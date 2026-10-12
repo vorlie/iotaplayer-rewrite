@@ -10,6 +10,9 @@ import { PlaceholderView } from './views/PlaceholderView'
 import { SearchView } from './views/SearchView'
 import { SettingsView } from './views/SettingsView'
 import { TracksView } from './views/TracksView'
+import { NowPlayingView } from './views/NowPlayingView'
+import { PlaylistsView } from './views/PlaylistsView'
+import { PlaylistDetailView } from './views/PlaylistDetailView'
 import './styles/layout.css'
 
 function MainContent() {
@@ -19,6 +22,9 @@ function MainContent() {
     case 'artists':        return <ArtistsView />
     case 'albums':         return <AlbumsView />
     case 'tracks':         return <TracksView />
+    case 'playlists':      return <PlaylistsView />
+    case 'playlist-detail': return <PlaylistDetailView />
+    case 'now-playing':    return <NowPlayingView />
     case 'artist-detail':  return <ArtistDetailView />
     case 'album-detail':   return <AlbumDetailView />
     case 'search':         return <SearchView />

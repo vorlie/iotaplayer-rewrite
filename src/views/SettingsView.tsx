@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { useAppStore } from '../store'
-import type { ScanResult } from '../types/electron'
+import type { PlaybackBackendMode, ScanResult } from '../types/electron'
 import '../styles/library.css'
 
 // Default library root
@@ -12,7 +12,18 @@ export function SettingsView() {
   const [libraryRoot, setLibraryRoot] = useState(DEFAULT_LIBRARY_ROOT)
   const [scanning, setScanning] = useState(false)
   const [lastResult, setLastResult] = useState<ScanResult | null>(library.lastScanResult)
+  const [backendMode, setBackendMode] = useState<PlaybackBackendMode>('auto')
   const scanProgress = library.scanProgress
+
+  useEffect(() => {
+    void window.playback.getPreferredBackend().then((mode) => {
+      setBackendMode(mode)
+    })
+  }, [])
+
+  useEffect(() => {
+    void window.playback.setPreferredBackend(backendMode)
+  }, [backendMode])
 
   async function handleScan() {
     if (scanning) return
@@ -35,6 +46,55 @@ export function SettingsView() {
       </div>
 
       <div className="page-body" style={{ maxWidth: 560 }}>
+        <section style={{ marginBottom: 'var(--space-8)' }}>
+          <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, marginBottom: 'var(--space-4)' }}>
+            Playback
+          </h2>
+
+          <div style={{ marginBottom: 'var(--space-4)' }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 'var(--text-xs)',
+                color: 'var(--color-text-3)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                fontWeight: 600,
+                marginBottom: 'var(--space-2)',
+              }}
+            >
+              Audio backend
+            </label>
+
+            <select
+              value={backendMode}
+              onChange={(e) => setBackendMode(e.target.value as PlaybackBackendMode)}
+              style={{
+                width: '100%',
+                background: 'var(--color-surface-2)',
+                color: 'var(--color-text-1)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius)',
+                padding: 'var(--space-2) var(--space-3)',
+              }}
+            >
+              <option value="auto">Automatic</option>
+              <option value="mpv">MPV only</option>
+              <option value="browser">Browser fallback only</option>
+            </select>
+
+            <div
+              style={{
+                marginTop: 'var(--space-2)',
+                color: 'var(--color-text-3)',
+                fontSize: 'var(--text-xs)',
+              }}
+            >
+              .wav files always use MPV.
+            </div>
+          </div>
+        </section>
+
         {/* Library section */}
         <section style={{ marginBottom: 'var(--space-8)' }}>
           <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, marginBottom: 'var(--space-4)' }}>

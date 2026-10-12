@@ -1,12 +1,26 @@
-import { Pause, Play, SkipBack, SkipForward, Volume2 } from 'lucide-react'
+import { Pause, Play, Repeat, Shuffle, SkipBack, SkipForward, Volume2 } from 'lucide-react'
 import { usePlaybackStore } from '../store'
 import { useArtwork, useFormatDuration } from '../hooks/useLibrary'
 import { Music2 } from 'lucide-react'
 import '../styles/layout.css'
 
 export function PlayerBar() {
-  const { currentTrack, isPlaying, position, duration, volume, toggle, next, previous, seek, setVolume } =
-    usePlaybackStore()
+  const {
+    currentTrack,
+    isPlaying,
+    position,
+    duration,
+    volume,
+    repeatMode,
+    shuffle,
+    toggle,
+    next,
+    previous,
+    seek,
+    setVolume,
+    toggleRepeat,
+    toggleShuffle,
+  } = usePlaybackStore()
   const artworkSrc = useArtwork(currentTrack?.artwork_id)
   const fmt = useFormatDuration()
 
@@ -54,6 +68,9 @@ export function PlayerBar() {
       {/* Controls */}
       <div className="player-controls">
         <div className="player-buttons">
+          <button className={`player-btn ${shuffle ? 'is-active' : ''}`} onClick={toggleShuffle} title={shuffle ? 'Shuffle on' : 'Shuffle off'}>
+            <Shuffle size={14} />
+          </button>
           <button className="player-btn" onClick={previous} title="Previous">
             <SkipBack size={16} />
           </button>
@@ -62,6 +79,13 @@ export function PlayerBar() {
           </button>
           <button className="player-btn" onClick={next} title="Next">
             <SkipForward size={16} />
+          </button>
+          <button
+            className={`player-btn ${repeatMode !== 'off' ? 'is-active' : ''}`}
+            onClick={toggleRepeat}
+            title={repeatMode === 'off' ? 'Repeat off' : repeatMode === 'all' ? 'Repeat all' : 'Repeat one'}
+          >
+            <Repeat size={14} />
           </button>
         </div>
 

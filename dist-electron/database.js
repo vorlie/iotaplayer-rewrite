@@ -14,6 +14,11 @@ exports.dbGetAlbum = dbGetAlbum;
 exports.dbGetTracks = dbGetTracks;
 exports.dbGetArtwork = dbGetArtwork;
 exports.dbSearch = dbSearch;
+exports.dbGetPlaylists = dbGetPlaylists;
+exports.dbRenamePlaylist = dbRenamePlaylist;
+exports.dbDeletePlaylist = dbDeletePlaylist;
+exports.dbCreatePlaylist = dbCreatePlaylist;
+exports.dbAddTrackToPlaylist = dbAddTrackToPlaylist;
 const better_sqlite3_1 = __importDefault(require("better-sqlite3"));
 const electron_1 = require("electron");
 const path_1 = __importDefault(require("path"));
@@ -102,10 +107,51 @@ const MIGRATIONS = [
         artwork_id     INTEGER REFERENCES artwork(id) ON DELETE SET NULL
       );
 
+      CREATE TABLE IF NOT EXISTS playlists (
+        id         TEXT PRIMARY KEY,
+        name       TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        last_modified INTEGER NOT NULL DEFAULT 0
+      );
+
+      CREATE TABLE IF NOT EXISTS playlist_tracks (
+        playlist_id TEXT NOT NULL,
+        track_id    INTEGER NOT NULL,
+        position    INTEGER NOT NULL,
+        PRIMARY KEY (playlist_id, position),
+        FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE,
+        FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+      );
+
       CREATE INDEX IF NOT EXISTS idx_tracks_album_id    ON tracks(album_id);
       CREATE INDEX IF NOT EXISTS idx_tracks_artist_id   ON tracks(artist_id);
       CREATE INDEX IF NOT EXISTS idx_tracks_path        ON tracks(path);
       CREATE INDEX IF NOT EXISTS idx_albums_artist_id   ON albums(artist_id);
+      CREATE INDEX IF NOT EXISTS idx_playlist_tracks_track_id ON playlist_tracks(track_id);
+    `,
+    },
+    {
+        version: 2,
+        sql: `
+      CREATE TABLE IF NOT EXISTS playlists (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        last_modified INTEGER NOT NULL DEFAULT 0
+      );
+
+      CREATE TABLE IF NOT EXISTS playlist_tracks (
+        playlist_id TEXT NOT NULL,
+        track_id INTEGER NOT NULL,
+        position INTEGER NOT NULL,
+        PRIMARY KEY (playlist_id, position),
+        FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE,
+        FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+      );
+
+      UPDATE playlists
+      SET last_modified = created_at
+      WHERE last_modified = 0 OR last_modified IS NULL;
     `,
     },
 ];
@@ -125,6 +171,34 @@ function runMigrations(db) {
                 .prepare('INSERT OR REPLACE INTO schema_version(version) VALUES(?)')
                 .run(migration.version);
         }
+    }
+    const playlistsTableExists = db
+        .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'playlists'")
+        .get();
+    if (!playlistsTableExists) {
+        db.exec(`
+      CREATE TABLE IF NOT EXISTS playlists (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        last_modified INTEGER NOT NULL DEFAULT 0
+      );
+
+      CREATE TABLE IF NOT EXISTS playlist_tracks (
+        playlist_id TEXT NOT NULL,
+        track_id INTEGER NOT NULL,
+        position INTEGER NOT NULL,
+        PRIMARY KEY (playlist_id, position),
+        FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE,
+        FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+      );
+    `);
+    }
+    const playlistsSchema = db.prepare('PRAGMA table_info(playlists)').all();
+    const hasLastModified = playlistsSchema.some((column) => column.name === 'last_modified');
+    if (!hasLastModified) {
+        db.exec('ALTER TABLE playlists ADD COLUMN last_modified INTEGER NOT NULL DEFAULT 0');
+        db.exec('UPDATE playlists SET last_modified = created_at WHERE last_modified = 0 OR last_modified IS NULL');
     }
 }
 // ---------------------------------------------------------------------------
@@ -292,4 +366,70 @@ function dbSearch(query) {
        LIMIT 20`)
         .all(q, q);
     return { artists, albums, tracks };
+}
+function dbGetPlaylists() {
+    const db = getDatabase();
+    const playlists = db
+        .prepare(`SELECT id, name, created_at AS createdAt
+       FROM playlists
+       ORDER BY created_at DESC`)
+        .all();
+    return playlists.map((playlist) => ({
+        ...playlist,
+        tracks: db
+            .prepare(`SELECT
+           t.id, t.title, t.artist, t.album_artist, t.album, t.album_id, t.artist_id,
+           t.track_number, t.track_total, t.disc_number, t.disc_total,
+           t.year, t.genre, t.duration, t.bitrate, t.sample_rate,
+           t.bits_per_sample, t.codec, t.format,
+           t.path, t.file_size, t.modified_time, t.artwork_id
+         FROM playlist_tracks pt
+         JOIN tracks t ON t.id = pt.track_id
+         WHERE pt.playlist_id = ?
+         ORDER BY pt.position ASC`)
+            .all(playlist.id),
+    }));
+}
+function dbRenamePlaylist(playlistId, newName) {
+    const trimmed = newName.trim();
+    if (!trimmed)
+        return null;
+    const db = getDatabase();
+    const result = db
+        .prepare('UPDATE playlists SET name = ?, last_modified = ? WHERE id = ?')
+        .run(trimmed, Date.now(), playlistId);
+    if (result.changes === 0)
+        return null;
+    return dbGetPlaylists();
+}
+function dbDeletePlaylist(playlistId) {
+    const db = getDatabase();
+    db.prepare('DELETE FROM playlist_tracks WHERE playlist_id = ?').run(playlistId);
+    db.prepare('DELETE FROM playlists WHERE id = ?').run(playlistId);
+    return dbGetPlaylists();
+}
+function dbCreatePlaylist(name, trackIds) {
+    const trimmed = name.trim();
+    if (!trimmed)
+        return null;
+    const db = getDatabase();
+    const id = `playlist-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const createdAt = Date.now();
+    const insert = db.prepare(`INSERT INTO playlists (id, name, created_at) VALUES (?, ?, ?)`);
+    insert.run(id, trimmed, createdAt);
+    if (trackIds.length > 0) {
+        const insertTrack = db.prepare(`INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES (?, ?, ?)`);
+        trackIds.forEach((trackId, index) => {
+            insertTrack.run(id, trackId, index);
+        });
+    }
+    return dbGetPlaylists();
+}
+function dbAddTrackToPlaylist(playlistId, trackId) {
+    const db = getDatabase();
+    const nextPosition = db
+        .prepare('SELECT COALESCE(MAX(position), -1) + 1 AS nextPos FROM playlist_tracks WHERE playlist_id = ?')
+        .get(playlistId).nextPos;
+    db.prepare('INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES (?, ?, ?)').run(playlistId, trackId, nextPosition);
+    return dbGetPlaylists();
 }

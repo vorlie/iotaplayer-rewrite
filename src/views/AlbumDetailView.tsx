@@ -74,7 +74,7 @@ export function AlbumDetailView() {
 
           <button
             className="detail-play-btn"
-            onClick={() => tracks.length > 0 && play(tracks[0], tracks)}
+            onClick={() => tracks.length > 0 && play(tracks[0], tracks, album.title)}
           >
             <Play size={14} fill="currentColor" />
             Play

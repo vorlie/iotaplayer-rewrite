@@ -7,6 +7,7 @@ const electron_1 = require("electron");
 const path_1 = __importDefault(require("path"));
 const database_1 = require("./database");
 const ipc_1 = require("./ipc");
+const mpv_1 = require("./mpv");
 // ---------------------------------------------------------------------------
 // Dev / prod detection
 // ---------------------------------------------------------------------------
@@ -73,10 +74,14 @@ electron_1.app.whenReady().then(() => {
 });
 electron_1.app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
+        (0, mpv_1.getMpv)().stop();
+        (0, mpv_1.getMpv)().destroy();
         (0, database_1.closeDatabase)();
         electron_1.app.quit();
     }
 });
 electron_1.app.on('before-quit', () => {
+    (0, mpv_1.getMpv)().stop();
+    (0, mpv_1.getMpv)().destroy();
     (0, database_1.closeDatabase)();
 });

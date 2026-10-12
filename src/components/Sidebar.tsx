@@ -5,6 +5,8 @@ import {
   Library,
   Mic2,
   Music2,
+  PlayCircle,
+  ListMusic,
   Search,
   Settings,
 } from 'lucide-react'
@@ -21,6 +23,8 @@ const LIBRARY_ITEMS: NavItem[] = [
   { id: 'artists', label: 'Artists', icon: <Mic2 size={15} /> },
   { id: 'albums',  label: 'Albums',  icon: <Disc3 size={15} /> },
   { id: 'tracks',  label: 'Tracks',  icon: <Music2 size={15} /> },
+  { id: 'playlists', label: 'Playlists', icon: <ListMusic size={15} /> },
+  { id: 'now-playing', label: 'Now Playing', icon: <PlayCircle size={15} /> },
 ]
 
 const YOUR_MUSIC_ITEMS: NavItem[] = [

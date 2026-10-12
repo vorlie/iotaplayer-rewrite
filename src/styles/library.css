@@ -10,6 +10,312 @@
   overflow: hidden;
 }
 
+.now-playing-page {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: stretch;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.now-playing-panel {
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  min-height: 0;
+}
+
+.now-playing-main-panel {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: sticky;
+  top: 0;
+}
+
+.now-playing-artwork {
+  aspect-ratio: 1;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--color-surface-2);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+}
+
+.now-playing-artwork img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.now-playing-artwork-placeholder {
+  color: var(--color-text-3);
+  font-size: 48px;
+}
+
+.now-playing-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.now-playing-section-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-3);
+}
+
+.now-playing-title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--color-text);
+}
+
+.now-playing-subtitle {
+  color: var(--color-text-3);
+}
+
+.now-playing-progress-block {
+  display: grid;
+  gap: 12px;
+}
+
+.now-playing-progress-row {
+  gap: 10px;
+}
+
+.now-playing-progress-track {
+  flex: 1;
+  height: 4px;
+  background: var(--color-surface-3);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.now-playing-volume-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-text-3);
+  margin-top: auto;
+}
+
+.now-playing-volume-track {
+  flex: 1;
+  height: 4px;
+  background: var(--color-surface-3);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.now-playing-volume-row .volume-fill {
+  background: var(--color-accent);
+  border-radius: 2px;
+} 
+
+.now-playing-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.now-playing-queue-panel {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.now-playing-queue-header {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-3);
+  margin-bottom: 12px;
+}
+
+.now-playing-empty-state {
+  color: var(--color-text-3);
+  padding: var(--space-2) 0;
+}
+
+.now-playing-queue-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  gap: 8px;
+  padding-right: 6px;
+}
+
+.now-playing-track-item {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--color-text-2);
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+
+.now-playing-track-item:hover {
+  background: var(--color-surface-2);
+  border-color: var(--color-border);
+}
+
+.now-playing-track-item.is-current {
+  background: var(--color-surface-2);
+  border-color: var(--color-border);
+  color: var(--color-text-1);
+}
+
+.now-playing-track-index {
+  color: var(--color-text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.now-playing-track-index.is-current {
+  color: var(--color-accent);
+}
+
+.now-playing-track-text {
+  min-width: 0;
+}
+
+.now-playing-track-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.now-playing-track-artist {
+  font-size: 12px;
+  color: var(--color-text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.now-playing-track-duration {
+  font-size: 12px;
+  color: var(--color-text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.context-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+.context-menu {
+  position: fixed;
+  min-width: 220px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.context-menu-header {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-3);
+  padding: 6px 8px 8px;
+}
+
+.context-menu-empty {
+  color: var(--color-text-3);
+  font-size: 13px;
+  padding: 8px;
+}
+
+.context-menu-item {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--color-text-2);
+  text-align: left;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.context-menu-item:hover {
+  background: var(--color-surface-2);
+  border-color: var(--color-border);
+}
+
+.context-menu-item--primary {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.player-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition), border-color var(--transition), opacity var(--transition), color var(--transition);
+}
+
+.player-btn:hover {
+  background: var(--color-surface-3);
+}
+
+.player-btn.is-active {
+  background: var(--color-accent-soft);
+  border-color: rgba(120, 160, 255, 0.35);
+  color: var(--color-text-1);
+}
+
+.player-btn--play {
+  width: 48px;
+  height: 48px;
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
+}
+
+.player-btn--play:hover {
+  background: var(--color-accent-hover);
+}
+
+/* Shared page layout */
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
 .page-header {
   padding: var(--space-6) var(--space-6) var(--space-4);
   border-bottom: 1px solid var(--color-border);
@@ -33,6 +339,10 @@
   flex: 1;
   overflow-y: auto;
   padding: var(--space-4) var(--space-6);
+}
+
+.page-body.now-playing-page {
+  overflow: hidden;
 }
 
 /* ---- Artists list ---- */

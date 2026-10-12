@@ -82,3 +82,17 @@ export interface SearchResults {
   albums: Album[]
   tracks: Track[]
 }
+
+export interface Playlist {
+  id: string
+  name: string
+  createdAt: number
+  tracks: Track[]
+}
+
+export interface PlaybackStateEvent {
+  isPlaying?: boolean
+  position?: number // seconds
+  duration?: number // seconds
+  volume?: number   // 0 to 1
+}

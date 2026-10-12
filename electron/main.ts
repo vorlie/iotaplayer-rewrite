@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell } from 'electron'
 import path from 'path'
 import { closeDatabase, initDatabase } from './database'
 import { registerIpcHandlers } from './ipc'
+import { getMpv } from './mpv'
 
 // ---------------------------------------------------------------------------
 // Dev / prod detection
@@ -82,11 +83,15 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
+    getMpv().stop()
+    getMpv().destroy()
     closeDatabase()
     app.quit()
   }
 })
 
 app.on('before-quit', () => {
+  getMpv().stop()
+  getMpv().destroy()
   closeDatabase()
 })

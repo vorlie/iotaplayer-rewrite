@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useFormatDuration, useTracks } from '../hooks/useLibrary'
 import { useAppStore, usePlaybackStore } from '../store'
 import type { Track } from '../types/electron'
@@ -15,39 +16,89 @@ interface TrackRowProps {
 function TrackRow({ track, index, showAlbum = true, isPlaying = false, onClick }: TrackRowProps) {
   const fmt = useFormatDuration()
   const navigate = useAppStore((s) => s.navigate)
+  const playlists = usePlaybackStore((s) => s.playlists)
+  const addTrackToPlaylist = usePlaybackStore((s) => s.addTrackToPlaylist)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
+
+  function handleContextMenu(e: React.MouseEvent<HTMLDivElement>) {
+    e.preventDefault()
+    setContextMenu({ x: e.clientX, y: e.clientY })
+  }
+
+  function handleCreatePlaylist() {
+    const name = window.prompt('New playlist name', track.title)?.trim()
+    if (!name) return
+    usePlaybackStore.getState().createPlaylist(name, [track])
+    setContextMenu(null)
+  }
 
   return (
-    <div
-      className={`track-row ${isPlaying ? 'playing' : ''}`}
-      onDoubleClick={onClick}
-    >
-      <div className={`track-num ${isPlaying ? 'track-num--playing' : ''}`}>
-        {isPlaying ? '▶' : (track.track_number ?? index + 1)}
-      </div>
+    <>
+      <div
+        className={`track-row ${isPlaying ? 'playing' : ''}`}
+        onDoubleClick={onClick}
+        onContextMenu={handleContextMenu}
+      >
+        <div className={`track-num ${isPlaying ? 'track-num--playing' : ''}`}>
+          {isPlaying ? '▶' : (track.track_number ?? index + 1)}
+        </div>
 
-      <div className="track-info">
-        <div className="track-name-block">
-          <div className="track-title">{track.title}</div>
-          <div
-            className="track-artist-small"
-            onClick={(e) => {
-              e.stopPropagation()
-              if (track.artist_id) navigate('artist-detail', { artistId: track.artist_id })
-            }}
-            style={{ cursor: track.artist_id ? 'pointer' : 'default' }}
-          >
-            {track.artist ?? track.album_artist ?? '—'}
+        <div className="track-info">
+          <div className="track-name-block">
+            <div className="track-title">{track.title}</div>
+            <div
+              className="track-artist-small"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (track.artist_id) navigate('artist-detail', { artistId: track.artist_id })
+              }}
+              style={{ cursor: track.artist_id ? 'pointer' : 'default' }}
+            >
+              {track.artist ?? track.album_artist ?? '—'}
+            </div>
           </div>
         </div>
+
+        {showAlbum && (
+          <div className="track-album">{track.album ?? '—'}</div>
+        )}
+
+        <div className="track-year">{track.year ?? '—'}</div>
+        <div className="track-duration">{fmt(track.duration)}</div>
       </div>
 
-      {showAlbum && (
-        <div className="track-album">{track.album ?? '—'}</div>
+      {contextMenu && (
+        <div className="context-menu-backdrop" onClick={() => setContextMenu(null)}>
+          <div
+            className="context-menu"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="context-menu-header">Add to playlist</div>
+            {playlists.length === 0 ? (
+              <div className="context-menu-empty">No playlists yet</div>
+            ) : (
+              playlists.map((playlist) => (
+                <button
+                  key={playlist.id}
+                  type="button"
+                  className="context-menu-item"
+                  onClick={() => {
+                    addTrackToPlaylist(playlist.id, track)
+                    setContextMenu(null)
+                  }}
+                >
+                  {playlist.name}
+                </button>
+              ))
+            )}
+            <button type="button" className="context-menu-item context-menu-item--primary" onClick={handleCreatePlaylist}>
+              New playlist…
+            </button>
+          </div>
+        </div>
       )}
-
-      <div className="track-year">{track.year ?? '—'}</div>
-      <div className="track-duration">{fmt(track.duration)}</div>
-    </div>
+    </>
   )
 }
 
