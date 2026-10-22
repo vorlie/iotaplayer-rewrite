@@ -1,6 +1,7 @@
 import { app, BrowserWindow, shell } from 'electron'
 import path from 'path'
 import { closeDatabase, initDatabase } from './database'
+import { discordPresence } from './discord'
 import { registerIpcHandlers } from './ipc'
 import { getMpv } from './mpv'
 
@@ -68,6 +69,9 @@ app.whenReady().then(() => {
   // Initialize database first
   initDatabase()
 
+  // Start Discord presence if configured
+  void discordPresence.start()
+
   // Register all IPC handlers
   registerIpcHandlers()
 
@@ -83,6 +87,7 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
+    void discordPresence.stop()
     getMpv().stop()
     getMpv().destroy()
     closeDatabase()
@@ -91,6 +96,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
+  void discordPresence.stop()
   getMpv().stop()
   getMpv().destroy()
   closeDatabase()

@@ -71,6 +71,30 @@ const libraryAPI = {
   addTrackToPlaylist: (playlistId: string, trackId: number): Promise<Playlist[]> =>
     ipcRenderer.invoke('library:add-track-to-playlist', playlistId, trackId),
 
+  removeTrackFromPlaylist: (playlistId: string, position: number): Promise<Playlist[]> =>
+    ipcRenderer.invoke('library:remove-track-from-playlist', playlistId, position),
+
+  reorderPlaylist: (playlistId: string, fromIndex: number, toIndex: number): Promise<Playlist[]> =>
+    ipcRenderer.invoke('library:reorder-playlist', playlistId, fromIndex, toIndex),
+
+  favorites: (): Promise<Track[]> =>
+    ipcRenderer.invoke('library:favorites'),
+
+  favoriteIds: (): Promise<number[]> =>
+    ipcRenderer.invoke('library:favorite-ids'),
+
+  toggleFavorite: (trackId: number): Promise<boolean> =>
+    ipcRenderer.invoke('library:toggle-favorite', trackId),
+
+  recentlyPlayed: (limit?: number): Promise<Track[]> =>
+    ipcRenderer.invoke('library:recently-played', limit),
+
+  clearHistory: (): Promise<void> =>
+    ipcRenderer.invoke('library:clear-history'),
+
+  recordPlayback: (trackId: number, durationPlayed?: number): Promise<void> =>
+    ipcRenderer.invoke('library:record-playback', trackId, durationPlayed),
+
   onScanProgress: (
     cb: (progress: ScanProgress) => void,
   ): (() => void) => {
@@ -110,7 +134,7 @@ type BrowserAudioElement = {
   onended: (() => void) | null
 }
 
-const browserAudio = new (globalThis as any).Audio() as BrowserAudioElement
+const browserAudio = new (globalThis as unknown as { Audio: new () => BrowserAudioElement }).Audio()
 
 const browserMimeMap: Array<[string[], string]> = [
   [['.aac', '.mp4', '.m4a', '.mov', '.3gp'], 'audio/aac'],
@@ -160,16 +184,16 @@ function toBrowserAudioUrl(filePath: string): string {
   const blob = new Blob([readFileSync(filePath)], { type: mimeType })
 
   if (browserObjectUrl) {
-    ;(globalThis as any).URL.revokeObjectURL(browserObjectUrl)
+    ;(globalThis as unknown as { URL: typeof URL }).URL.revokeObjectURL(browserObjectUrl)
   }
 
-  const objectUrl = (globalThis as any).URL.createObjectURL(blob) as string
+  const objectUrl = (globalThis as unknown as { URL: typeof URL }).URL.createObjectURL(blob)
   browserObjectUrl = objectUrl
   return objectUrl
 }
 
 function emitBrowserState(state: PlaybackStateEvent): void {
-  browserStateCallbacks.forEach((cb) => cb(state))
+  browserStateCallbacks.forEach((cb) => cb({ backend: 'browser', ...state }))
 }
 
 function emitBrowserEnded(): void {
@@ -227,6 +251,30 @@ attachBrowserAudioEvents()
 // ---------------------------------------------------------------------------
 // Playback API
 // ---------------------------------------------------------------------------
+
+const settingsAPI = {
+  get: (): Promise<{ discordClientId: string; imgurClientId: string; discordEnabled: boolean }> =>
+    ipcRenderer.invoke('settings:get'),
+  set: (value: { discordClientId?: string; imgurClientId?: string; discordEnabled?: boolean }): Promise<void> =>
+    ipcRenderer.invoke('settings:set', value),
+}
+
+const discordAPI = {
+  setEnabled: (enabled: boolean): Promise<void> => ipcRenderer.invoke('discord:set-enabled', enabled),
+  getEnabled: (): Promise<boolean> => ipcRenderer.invoke('discord:get-enabled'),
+  setActivity: (payload: {
+    details: string
+    state: string
+    isPlaying: boolean
+    album?: string | null
+    artist?: string | null
+    artworkId?: number | null
+    position?: number
+    duration?: number
+  }): Promise<void> => ipcRenderer.invoke('discord:set-activity', payload),
+
+  clearActivity: (): Promise<void> => ipcRenderer.invoke('discord:clear-activity'),
+}
 
 const playbackAPI = {
   getPreferredBackend: (): Promise<PlaybackBackendMode> => Promise.resolve(preferredPlaybackBackend),
@@ -318,6 +366,21 @@ const playbackAPI = {
     return ipcRenderer.invoke('playback:stop')
   },
 
+  saveTrackResume: (trackId: number, position: number): Promise<void> =>
+    ipcRenderer.invoke('playback:save-resume', trackId, position),
+
+  getTrackResume: (trackId: number): Promise<number | null> =>
+    ipcRenderer.invoke('playback:get-resume', trackId),
+
+  clearTrackResume: (trackId: number): Promise<void> =>
+    ipcRenderer.invoke('playback:clear-resume', trackId),
+
+  savePlaybackState: (state: Record<string, string>): Promise<void> =>
+    ipcRenderer.invoke('playback:save-state', state),
+
+  getPlaybackState: (): Promise<Record<string, string>> =>
+    ipcRenderer.invoke('playback:get-state'),
+
   onStateChange: (
     cb: (state: PlaybackStateEvent) => void,
   ): (() => void) => {
@@ -344,7 +407,11 @@ const playbackAPI = {
 }
 
 contextBridge.exposeInMainWorld('library', libraryAPI)
+contextBridge.exposeInMainWorld('settings', settingsAPI)
+contextBridge.exposeInMainWorld('discord', discordAPI)
 contextBridge.exposeInMainWorld('playback', playbackAPI)
 
 export type LibraryAPI = typeof libraryAPI
+export type SettingsAPI = typeof settingsAPI
+export type DiscordAPI = typeof discordAPI
 export type PlaybackAPI = typeof playbackAPI

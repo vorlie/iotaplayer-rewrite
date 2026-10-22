@@ -6,13 +6,14 @@ import { AlbumDetailView } from './views/AlbumDetailView'
 import { AlbumsView } from './views/AlbumsView'
 import { ArtistDetailView } from './views/ArtistDetailView'
 import { ArtistsView } from './views/ArtistsView'
-import { PlaceholderView } from './views/PlaceholderView'
+import { FavoritesView } from './views/FavoritesView'
+import { NowPlayingView } from './views/NowPlayingView'
+import { PlaylistDetailView } from './views/PlaylistDetailView'
+import { PlaylistsView } from './views/PlaylistsView'
+import { RecentlyPlayedView } from './views/RecentlyPlayedView'
 import { SearchView } from './views/SearchView'
 import { SettingsView } from './views/SettingsView'
 import { TracksView } from './views/TracksView'
-import { NowPlayingView } from './views/NowPlayingView'
-import { PlaylistsView } from './views/PlaylistsView'
-import { PlaylistDetailView } from './views/PlaylistDetailView'
 import './styles/layout.css'
 
 function MainContent() {
@@ -29,22 +30,9 @@ function MainContent() {
     case 'album-detail':   return <AlbumDetailView />
     case 'search':         return <SearchView />
     case 'settings':       return <SettingsView />
-    case 'favorites':
-      return (
-        <PlaceholderView
-          title="Favorites"
-          description="Your favorite tracks will appear here. Coming in Phase 11."
-        />
-      )
-    case 'recently-played':
-      return (
-        <PlaceholderView
-          title="Recently Played"
-          description="Your playback history will appear here. Coming in Phase 11."
-        />
-      )
-    default:
-      return <AlbumsView />
+    case 'favorites':      return <FavoritesView />
+    case 'recently-played': return <RecentlyPlayedView />
+    default:               return <AlbumsView />
   }
 }
 

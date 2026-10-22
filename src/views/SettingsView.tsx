@@ -13,17 +13,40 @@ export function SettingsView() {
   const [scanning, setScanning] = useState(false)
   const [lastResult, setLastResult] = useState<ScanResult | null>(library.lastScanResult)
   const [backendMode, setBackendMode] = useState<PlaybackBackendMode>('auto')
+  const [discordEnabled, setDiscordEnabled] = useState(true)
+  const [discordClientId, setDiscordClientId] = useState('')
+  const [imgurClientId, setImgurClientId] = useState('')
+  const [savingSettings, setSavingSettings] = useState(false)
   const scanProgress = library.scanProgress
 
   useEffect(() => {
     void window.playback.getPreferredBackend().then((mode) => {
       setBackendMode(mode)
     })
+    void window.settings.get().then((settings) => {
+      setDiscordEnabled(settings.discordEnabled)
+      setDiscordClientId(settings.discordClientId)
+      setImgurClientId(settings.imgurClientId)
+    })
   }, [])
 
   useEffect(() => {
     void window.playback.setPreferredBackend(backendMode)
   }, [backendMode])
+
+  async function handleSaveSettings() {
+    setSavingSettings(true)
+    try {
+      await window.settings.set({
+        discordEnabled,
+        discordClientId,
+        imgurClientId,
+      })
+      await window.discord.setEnabled(discordEnabled)
+    } finally {
+      setSavingSettings(false)
+    }
+  }
 
   async function handleScan() {
     if (scanning) return
@@ -92,6 +115,100 @@ export function SettingsView() {
             >
               .wav files always use MPV.
             </div>
+          </div>
+
+          <div style={{ marginTop: 'var(--space-4)' }}>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 'var(--space-3)',
+                padding: 'var(--space-3) var(--space-4)',
+                background: 'var(--color-surface-2)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius)',
+                cursor: 'pointer',
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 600 }}>Discord Rich Presence</div>
+                <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--text-xs)' }}>
+                  Shows the current track and audio progress in Discord.
+                </div>
+              </div>
+
+              <input
+                type="checkbox"
+                checked={discordEnabled}
+                onChange={(e) => setDiscordEnabled(e.target.checked)}
+                style={{ width: 18, height: 18 }}
+              />
+            </label>
+          </div>
+
+          <div style={{ marginTop: 'var(--space-4)' }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 'var(--text-xs)',
+                color: 'var(--color-text-3)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                fontWeight: 600,
+                marginBottom: 'var(--space-2)',
+              }}
+            >
+              Discord Application ID
+            </label>
+            <input
+              type="text"
+              value={discordClientId}
+              onChange={(e) => setDiscordClientId(e.target.value)}
+              placeholder="Paste your Discord app ID"
+              style={{ width: '100%' }}
+            />
+          </div>
+
+          <div style={{ marginTop: 'var(--space-4)' }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 'var(--text-xs)',
+                color: 'var(--color-text-3)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                fontWeight: 600,
+                marginBottom: 'var(--space-2)',
+              }}
+            >
+              Imgur Client ID
+            </label>
+            <input
+              type="text"
+              value={imgurClientId}
+              onChange={(e) => setImgurClientId(e.target.value)}
+              placeholder="Paste your Imgur client ID"
+              style={{ width: '100%' }}
+            />
+          </div>
+
+          <div style={{ marginTop: 'var(--space-5)', display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              onClick={handleSaveSettings}
+              disabled={savingSettings}
+              style={{
+                padding: 'var(--space-2) var(--space-4)',
+                background: savingSettings ? 'var(--color-surface-3)' : 'var(--color-accent)',
+                color: savingSettings ? 'var(--color-text-3)' : '#fff',
+                borderRadius: 'var(--radius)',
+                fontWeight: 600,
+                cursor: savingSettings ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {savingSettings ? 'Saving…' : 'Save Settings'}
+            </button>
           </div>
         </section>
 

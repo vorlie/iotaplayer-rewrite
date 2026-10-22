@@ -145,6 +145,38 @@ const MIGRATIONS: Array<{ version: number; sql: string }> = [
       WHERE last_modified = 0 OR last_modified IS NULL;
     `,
   },
+  {
+    version: 3,
+    sql: `
+      CREATE TABLE IF NOT EXISTS favorites (
+        track_id INTEGER PRIMARY KEY,
+        added_at INTEGER NOT NULL,
+        FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS playback_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        track_id INTEGER NOT NULL,
+        played_at INTEGER NOT NULL,
+        duration_played REAL DEFAULT 0,
+        FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_playback_history_played_at ON playback_history(played_at DESC);
+
+      CREATE TABLE IF NOT EXISTS track_resume (
+        track_id INTEGER PRIMARY KEY,
+        position REAL NOT NULL,
+        updated_at INTEGER NOT NULL,
+        FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS playback_state (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+    `,
+  },
 ]
 
 function runMigrations(db: Database.Database): void {
@@ -360,7 +392,19 @@ export function dbSearch(query: string): {
   tracks: Track[]
 } {
   const db = getDatabase()
-  const q = `%${query}%`
+  const trimmed = query.trim()
+  if (!trimmed) {
+    return { artists: [], albums: [], tracks: [] }
+  }
+
+  const tokens = trimmed.split(/\s+/).filter(Boolean)
+  if (tokens.length === 0) {
+    return { artists: [], albums: [], tracks: [] }
+  }
+
+  // Build conditions for each token
+  const artistWheres = tokens.map(() => 'a.name LIKE ? COLLATE NOCASE')
+  const artistArgs = tokens.map((t) => `%${t}%`)
 
   const artists = db
     .prepare(
@@ -371,11 +415,22 @@ export function dbSearch(query: string): {
        FROM artists a
        LEFT JOIN albums al ON al.artist_id = a.id
        LEFT JOIN tracks t  ON t.artist_id  = a.id
-       WHERE a.name LIKE ? COLLATE NOCASE
+       WHERE ${artistWheres.join(' AND ')}
        GROUP BY a.id
-       LIMIT 10`,
+       ORDER BY
+         CASE WHEN LOWER(a.name) = LOWER(?) THEN 0
+              WHEN LOWER(a.name) LIKE LOWER(?) THEN 1
+              ELSE 2 END,
+         a.name COLLATE NOCASE
+       LIMIT 20`,
     )
-    .all(q) as Artist[]
+    .all(...artistArgs, trimmed, `${trimmed}%`) as Artist[]
+
+  const albumWheres = tokens.map(() => '(al.title LIKE ? COLLATE NOCASE OR ar.name LIKE ? COLLATE NOCASE)')
+  const albumArgs: string[] = []
+  tokens.forEach((t) => {
+    albumArgs.push(`%${t}%`, `%${t}%`)
+  })
 
   const albums = db
     .prepare(
@@ -388,11 +443,26 @@ export function dbSearch(query: string): {
        FROM albums al
        LEFT JOIN artists ar ON ar.id = al.artist_id
        LEFT JOIN tracks  t  ON t.album_id = al.id
-       WHERE al.title LIKE ? COLLATE NOCASE
+       WHERE ${albumWheres.join(' AND ')}
        GROUP BY al.id
-       LIMIT 10`,
+       ORDER BY
+         CASE WHEN LOWER(al.title) = LOWER(?) THEN 0
+              WHEN LOWER(al.title) LIKE LOWER(?) THEN 1
+              ELSE 2 END,
+         al.title COLLATE NOCASE
+       LIMIT 20`,
     )
-    .all(q) as Album[]
+    .all(...albumArgs, trimmed, `${trimmed}%`) as Album[]
+
+  const trackWheres = tokens.map(
+    () =>
+      '(t.title LIKE ? COLLATE NOCASE OR t.artist LIKE ? COLLATE NOCASE OR t.album_artist LIKE ? COLLATE NOCASE OR t.album LIKE ? COLLATE NOCASE OR t.genre LIKE ? COLLATE NOCASE OR CAST(t.year AS TEXT) LIKE ?)',
+  )
+  const trackArgs: string[] = []
+  tokens.forEach((t) => {
+    const pat = `%${t}%`
+    trackArgs.push(pat, pat, pat, pat, pat, pat)
+  })
 
   const tracks = db
     .prepare(
@@ -403,11 +473,15 @@ export function dbSearch(query: string): {
          t.bits_per_sample, t.codec, t.format,
          t.path, t.file_size, t.modified_time, t.artwork_id
        FROM tracks t
-       WHERE t.title LIKE ? COLLATE NOCASE
-          OR t.artist LIKE ? COLLATE NOCASE
-       LIMIT 20`,
+       WHERE ${trackWheres.join(' AND ')}
+       ORDER BY
+         CASE WHEN LOWER(t.title) = LOWER(?) THEN 0
+              WHEN LOWER(t.title) LIKE LOWER(?) THEN 1
+              ELSE 2 END,
+         LOWER(t.title)
+       LIMIT 50`,
     )
-    .all(q, q) as Track[]
+    .all(...trackArgs, trimmed, `${trimmed}%`) as Track[]
 
   return { artists, albums, tracks }
 }
@@ -500,4 +574,204 @@ export function dbAddTrackToPlaylist(playlistId: string, trackId: number): Array
   )
 
   return dbGetPlaylists()
+}
+
+export function dbRemoveTrackFromPlaylist(
+  playlistId: string,
+  position: number,
+): Array<{ id: string; name: string; createdAt: number; tracks: Track[] }> {
+  const db = getDatabase()
+  const deleteStmt = db.prepare('DELETE FROM playlist_tracks WHERE playlist_id = ? AND position = ?')
+  const updateStmt = db.prepare(
+    'UPDATE playlist_tracks SET position = position - 1 WHERE playlist_id = ? AND position > ?',
+  )
+  const touchStmt = db.prepare('UPDATE playlists SET last_modified = ? WHERE id = ?')
+
+  db.transaction(() => {
+    deleteStmt.run(playlistId, position)
+    updateStmt.run(playlistId, position)
+    touchStmt.run(Date.now(), playlistId)
+  })()
+
+  return dbGetPlaylists()
+}
+
+export function dbReorderPlaylist(
+  playlistId: string,
+  fromIndex: number,
+  toIndex: number,
+): Array<{ id: string; name: string; createdAt: number; tracks: Track[] }> {
+  if (fromIndex === toIndex) return dbGetPlaylists()
+
+  const db = getDatabase()
+  const currentTracks = db
+    .prepare('SELECT track_id FROM playlist_tracks WHERE playlist_id = ? ORDER BY position ASC')
+    .all(playlistId) as Array<{ track_id: number }>
+
+  if (fromIndex < 0 || fromIndex >= currentTracks.length || toIndex < 0 || toIndex >= currentTracks.length) {
+    return dbGetPlaylists()
+  }
+
+  const [moved] = currentTracks.splice(fromIndex, 1)
+  currentTracks.splice(toIndex, 0, moved)
+
+  const deleteStmt = db.prepare('DELETE FROM playlist_tracks WHERE playlist_id = ?')
+  const insertStmt = db.prepare(
+    'INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES (?, ?, ?)',
+  )
+  const touchStmt = db.prepare('UPDATE playlists SET last_modified = ? WHERE id = ?')
+
+  db.transaction(() => {
+    deleteStmt.run(playlistId)
+    currentTracks.forEach((item, pos) => {
+      insertStmt.run(playlistId, item.track_id, pos)
+    })
+    touchStmt.run(Date.now(), playlistId)
+  })()
+
+  return dbGetPlaylists()
+}
+
+// ---------------------------------------------------------------------------
+// Favorites
+// ---------------------------------------------------------------------------
+
+export function dbGetFavorites(): Track[] {
+  const db = getDatabase()
+  return db
+    .prepare(
+      `SELECT
+         t.id, t.title, t.artist, t.album_artist, t.album, t.album_id, t.artist_id,
+         t.track_number, t.track_total, t.disc_number, t.disc_total,
+         t.year, t.genre, t.duration, t.bitrate, t.sample_rate,
+         t.bits_per_sample, t.codec, t.format,
+         t.path, t.file_size, t.modified_time, t.artwork_id
+       FROM tracks t
+       JOIN favorites f ON f.track_id = t.id
+       ORDER BY f.added_at DESC`,
+    )
+    .all() as Track[]
+}
+
+export function dbGetFavoriteIds(): number[] {
+  const db = getDatabase()
+  const rows = db.prepare('SELECT track_id FROM favorites').all() as Array<{ track_id: number }>
+  return rows.map((r) => r.track_id)
+}
+
+export function dbToggleFavorite(trackId: number): boolean {
+  const db = getDatabase()
+  const exists = db.prepare('SELECT 1 FROM favorites WHERE track_id = ?').get(trackId)
+  if (exists) {
+    db.prepare('DELETE FROM favorites WHERE track_id = ?').run(trackId)
+    return false
+  } else {
+    db.prepare('INSERT INTO favorites (track_id, added_at) VALUES (?, ?)').run(trackId, Date.now())
+    return true
+  }
+}
+
+export function dbIsFavorite(trackId: number): boolean {
+  const db = getDatabase()
+  const exists = db.prepare('SELECT 1 FROM favorites WHERE track_id = ?').get(trackId)
+  return !!exists
+}
+
+// ---------------------------------------------------------------------------
+// Playback History
+// ---------------------------------------------------------------------------
+
+export function dbRecordPlayback(trackId: number, durationPlayed: number = 0): void {
+  const db = getDatabase()
+  db.prepare(
+    'INSERT INTO playback_history (track_id, played_at, duration_played) VALUES (?, ?, ?)',
+  ).run(trackId, Date.now(), durationPlayed)
+
+  // Keep history table capped at 500 entries
+  db.prepare(
+    `DELETE FROM playback_history WHERE id NOT IN (
+       SELECT id FROM playback_history ORDER BY played_at DESC LIMIT 500
+     )`,
+  ).run()
+}
+
+export function dbGetRecentlyPlayed(limit: number = 50): Track[] {
+  const db = getDatabase()
+  return db
+    .prepare(
+      `SELECT
+         t.id, t.title, t.artist, t.album_artist, t.album, t.album_id, t.artist_id,
+         t.track_number, t.track_total, t.disc_number, t.disc_total,
+         t.year, t.genre, t.duration, t.bitrate, t.sample_rate,
+         t.bits_per_sample, t.codec, t.format,
+         t.path, t.file_size, t.modified_time, t.artwork_id,
+         MAX(ph.played_at) as last_played
+       FROM tracks t
+       JOIN playback_history ph ON ph.track_id = t.id
+       GROUP BY t.id
+       ORDER BY last_played DESC
+       LIMIT ?`,
+    )
+    .all(limit) as Track[]
+}
+
+export function dbClearPlaybackHistory(): void {
+  const db = getDatabase()
+  db.prepare('DELETE FROM playback_history').run()
+}
+
+// ---------------------------------------------------------------------------
+// Track Resume & Persistent Playback State
+// ---------------------------------------------------------------------------
+
+export function dbSaveTrackResume(trackId: number, position: number): void {
+  const db = getDatabase()
+  db.prepare(
+    `INSERT INTO track_resume (track_id, position, updated_at)
+     VALUES (?, ?, ?)
+     ON CONFLICT(track_id) DO UPDATE SET position = excluded.position, updated_at = excluded.updated_at`,
+  ).run(trackId, position, Date.now())
+}
+
+export function dbGetTrackResume(trackId: number): number | null {
+  const db = getDatabase()
+  const row = db.prepare('SELECT position FROM track_resume WHERE track_id = ?').get(trackId) as
+    | { position: number }
+    | undefined
+  return row ? row.position : null
+}
+
+export function dbClearTrackResume(trackId: number): void {
+  const db = getDatabase()
+  db.prepare('DELETE FROM track_resume WHERE track_id = ?').run(trackId)
+}
+
+export function dbSetPlaybackState(key: string, value: string): void {
+  const db = getDatabase()
+  db.prepare(
+    `INSERT INTO playback_state (key, value)
+     VALUES (?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+  ).run(key, value)
+}
+
+export function dbGetPlaybackState(key: string): string | null {
+  const db = getDatabase()
+  const row = db.prepare('SELECT value FROM playback_state WHERE key = ?').get(key) as
+    | { value: string }
+    | undefined
+  return row ? row.value : null
+}
+
+export function dbGetAllPlaybackState(): Record<string, string> {
+  const db = getDatabase()
+  const rows = db.prepare('SELECT key, value FROM playback_state').all() as Array<{
+    key: string
+    value: string
+  }>
+  const result: Record<string, string> = {}
+  for (const row of rows) {
+    result[row.key] = row.value
+  }
+  return result
 }

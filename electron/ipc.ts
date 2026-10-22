@@ -13,9 +13,24 @@ import {
   dbGetTracks,
   dbRenamePlaylist,
   dbSearch,
+  dbRemoveTrackFromPlaylist,
+  dbReorderPlaylist,
+  dbGetFavorites,
+  dbGetFavoriteIds,
+  dbToggleFavorite,
+  dbRecordPlayback,
+  dbGetRecentlyPlayed,
+  dbClearPlaybackHistory,
+  dbSaveTrackResume,
+  dbGetTrackResume,
+  dbClearTrackResume,
+  dbSetPlaybackState,
+  dbGetAllPlaybackState,
 } from './database'
+import { discordPresence } from './discord'
 import { getMpv } from './mpv'
 import { scanLibrary } from './scanner'
+import { getAppSettings, setAppSettings } from './settings'
 import type { ScanProgress } from './types'
 
 // ---------------------------------------------------------------------------
@@ -37,6 +52,14 @@ export const IPC = {
   LIBRARY_RENAME_PLAYLIST: 'library:rename-playlist',
   LIBRARY_DELETE_PLAYLIST: 'library:delete-playlist',
   LIBRARY_ADD_TRACK_TO_PLAYLIST: 'library:add-track-to-playlist',
+  LIBRARY_REMOVE_TRACK_FROM_PLAYLIST: 'library:remove-track-from-playlist',
+  LIBRARY_REORDER_PLAYLIST: 'library:reorder-playlist',
+  LIBRARY_FAVORITES: 'library:favorites',
+  LIBRARY_FAVORITE_IDS: 'library:favorite-ids',
+  LIBRARY_TOGGLE_FAVORITE: 'library:toggle-favorite',
+  LIBRARY_RECENTLY_PLAYED: 'library:recently-played',
+  LIBRARY_CLEAR_HISTORY: 'library:clear-history',
+  LIBRARY_RECORD_PLAYBACK: 'library:record-playback',
   SCAN_PROGRESS:    'scan:progress',
 
   PLAYBACK_PLAY:    'playback:play',
@@ -48,6 +71,11 @@ export const IPC = {
   PLAYBACK_STOP:    'playback:stop',
   PLAYBACK_STATE:   'playback:state',
   PLAYBACK_ENDED:   'playback:ended',
+  PLAYBACK_SAVE_RESUME: 'playback:save-resume',
+  PLAYBACK_GET_RESUME:  'playback:get-resume',
+  PLAYBACK_CLEAR_RESUME: 'playback:clear-resume',
+  PLAYBACK_SAVE_STATE:  'playback:save-state',
+  PLAYBACK_GET_STATE:   'playback:get-state',
 } as const
 
 // ---------------------------------------------------------------------------
@@ -61,7 +89,7 @@ export function registerIpcHandlers(): void {
     (state) => {
       BrowserWindow.getAllWindows().forEach((win) => {
         if (!win.isDestroyed()) {
-          win.webContents.send(IPC.PLAYBACK_STATE, state)
+          win.webContents.send(IPC.PLAYBACK_STATE, { ...state, backend: 'mpv' })
         }
       })
     },
@@ -156,9 +184,87 @@ export function registerIpcHandlers(): void {
     return dbAddTrackToPlaylist(playlistId, trackId)
   })
 
+  ipcMain.handle(IPC.LIBRARY_REMOVE_TRACK_FROM_PLAYLIST, (_event, playlistId: string, position: number) => {
+    return dbRemoveTrackFromPlaylist(playlistId, position)
+  })
+
+  ipcMain.handle(
+    IPC.LIBRARY_REORDER_PLAYLIST,
+    (_event, playlistId: string, fromIndex: number, toIndex: number) => {
+      return dbReorderPlaylist(playlistId, fromIndex, toIndex)
+    },
+  )
+
+  ipcMain.handle(IPC.LIBRARY_FAVORITES, () => {
+    return dbGetFavorites()
+  })
+
+  ipcMain.handle(IPC.LIBRARY_FAVORITE_IDS, () => {
+    return dbGetFavoriteIds()
+  })
+
+  ipcMain.handle(IPC.LIBRARY_TOGGLE_FAVORITE, (_event, trackId: number) => {
+    return dbToggleFavorite(trackId)
+  })
+
+  ipcMain.handle(IPC.LIBRARY_RECENTLY_PLAYED, (_event, limit?: number) => {
+    return dbGetRecentlyPlayed(limit ?? 50)
+  })
+
+  ipcMain.handle(IPC.LIBRARY_CLEAR_HISTORY, () => {
+    dbClearPlaybackHistory()
+    return true
+  })
+
+  ipcMain.handle(IPC.LIBRARY_RECORD_PLAYBACK, (_event, trackId: number, durationPlayed?: number) => {
+    dbRecordPlayback(trackId, durationPlayed ?? 0)
+    return true
+  })
+
   // -------------------------------------------------------------------------
   // Playback handlers
   // -------------------------------------------------------------------------
+
+  ipcMain.handle('settings:get', () => {
+    return getAppSettings()
+  })
+
+  ipcMain.handle('settings:set', (_event, nextSettings: Partial<typeof getAppSettings>) => {
+    const saved = setAppSettings(nextSettings)
+    const current = getAppSettings()
+
+    if ('discordEnabled' in nextSettings) {
+      discordPresence.setEnabled(current.discordEnabled)
+    }
+
+    return saved
+  })
+
+  ipcMain.handle('discord:set-enabled', async (_event, enabled: boolean) => {
+    discordPresence.setEnabled(enabled)
+  })
+
+  ipcMain.handle('discord:get-enabled', () => {
+    return discordPresence.isEnabled()
+  })
+
+  ipcMain.handle('discord:set-activity', async (_event, payload: {
+    details: string
+    state: string
+    isPlaying: boolean
+    album?: string | null
+    artist?: string | null
+    artworkId?: number | null
+    position?: number
+    duration?: number
+    repeatMode?: 'off' | 'all' | 'one'
+  }) => {
+    await discordPresence.setActivity(payload)
+  })
+
+  ipcMain.handle('discord:clear-activity', async () => {
+    await discordPresence.clearActivity()
+  })
 
   ipcMain.handle(IPC.PLAYBACK_PLAY, async (_event, filePath: string) => {
     await mpv.play(filePath)
@@ -186,5 +292,30 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(IPC.PLAYBACK_STOP, () => {
     mpv.stop()
+  })
+
+  ipcMain.handle(IPC.PLAYBACK_SAVE_RESUME, (_event, trackId: number, position: number) => {
+    dbSaveTrackResume(trackId, position)
+    return true
+  })
+
+  ipcMain.handle(IPC.PLAYBACK_GET_RESUME, (_event, trackId: number) => {
+    return dbGetTrackResume(trackId)
+  })
+
+  ipcMain.handle(IPC.PLAYBACK_CLEAR_RESUME, (_event, trackId: number) => {
+    dbClearTrackResume(trackId)
+    return true
+  })
+
+  ipcMain.handle(IPC.PLAYBACK_SAVE_STATE, (_event, state: Record<string, string>) => {
+    for (const [key, val] of Object.entries(state)) {
+      dbSetPlaybackState(key, typeof val === 'string' ? val : JSON.stringify(val))
+    }
+    return true
+  })
+
+  ipcMain.handle(IPC.PLAYBACK_GET_STATE, () => {
+    return dbGetAllPlaybackState()
   })
 }

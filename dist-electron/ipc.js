@@ -4,8 +4,10 @@ exports.IPC = void 0;
 exports.registerIpcHandlers = registerIpcHandlers;
 const electron_1 = require("electron");
 const database_1 = require("./database");
+const discord_1 = require("./discord");
 const mpv_1 = require("./mpv");
 const scanner_1 = require("./scanner");
+const settings_1 = require("./settings");
 // ---------------------------------------------------------------------------
 // IPC channel names (must match preload.ts)
 // ---------------------------------------------------------------------------
@@ -24,6 +26,14 @@ exports.IPC = {
     LIBRARY_RENAME_PLAYLIST: 'library:rename-playlist',
     LIBRARY_DELETE_PLAYLIST: 'library:delete-playlist',
     LIBRARY_ADD_TRACK_TO_PLAYLIST: 'library:add-track-to-playlist',
+    LIBRARY_REMOVE_TRACK_FROM_PLAYLIST: 'library:remove-track-from-playlist',
+    LIBRARY_REORDER_PLAYLIST: 'library:reorder-playlist',
+    LIBRARY_FAVORITES: 'library:favorites',
+    LIBRARY_FAVORITE_IDS: 'library:favorite-ids',
+    LIBRARY_TOGGLE_FAVORITE: 'library:toggle-favorite',
+    LIBRARY_RECENTLY_PLAYED: 'library:recently-played',
+    LIBRARY_CLEAR_HISTORY: 'library:clear-history',
+    LIBRARY_RECORD_PLAYBACK: 'library:record-playback',
     SCAN_PROGRESS: 'scan:progress',
     PLAYBACK_PLAY: 'playback:play',
     PLAYBACK_PAUSE: 'playback:pause',
@@ -34,6 +44,11 @@ exports.IPC = {
     PLAYBACK_STOP: 'playback:stop',
     PLAYBACK_STATE: 'playback:state',
     PLAYBACK_ENDED: 'playback:ended',
+    PLAYBACK_SAVE_RESUME: 'playback:save-resume',
+    PLAYBACK_GET_RESUME: 'playback:get-resume',
+    PLAYBACK_CLEAR_RESUME: 'playback:clear-resume',
+    PLAYBACK_SAVE_STATE: 'playback:save-state',
+    PLAYBACK_GET_STATE: 'playback:get-state',
 };
 // ---------------------------------------------------------------------------
 // Register all IPC handlers
@@ -44,7 +59,7 @@ function registerIpcHandlers() {
     mpv.setCallbacks((state) => {
         electron_1.BrowserWindow.getAllWindows().forEach((win) => {
             if (!win.isDestroyed()) {
-                win.webContents.send(exports.IPC.PLAYBACK_STATE, state);
+                win.webContents.send(exports.IPC.PLAYBACK_STATE, { ...state, backend: 'mpv' });
             }
         });
     }, () => {
@@ -115,9 +130,58 @@ function registerIpcHandlers() {
     electron_1.ipcMain.handle(exports.IPC.LIBRARY_ADD_TRACK_TO_PLAYLIST, (_event, playlistId, trackId) => {
         return (0, database_1.dbAddTrackToPlaylist)(playlistId, trackId);
     });
+    electron_1.ipcMain.handle(exports.IPC.LIBRARY_REMOVE_TRACK_FROM_PLAYLIST, (_event, playlistId, position) => {
+        return (0, database_1.dbRemoveTrackFromPlaylist)(playlistId, position);
+    });
+    electron_1.ipcMain.handle(exports.IPC.LIBRARY_REORDER_PLAYLIST, (_event, playlistId, fromIndex, toIndex) => {
+        return (0, database_1.dbReorderPlaylist)(playlistId, fromIndex, toIndex);
+    });
+    electron_1.ipcMain.handle(exports.IPC.LIBRARY_FAVORITES, () => {
+        return (0, database_1.dbGetFavorites)();
+    });
+    electron_1.ipcMain.handle(exports.IPC.LIBRARY_FAVORITE_IDS, () => {
+        return (0, database_1.dbGetFavoriteIds)();
+    });
+    electron_1.ipcMain.handle(exports.IPC.LIBRARY_TOGGLE_FAVORITE, (_event, trackId) => {
+        return (0, database_1.dbToggleFavorite)(trackId);
+    });
+    electron_1.ipcMain.handle(exports.IPC.LIBRARY_RECENTLY_PLAYED, (_event, limit) => {
+        return (0, database_1.dbGetRecentlyPlayed)(limit ?? 50);
+    });
+    electron_1.ipcMain.handle(exports.IPC.LIBRARY_CLEAR_HISTORY, () => {
+        (0, database_1.dbClearPlaybackHistory)();
+        return true;
+    });
+    electron_1.ipcMain.handle(exports.IPC.LIBRARY_RECORD_PLAYBACK, (_event, trackId, durationPlayed) => {
+        (0, database_1.dbRecordPlayback)(trackId, durationPlayed ?? 0);
+        return true;
+    });
     // -------------------------------------------------------------------------
     // Playback handlers
     // -------------------------------------------------------------------------
+    electron_1.ipcMain.handle('settings:get', () => {
+        return (0, settings_1.getAppSettings)();
+    });
+    electron_1.ipcMain.handle('settings:set', (_event, nextSettings) => {
+        const saved = (0, settings_1.setAppSettings)(nextSettings);
+        const current = (0, settings_1.getAppSettings)();
+        if ('discordEnabled' in nextSettings) {
+            discord_1.discordPresence.setEnabled(current.discordEnabled);
+        }
+        return saved;
+    });
+    electron_1.ipcMain.handle('discord:set-enabled', async (_event, enabled) => {
+        discord_1.discordPresence.setEnabled(enabled);
+    });
+    electron_1.ipcMain.handle('discord:get-enabled', () => {
+        return discord_1.discordPresence.isEnabled();
+    });
+    electron_1.ipcMain.handle('discord:set-activity', async (_event, payload) => {
+        await discord_1.discordPresence.setActivity(payload);
+    });
+    electron_1.ipcMain.handle('discord:clear-activity', async () => {
+        await discord_1.discordPresence.clearActivity();
+    });
     electron_1.ipcMain.handle(exports.IPC.PLAYBACK_PLAY, async (_event, filePath) => {
         await mpv.play(filePath);
     });
@@ -138,5 +202,25 @@ function registerIpcHandlers() {
     });
     electron_1.ipcMain.handle(exports.IPC.PLAYBACK_STOP, () => {
         mpv.stop();
+    });
+    electron_1.ipcMain.handle(exports.IPC.PLAYBACK_SAVE_RESUME, (_event, trackId, position) => {
+        (0, database_1.dbSaveTrackResume)(trackId, position);
+        return true;
+    });
+    electron_1.ipcMain.handle(exports.IPC.PLAYBACK_GET_RESUME, (_event, trackId) => {
+        return (0, database_1.dbGetTrackResume)(trackId);
+    });
+    electron_1.ipcMain.handle(exports.IPC.PLAYBACK_CLEAR_RESUME, (_event, trackId) => {
+        (0, database_1.dbClearTrackResume)(trackId);
+        return true;
+    });
+    electron_1.ipcMain.handle(exports.IPC.PLAYBACK_SAVE_STATE, (_event, state) => {
+        for (const [key, val] of Object.entries(state)) {
+            (0, database_1.dbSetPlaybackState)(key, typeof val === 'string' ? val : JSON.stringify(val));
+        }
+        return true;
+    });
+    electron_1.ipcMain.handle(exports.IPC.PLAYBACK_GET_STATE, () => {
+        return (0, database_1.dbGetAllPlaybackState)();
     });
 }

@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const electron_1 = require("electron");
 const path_1 = __importDefault(require("path"));
 const database_1 = require("./database");
+const discord_1 = require("./discord");
 const ipc_1 = require("./ipc");
 const mpv_1 = require("./mpv");
 // ---------------------------------------------------------------------------
@@ -62,6 +63,8 @@ function createWindow() {
 electron_1.app.whenReady().then(() => {
     // Initialize database first
     (0, database_1.initDatabase)();
+    // Start Discord presence if configured
+    void discord_1.discordPresence.start();
     // Register all IPC handlers
     (0, ipc_1.registerIpcHandlers)();
     // Create the window
@@ -74,6 +77,7 @@ electron_1.app.whenReady().then(() => {
 });
 electron_1.app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
+        void discord_1.discordPresence.stop();
         (0, mpv_1.getMpv)().stop();
         (0, mpv_1.getMpv)().destroy();
         (0, database_1.closeDatabase)();
@@ -81,6 +85,7 @@ electron_1.app.on('window-all-closed', () => {
     }
 });
 electron_1.app.on('before-quit', () => {
+    void discord_1.discordPresence.stop();
     (0, mpv_1.getMpv)().stop();
     (0, mpv_1.getMpv)().destroy();
     (0, database_1.closeDatabase)();

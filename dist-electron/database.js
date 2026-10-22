@@ -19,6 +19,21 @@ exports.dbRenamePlaylist = dbRenamePlaylist;
 exports.dbDeletePlaylist = dbDeletePlaylist;
 exports.dbCreatePlaylist = dbCreatePlaylist;
 exports.dbAddTrackToPlaylist = dbAddTrackToPlaylist;
+exports.dbRemoveTrackFromPlaylist = dbRemoveTrackFromPlaylist;
+exports.dbReorderPlaylist = dbReorderPlaylist;
+exports.dbGetFavorites = dbGetFavorites;
+exports.dbGetFavoriteIds = dbGetFavoriteIds;
+exports.dbToggleFavorite = dbToggleFavorite;
+exports.dbIsFavorite = dbIsFavorite;
+exports.dbRecordPlayback = dbRecordPlayback;
+exports.dbGetRecentlyPlayed = dbGetRecentlyPlayed;
+exports.dbClearPlaybackHistory = dbClearPlaybackHistory;
+exports.dbSaveTrackResume = dbSaveTrackResume;
+exports.dbGetTrackResume = dbGetTrackResume;
+exports.dbClearTrackResume = dbClearTrackResume;
+exports.dbSetPlaybackState = dbSetPlaybackState;
+exports.dbGetPlaybackState = dbGetPlaybackState;
+exports.dbGetAllPlaybackState = dbGetAllPlaybackState;
 const better_sqlite3_1 = __importDefault(require("better-sqlite3"));
 const electron_1 = require("electron");
 const path_1 = __importDefault(require("path"));
@@ -152,6 +167,38 @@ const MIGRATIONS = [
       UPDATE playlists
       SET last_modified = created_at
       WHERE last_modified = 0 OR last_modified IS NULL;
+    `,
+    },
+    {
+        version: 3,
+        sql: `
+      CREATE TABLE IF NOT EXISTS favorites (
+        track_id INTEGER PRIMARY KEY,
+        added_at INTEGER NOT NULL,
+        FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS playback_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        track_id INTEGER NOT NULL,
+        played_at INTEGER NOT NULL,
+        duration_played REAL DEFAULT 0,
+        FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_playback_history_played_at ON playback_history(played_at DESC);
+
+      CREATE TABLE IF NOT EXISTS track_resume (
+        track_id INTEGER PRIMARY KEY,
+        position REAL NOT NULL,
+        updated_at INTEGER NOT NULL,
+        FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS playback_state (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
     `,
     },
 ];
@@ -326,7 +373,17 @@ function dbGetArtwork(id) {
 }
 function dbSearch(query) {
     const db = getDatabase();
-    const q = `%${query}%`;
+    const trimmed = query.trim();
+    if (!trimmed) {
+        return { artists: [], albums: [], tracks: [] };
+    }
+    const tokens = trimmed.split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) {
+        return { artists: [], albums: [], tracks: [] };
+    }
+    // Build conditions for each token
+    const artistWheres = tokens.map(() => 'a.name LIKE ? COLLATE NOCASE');
+    const artistArgs = tokens.map((t) => `%${t}%`);
     const artists = db
         .prepare(`SELECT
          a.id, a.name,
@@ -335,10 +392,20 @@ function dbSearch(query) {
        FROM artists a
        LEFT JOIN albums al ON al.artist_id = a.id
        LEFT JOIN tracks t  ON t.artist_id  = a.id
-       WHERE a.name LIKE ? COLLATE NOCASE
+       WHERE ${artistWheres.join(' AND ')}
        GROUP BY a.id
-       LIMIT 10`)
-        .all(q);
+       ORDER BY
+         CASE WHEN LOWER(a.name) = LOWER(?) THEN 0
+              WHEN LOWER(a.name) LIKE LOWER(?) THEN 1
+              ELSE 2 END,
+         a.name COLLATE NOCASE
+       LIMIT 20`)
+        .all(...artistArgs, trimmed, `${trimmed}%`);
+    const albumWheres = tokens.map(() => '(al.title LIKE ? COLLATE NOCASE OR ar.name LIKE ? COLLATE NOCASE)');
+    const albumArgs = [];
+    tokens.forEach((t) => {
+        albumArgs.push(`%${t}%`, `%${t}%`);
+    });
     const albums = db
         .prepare(`SELECT
          al.id, al.title, al.artist_id,
@@ -349,10 +416,21 @@ function dbSearch(query) {
        FROM albums al
        LEFT JOIN artists ar ON ar.id = al.artist_id
        LEFT JOIN tracks  t  ON t.album_id = al.id
-       WHERE al.title LIKE ? COLLATE NOCASE
+       WHERE ${albumWheres.join(' AND ')}
        GROUP BY al.id
-       LIMIT 10`)
-        .all(q);
+       ORDER BY
+         CASE WHEN LOWER(al.title) = LOWER(?) THEN 0
+              WHEN LOWER(al.title) LIKE LOWER(?) THEN 1
+              ELSE 2 END,
+         al.title COLLATE NOCASE
+       LIMIT 20`)
+        .all(...albumArgs, trimmed, `${trimmed}%`);
+    const trackWheres = tokens.map(() => '(t.title LIKE ? COLLATE NOCASE OR t.artist LIKE ? COLLATE NOCASE OR t.album_artist LIKE ? COLLATE NOCASE OR t.album LIKE ? COLLATE NOCASE OR t.genre LIKE ? COLLATE NOCASE OR CAST(t.year AS TEXT) LIKE ?)');
+    const trackArgs = [];
+    tokens.forEach((t) => {
+        const pat = `%${t}%`;
+        trackArgs.push(pat, pat, pat, pat, pat, pat);
+    });
     const tracks = db
         .prepare(`SELECT
          t.id, t.title, t.artist, t.album_artist, t.album, t.album_id, t.artist_id,
@@ -361,10 +439,14 @@ function dbSearch(query) {
          t.bits_per_sample, t.codec, t.format,
          t.path, t.file_size, t.modified_time, t.artwork_id
        FROM tracks t
-       WHERE t.title LIKE ? COLLATE NOCASE
-          OR t.artist LIKE ? COLLATE NOCASE
-       LIMIT 20`)
-        .all(q, q);
+       WHERE ${trackWheres.join(' AND ')}
+       ORDER BY
+         CASE WHEN LOWER(t.title) = LOWER(?) THEN 0
+              WHEN LOWER(t.title) LIKE LOWER(?) THEN 1
+              ELSE 2 END,
+         LOWER(t.title)
+       LIMIT 50`)
+        .all(...trackArgs, trimmed, `${trimmed}%`);
     return { artists, albums, tracks };
 }
 function dbGetPlaylists() {
@@ -432,4 +514,149 @@ function dbAddTrackToPlaylist(playlistId, trackId) {
         .get(playlistId).nextPos;
     db.prepare('INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES (?, ?, ?)').run(playlistId, trackId, nextPosition);
     return dbGetPlaylists();
+}
+function dbRemoveTrackFromPlaylist(playlistId, position) {
+    const db = getDatabase();
+    const deleteStmt = db.prepare('DELETE FROM playlist_tracks WHERE playlist_id = ? AND position = ?');
+    const updateStmt = db.prepare('UPDATE playlist_tracks SET position = position - 1 WHERE playlist_id = ? AND position > ?');
+    const touchStmt = db.prepare('UPDATE playlists SET last_modified = ? WHERE id = ?');
+    db.transaction(() => {
+        deleteStmt.run(playlistId, position);
+        updateStmt.run(playlistId, position);
+        touchStmt.run(Date.now(), playlistId);
+    })();
+    return dbGetPlaylists();
+}
+function dbReorderPlaylist(playlistId, fromIndex, toIndex) {
+    if (fromIndex === toIndex)
+        return dbGetPlaylists();
+    const db = getDatabase();
+    const currentTracks = db
+        .prepare('SELECT track_id FROM playlist_tracks WHERE playlist_id = ? ORDER BY position ASC')
+        .all(playlistId);
+    if (fromIndex < 0 || fromIndex >= currentTracks.length || toIndex < 0 || toIndex >= currentTracks.length) {
+        return dbGetPlaylists();
+    }
+    const [moved] = currentTracks.splice(fromIndex, 1);
+    currentTracks.splice(toIndex, 0, moved);
+    const deleteStmt = db.prepare('DELETE FROM playlist_tracks WHERE playlist_id = ?');
+    const insertStmt = db.prepare('INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES (?, ?, ?)');
+    const touchStmt = db.prepare('UPDATE playlists SET last_modified = ? WHERE id = ?');
+    db.transaction(() => {
+        deleteStmt.run(playlistId);
+        currentTracks.forEach((item, pos) => {
+            insertStmt.run(playlistId, item.track_id, pos);
+        });
+        touchStmt.run(Date.now(), playlistId);
+    })();
+    return dbGetPlaylists();
+}
+// ---------------------------------------------------------------------------
+// Favorites
+// ---------------------------------------------------------------------------
+function dbGetFavorites() {
+    const db = getDatabase();
+    return db
+        .prepare(`SELECT
+         t.id, t.title, t.artist, t.album_artist, t.album, t.album_id, t.artist_id,
+         t.track_number, t.track_total, t.disc_number, t.disc_total,
+         t.year, t.genre, t.duration, t.bitrate, t.sample_rate,
+         t.bits_per_sample, t.codec, t.format,
+         t.path, t.file_size, t.modified_time, t.artwork_id
+       FROM tracks t
+       JOIN favorites f ON f.track_id = t.id
+       ORDER BY f.added_at DESC`)
+        .all();
+}
+function dbGetFavoriteIds() {
+    const db = getDatabase();
+    const rows = db.prepare('SELECT track_id FROM favorites').all();
+    return rows.map((r) => r.track_id);
+}
+function dbToggleFavorite(trackId) {
+    const db = getDatabase();
+    const exists = db.prepare('SELECT 1 FROM favorites WHERE track_id = ?').get(trackId);
+    if (exists) {
+        db.prepare('DELETE FROM favorites WHERE track_id = ?').run(trackId);
+        return false;
+    }
+    else {
+        db.prepare('INSERT INTO favorites (track_id, added_at) VALUES (?, ?)').run(trackId, Date.now());
+        return true;
+    }
+}
+function dbIsFavorite(trackId) {
+    const db = getDatabase();
+    const exists = db.prepare('SELECT 1 FROM favorites WHERE track_id = ?').get(trackId);
+    return !!exists;
+}
+// ---------------------------------------------------------------------------
+// Playback History
+// ---------------------------------------------------------------------------
+function dbRecordPlayback(trackId, durationPlayed = 0) {
+    const db = getDatabase();
+    db.prepare('INSERT INTO playback_history (track_id, played_at, duration_played) VALUES (?, ?, ?)').run(trackId, Date.now(), durationPlayed);
+    // Keep history table capped at 500 entries
+    db.prepare(`DELETE FROM playback_history WHERE id NOT IN (
+       SELECT id FROM playback_history ORDER BY played_at DESC LIMIT 500
+     )`).run();
+}
+function dbGetRecentlyPlayed(limit = 50) {
+    const db = getDatabase();
+    return db
+        .prepare(`SELECT
+         t.id, t.title, t.artist, t.album_artist, t.album, t.album_id, t.artist_id,
+         t.track_number, t.track_total, t.disc_number, t.disc_total,
+         t.year, t.genre, t.duration, t.bitrate, t.sample_rate,
+         t.bits_per_sample, t.codec, t.format,
+         t.path, t.file_size, t.modified_time, t.artwork_id,
+         MAX(ph.played_at) as last_played
+       FROM tracks t
+       JOIN playback_history ph ON ph.track_id = t.id
+       GROUP BY t.id
+       ORDER BY last_played DESC
+       LIMIT ?`)
+        .all(limit);
+}
+function dbClearPlaybackHistory() {
+    const db = getDatabase();
+    db.prepare('DELETE FROM playback_history').run();
+}
+// ---------------------------------------------------------------------------
+// Track Resume & Persistent Playback State
+// ---------------------------------------------------------------------------
+function dbSaveTrackResume(trackId, position) {
+    const db = getDatabase();
+    db.prepare(`INSERT INTO track_resume (track_id, position, updated_at)
+     VALUES (?, ?, ?)
+     ON CONFLICT(track_id) DO UPDATE SET position = excluded.position, updated_at = excluded.updated_at`).run(trackId, position, Date.now());
+}
+function dbGetTrackResume(trackId) {
+    const db = getDatabase();
+    const row = db.prepare('SELECT position FROM track_resume WHERE track_id = ?').get(trackId);
+    return row ? row.position : null;
+}
+function dbClearTrackResume(trackId) {
+    const db = getDatabase();
+    db.prepare('DELETE FROM track_resume WHERE track_id = ?').run(trackId);
+}
+function dbSetPlaybackState(key, value) {
+    const db = getDatabase();
+    db.prepare(`INSERT INTO playback_state (key, value)
+     VALUES (?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`).run(key, value);
+}
+function dbGetPlaybackState(key) {
+    const db = getDatabase();
+    const row = db.prepare('SELECT value FROM playback_state WHERE key = ?').get(key);
+    return row ? row.value : null;
+}
+function dbGetAllPlaybackState() {
+    const db = getDatabase();
+    const rows = db.prepare('SELECT key, value FROM playback_state').all();
+    const result = {};
+    for (const row of rows) {
+        result[row.key] = row.value;
+    }
+    return result;
 }

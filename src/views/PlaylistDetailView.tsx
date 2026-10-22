@@ -1,4 +1,4 @@
-import { ArrowLeft, Play, Pencil, Trash2 } from 'lucide-react'
+import { ArrowLeft, Pencil, Play, Trash2 } from 'lucide-react'
 import { useAppStore, usePlaybackStore } from '../store'
 import { TracksTable } from './TracksView'
 import '../styles/library.css'
@@ -8,7 +8,8 @@ export function PlaylistDetailView() {
   const navigate = useAppStore((s) => s.navigate)
   const playlists = usePlaybackStore((s) => s.playlists)
   const playlist = playlists.find((item) => item.id === playlistId) ?? null
-  const { playPlaylist, renamePlaylist, deletePlaylist } = usePlaybackStore()
+  const { playPlaylist, renamePlaylist, deletePlaylist, removeTrackFromPlaylist, reorderPlaylist } =
+    usePlaybackStore()
 
   if (!playlist) {
     return (
@@ -90,7 +91,12 @@ export function PlaylistDetailView() {
             <div className="empty-state-body">Add tracks from the library or the queue to start building it.</div>
           </div>
         ) : (
-          <TracksTable tracks={playlist.tracks} showAlbum />
+          <TracksTable
+            tracks={playlist.tracks}
+            showAlbum
+            onRemoveTrack={(position) => removeTrackFromPlaylist(playlist.id, position)}
+            onMoveTrack={(fromIndex, toIndex) => reorderPlaylist(playlist.id, fromIndex, toIndex)}
+          />
         )}
       </div>
     </div>

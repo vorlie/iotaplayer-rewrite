@@ -84,7 +84,7 @@ export class MpvController {
       this.handleSocketData(data)
     })
 
-    socket.on('error', (_err) => {
+    socket.on('error', () => {
       if (!this.isConnected && retryCount < 30) {
         setTimeout(() => this.connectSocket(onReady, retryCount + 1), 100)
       }

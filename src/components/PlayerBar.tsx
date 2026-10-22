@@ -1,7 +1,6 @@
-import { Pause, Play, Repeat, Shuffle, SkipBack, SkipForward, Volume2 } from 'lucide-react'
+import { Heart, Music2, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Volume2 } from 'lucide-react'
 import { usePlaybackStore } from '../store'
 import { useArtwork, useFormatDuration } from '../hooks/useLibrary'
-import { Music2 } from 'lucide-react'
 import '../styles/layout.css'
 
 export function PlayerBar() {
@@ -13,6 +12,9 @@ export function PlayerBar() {
     volume,
     repeatMode,
     shuffle,
+    activeBackend,
+    favoriteIds,
+    toggleFavorite,
     toggle,
     next,
     previous,
@@ -24,6 +26,7 @@ export function PlayerBar() {
   const artworkSrc = useArtwork(currentTrack?.artwork_id)
   const fmt = useFormatDuration()
 
+  const isFav = currentTrack ? favoriteIds.includes(currentTrack.id) : false
   const progress = duration > 0 ? (position / duration) * 100 : 0
 
   function handleProgressClick(e: React.MouseEvent<HTMLDivElement>) {
@@ -50,12 +53,21 @@ export function PlayerBar() {
           )}
         </div>
         {currentTrack ? (
-          <div className="player-track-info">
-            <div className="player-track-title">{currentTrack.title}</div>
-            <div className="player-track-artist">
-              {currentTrack.artist ?? currentTrack.album_artist ?? '—'}
+          <>
+            <div className="player-track-info">
+              <div className="player-track-title">{currentTrack.title}</div>
+              <div className="player-track-artist">
+                {currentTrack.artist ?? currentTrack.album_artist ?? '—'}
+              </div>
             </div>
-          </div>
+            <button
+              className={`player-fav-btn ${isFav ? 'is-fav' : ''}`}
+              onClick={() => toggleFavorite(currentTrack)}
+              title={isFav ? 'Remove from Favorites' : 'Add to Favorites'}
+            >
+              <Heart size={16} fill={isFav ? 'currentColor' : 'none'} />
+            </button>
+          </>
         ) : (
           <div className="player-track-info">
             <div className="player-track-title" style={{ color: 'var(--color-text-3)' }}>
@@ -81,11 +93,11 @@ export function PlayerBar() {
             <SkipForward size={16} />
           </button>
           <button
-            className={`player-btn ${repeatMode !== 'off' ? 'is-active' : ''}`}
+            className={`player-btn ${repeatMode !== 'off' ? 'is-active' : ''} ${repeatMode === 'one' ? 'is-repeat-one' : ''}`}
             onClick={toggleRepeat}
             title={repeatMode === 'off' ? 'Repeat off' : repeatMode === 'all' ? 'Repeat all' : 'Repeat one'}
           >
-            <Repeat size={14} />
+            {repeatMode === 'one' ? <Repeat1 size={14} /> : <Repeat size={14} />}
           </button>
         </div>
 
@@ -98,23 +110,31 @@ export function PlayerBar() {
         </div>
       </div>
 
-      {/* Volume */}
-      <div className="player-volume">
-        <Volume2 size={14} color="var(--color-text-3)" />
-        <div
-          className="volume-track"
-          onClick={handleVolumeClick}
-          style={{ background: 'var(--color-surface-3)' }}
+      {/* Volume & Backend */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifySelf: 'end' }}>
+        <span
+          className={`player-backend-badge player-backend-badge--${activeBackend}`}
+          title={`Active playback backend: ${activeBackend.toUpperCase()}`}
         >
+          {activeBackend}
+        </span>
+        <div className="player-volume">
+          <Volume2 size={14} color="var(--color-text-3)" />
           <div
-            className="volume-fill"
-            style={{
-              width: `${volume * 100}%`,
-              height: '100%',
-              background: 'var(--color-accent)',
-              borderRadius: 2,
-            }}
-          />
+            className="volume-track"
+            onClick={handleVolumeClick}
+            style={{ background: 'var(--color-surface-3)' }}
+          >
+            <div
+              className="volume-fill"
+              style={{
+                width: `${volume * 100}%`,
+                height: '100%',
+                background: 'var(--color-accent)',
+                borderRadius: 2,
+              }}
+            />
+          </div>
         </div>
       </div>
     </div>

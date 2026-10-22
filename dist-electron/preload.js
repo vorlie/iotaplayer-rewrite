@@ -20,6 +20,14 @@ const libraryAPI = {
     renamePlaylist: (playlistId, newName) => electron_1.ipcRenderer.invoke('library:rename-playlist', playlistId, newName),
     deletePlaylist: (playlistId) => electron_1.ipcRenderer.invoke('library:delete-playlist', playlistId),
     addTrackToPlaylist: (playlistId, trackId) => electron_1.ipcRenderer.invoke('library:add-track-to-playlist', playlistId, trackId),
+    removeTrackFromPlaylist: (playlistId, position) => electron_1.ipcRenderer.invoke('library:remove-track-from-playlist', playlistId, position),
+    reorderPlaylist: (playlistId, fromIndex, toIndex) => electron_1.ipcRenderer.invoke('library:reorder-playlist', playlistId, fromIndex, toIndex),
+    favorites: () => electron_1.ipcRenderer.invoke('library:favorites'),
+    favoriteIds: () => electron_1.ipcRenderer.invoke('library:favorite-ids'),
+    toggleFavorite: (trackId) => electron_1.ipcRenderer.invoke('library:toggle-favorite', trackId),
+    recentlyPlayed: (limit) => electron_1.ipcRenderer.invoke('library:recently-played', limit),
+    clearHistory: () => electron_1.ipcRenderer.invoke('library:clear-history'),
+    recordPlayback: (trackId, durationPlayed) => electron_1.ipcRenderer.invoke('library:record-playback', trackId, durationPlayed),
     onScanProgress: (cb) => {
         const handler = (_, progress) => cb(progress);
         electron_1.ipcRenderer.on('scan:progress', handler);
@@ -82,7 +90,7 @@ function toBrowserAudioUrl(filePath) {
     return objectUrl;
 }
 function emitBrowserState(state) {
-    browserStateCallbacks.forEach((cb) => cb(state));
+    browserStateCallbacks.forEach((cb) => cb({ backend: 'browser', ...state }));
 }
 function emitBrowserEnded() {
     browserEndedCallbacks.forEach((cb) => cb());
@@ -132,6 +140,16 @@ attachBrowserAudioEvents();
 // ---------------------------------------------------------------------------
 // Playback API
 // ---------------------------------------------------------------------------
+const settingsAPI = {
+    get: () => electron_1.ipcRenderer.invoke('settings:get'),
+    set: (value) => electron_1.ipcRenderer.invoke('settings:set', value),
+};
+const discordAPI = {
+    setEnabled: (enabled) => electron_1.ipcRenderer.invoke('discord:set-enabled', enabled),
+    getEnabled: () => electron_1.ipcRenderer.invoke('discord:get-enabled'),
+    setActivity: (payload) => electron_1.ipcRenderer.invoke('discord:set-activity', payload),
+    clearActivity: () => electron_1.ipcRenderer.invoke('discord:clear-activity'),
+};
 const playbackAPI = {
     getPreferredBackend: () => Promise.resolve(preferredPlaybackBackend),
     setPreferredBackend: (mode) => {
@@ -213,6 +231,11 @@ const playbackAPI = {
         }
         return electron_1.ipcRenderer.invoke('playback:stop');
     },
+    saveTrackResume: (trackId, position) => electron_1.ipcRenderer.invoke('playback:save-resume', trackId, position),
+    getTrackResume: (trackId) => electron_1.ipcRenderer.invoke('playback:get-resume', trackId),
+    clearTrackResume: (trackId) => electron_1.ipcRenderer.invoke('playback:clear-resume', trackId),
+    savePlaybackState: (state) => electron_1.ipcRenderer.invoke('playback:save-state', state),
+    getPlaybackState: () => electron_1.ipcRenderer.invoke('playback:get-state'),
     onStateChange: (cb) => {
         browserStateCallbacks.add(cb);
         const handler = (_, state) => cb(state);
@@ -233,4 +256,6 @@ const playbackAPI = {
     },
 };
 electron_1.contextBridge.exposeInMainWorld('library', libraryAPI);
+electron_1.contextBridge.exposeInMainWorld('settings', settingsAPI);
+electron_1.contextBridge.exposeInMainWorld('discord', discordAPI);
 electron_1.contextBridge.exposeInMainWorld('playback', playbackAPI);

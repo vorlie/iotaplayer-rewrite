@@ -38,10 +38,48 @@ interface LibraryAPI {
   renamePlaylist: (playlistId: string, newName: string) => Promise<Playlist[] | null>
   deletePlaylist: (playlistId: string) => Promise<Playlist[]>
   addTrackToPlaylist: (playlistId: string, trackId: number) => Promise<Playlist[]>
+  removeTrackFromPlaylist: (playlistId: string, position: number) => Promise<Playlist[]>
+  reorderPlaylist: (playlistId: string, fromIndex: number, toIndex: number) => Promise<Playlist[]>
+  favorites: () => Promise<Track[]>
+  favoriteIds: () => Promise<number[]>
+  toggleFavorite: (trackId: number) => Promise<boolean>
+  recentlyPlayed: (limit?: number) => Promise<Track[]>
+  clearHistory: () => Promise<void>
+  recordPlayback: (trackId: number, durationPlayed?: number) => Promise<void>
   onScanProgress: (cb: (progress: ScanProgress) => void) => () => void
 }
 
 type PlaybackBackendMode = 'auto' | 'mpv' | 'browser'
+
+interface DiscordActivityInput {
+  details: string
+  state: string
+  isPlaying: boolean
+  album?: string | null
+  artist?: string | null
+  artworkId?: number | null
+  position?: number
+  duration?: number
+  repeatMode?: 'off' | 'all' | 'one'
+}
+
+interface AppSettings {
+  discordClientId: string
+  imgurClientId: string
+  discordEnabled: boolean
+}
+
+interface SettingsAPI {
+  get: () => Promise<AppSettings>
+  set: (value: Partial<AppSettings>) => Promise<void>
+}
+
+interface DiscordAPI {
+  setEnabled: (enabled: boolean) => Promise<void>
+  getEnabled: () => Promise<boolean>
+  setActivity: (payload: DiscordActivityInput) => Promise<void>
+  clearActivity: () => Promise<void>
+}
 
 interface PlaybackAPI {
   getPreferredBackend: () => Promise<PlaybackBackendMode>
@@ -53,6 +91,11 @@ interface PlaybackAPI {
   seek: (seconds: number) => Promise<void>
   setVolume: (volume: number) => Promise<void>
   stop: () => Promise<void>
+  saveTrackResume: (trackId: number, position: number) => Promise<void>
+  getTrackResume: (trackId: number) => Promise<number | null>
+  clearTrackResume: (trackId: number) => Promise<void>
+  savePlaybackState: (state: Record<string, string>) => Promise<void>
+  getPlaybackState: () => Promise<Record<string, string>>
   onStateChange: (cb: (state: PlaybackStateEvent) => void) => () => void
   onTrackEnded: (cb: () => void) => () => void
 }
@@ -60,6 +103,8 @@ interface PlaybackAPI {
 declare global {
   interface Window {
     library: LibraryAPI
+    settings: SettingsAPI
+    discord: DiscordAPI
     playback: PlaybackAPI
   }
 }
@@ -68,6 +113,8 @@ export type {
   Album,
   Artist,
   ArtworkResponse,
+  DiscordAPI,
+  DiscordActivityInput,
   LibraryAPI,
   LibraryStats,
   PlaybackAPI,

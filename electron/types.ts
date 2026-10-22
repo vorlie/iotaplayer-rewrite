@@ -95,4 +95,5 @@ export interface PlaybackStateEvent {
   position?: number // seconds
   duration?: number // seconds
   volume?: number   // 0 to 1
+  backend?: 'mpv' | 'browser' | 'idle'
 }

@@ -230,6 +230,10 @@
   background: var(--color-surface-2);
 }
 
+.player-btn.is-active {
+  color: var(--color-accent);
+}
+
 .player-btn--play {
   width: 36px;
   height: 36px;
@@ -298,3 +302,56 @@
   background: var(--color-surface-3);
   border-radius: 2px;
 }
+
+/* Player backend badge */
+.player-backend-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-2);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.player-backend-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+}
+
+.player-backend-badge--browser::before {
+  background: #3b82f6;
+}
+
+.player-fav-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 50%;
+  transition: color var(--transition), transform var(--transition);
+}
+
+.player-fav-btn:hover {
+  color: #ef4444;
+  transform: scale(1.1);
+}
+
+.player-fav-btn.is-fav {
+  color: #ef4444;
+}
+
