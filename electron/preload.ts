@@ -136,6 +136,92 @@ type BrowserAudioElement = {
 
 const browserAudio = new (globalThis as unknown as { Audio: new () => BrowserAudioElement }).Audio()
 
+type AudioContextConstructor = new () => AudioContextLike
+
+interface AudioContextLike {
+  state: string
+  destination: AudioNodeLike
+  createAnalyser(): AnalyserNodeLike
+  createMediaElementSource(element: BrowserAudioElement): {
+    connect(destination: AudioNodeLike): void
+  }
+  resume(): Promise<void>
+}
+
+interface AudioNodeLike {
+  connect(destination: AudioNodeLike): void
+}
+
+interface AnalyserNodeLike extends AudioNodeLike {
+  fftSize: number
+  smoothingTimeConstant: number
+  frequencyBinCount: number
+  getByteFrequencyData(array: Uint8Array): void
+}
+
+let audioContext: AudioContextLike | null = null
+let analyser: AnalyserNodeLike | null = null
+let analyserData: Uint8Array | null = null
+
+function initializeAnalyser(): void {
+  if (analyser) return
+
+  const globals = globalThis as typeof globalThis & {
+    AudioContext?: AudioContextConstructor
+    webkitAudioContext?: AudioContextConstructor
+  }
+
+  const AudioContextClass =
+    globals.AudioContext ?? globals.webkitAudioContext
+
+  if (!AudioContextClass) return
+
+  const context = new AudioContextClass()
+  const nextAnalyser = context.createAnalyser()
+
+  nextAnalyser.fftSize = 2048
+  nextAnalyser.smoothingTimeConstant = 0.8
+
+  const source = context.createMediaElementSource(browserAudio)
+
+  source.connect(nextAnalyser)
+  nextAnalyser.connect(context.destination)
+
+  audioContext = context
+  analyser = nextAnalyser
+  analyserData = new Uint8Array(nextAnalyser.frequencyBinCount)
+}
+
+function getSpectrum(): number[] | null {
+  if (!browserAudioActive || !analyser || !analyserData) {
+    return null
+  }
+
+  analyser.getByteFrequencyData(analyserData)
+
+  const barCount = 64
+  const result: number[] = []
+
+  for (let i = 0; i < barCount; i++) {
+    // Spread the bars logarithmically to give bass more room.
+    const start = Math.floor((i / barCount) ** 2 * analyserData.length)
+    const end = Math.max(
+      start + 1,
+      Math.floor(((i + 1) / barCount) ** 2 * analyserData.length),
+    )
+
+    let peak = 0
+
+    for (let j = start; j < Math.min(end, analyserData.length); j++) {
+      peak = Math.max(peak, analyserData[j] / 255)
+    }
+
+    result.push(peak)
+  }
+
+  return result
+}
+
 const browserMimeMap: Array<[string[], string]> = [
   [['.aac', '.mp4', '.m4a', '.mov', '.3gp'], 'audio/aac'],
   [['.alac'], 'audio/mp4'],
@@ -277,6 +363,7 @@ const discordAPI = {
 }
 
 const playbackAPI = {
+  getSpectrum,
   getPreferredBackend: (): Promise<PlaybackBackendMode> => Promise.resolve(preferredPlaybackBackend),
 
   setPreferredBackend: (mode: PlaybackBackendMode): Promise<void> => {
@@ -290,11 +377,23 @@ const playbackAPI = {
       browserAudio.volume = browserVolume
       browserAudio.src = toBrowserAudioUrl(filePath)
       browserAudio.load()
+
+      try {
+        initializeAnalyser()
+
+        if (audioContext?.state === 'suspended') {
+          await audioContext.resume()
+        }
+      } catch (error) {
+        console.error('Failed to initialize audio analyser:', error)
+      }
+
       try {
         await browserAudio.play()
       } catch {
         browserAudioActive = false
       }
+
       return
     }
 

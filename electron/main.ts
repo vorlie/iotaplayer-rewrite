@@ -23,13 +23,13 @@ function createWindow(): BrowserWindow {
     height: 800,
     minWidth: 800,
     minHeight: 600,
-    backgroundColor: '#0f0f11',
+    backgroundColor: '#110d0d',
     titleBarStyle: 'hidden',
     // On Windows, use a custom overlay so we can still have traffic lights
     titleBarOverlay: {
-      color: '#0f0f11',
-      symbolColor: '#a0a0b0',
-      height: 36,
+      color: '#110d0d',
+      symbolColor: '#ede4e4',
+      height: 34,
     },
     webPreferences: {
       preload: preloadPath,

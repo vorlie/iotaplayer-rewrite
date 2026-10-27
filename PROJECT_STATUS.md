@@ -1,4 +1,4 @@
-# IoTAP Layer Rewrite — Project Status
+# Project Status
 
 ## Overview
 This project is a desktop music player built with Electron + React + TypeScript, backed by mpv for core playback and a browser media fallback for selected formats. The app scans a local music library into SQLite, renders a library UI, and supports queue-based playback, playlists, and now-playing views.

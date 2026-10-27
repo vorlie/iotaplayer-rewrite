@@ -15,6 +15,7 @@ import { SearchView } from './views/SearchView'
 import { SettingsView } from './views/SettingsView'
 import { TracksView } from './views/TracksView'
 import './styles/layout.css'
+import { BrowserSpectrum } from './components/BrowserSpectrum'
 
 function MainContent() {
   const section = useAppStore((s) => s.nav.section)
@@ -50,7 +51,6 @@ export default function App() {
       {/* Titlebar */}
       <div className="titlebar">
         <div className="titlebar__logo">
-          <div className="titlebar__logo-dot" />
           IotaPlayer
         </div>
       </div>
@@ -61,6 +61,7 @@ export default function App() {
       {/* Main content */}
       <main className="main-content">
         <MainContent />
+        <BrowserSpectrum className="browser-spectrum" />
       </main>
 
       {/* Player bar */}

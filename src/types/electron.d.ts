@@ -98,6 +98,7 @@ interface PlaybackAPI {
   getPlaybackState: () => Promise<Record<string, string>>
   onStateChange: (cb: (state: PlaybackStateEvent) => void) => () => void
   onTrackEnded: (cb: () => void) => () => void
+  getSpectrum: () => Promise<number[]>
 }
 
 declare global {

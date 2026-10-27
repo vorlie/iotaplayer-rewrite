@@ -292,7 +292,7 @@
 
 .player-btn.is-active {
   background: var(--color-accent-soft);
-  border-color: rgba(120, 160, 255, 0.35);
+  border-color: var(--color-border);
   color: var(--color-text-1);
 }
 
