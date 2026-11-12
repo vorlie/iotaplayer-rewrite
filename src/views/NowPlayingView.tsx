@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ArrowDown,
   ArrowUp,
@@ -57,6 +57,9 @@ export function NowPlayingView() {
   const [contextMenu, setContextMenu] = useState<{ track: NonNullable<typeof currentTrack>; x: number; y: number } | null>(null)
   const [lyrics, setLyrics] = useState<LyricsResult>(EMPTY_LYRICS)
   const [lyricsLoading, setLyricsLoading] = useState(false)
+  const lyricsListRef = useRef<HTMLDivElement>(null)
+  const userScrolledLyricsUntil = useRef(0)
+  const isLyricsPointerDown = useRef(false)
 
   // Drag and drop state for queue reordering
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
@@ -91,6 +94,12 @@ export function NowPlayingView() {
     : lyrics.source === 'sidecar-text' ? 'Text sidecar'
       : lyrics.source === 'embedded' ? 'Embedded'
         : null
+
+  useEffect(() => {
+    if (activeLyricIndex < 0 || isLyricsPointerDown.current || Date.now() < userScrolledLyricsUntil.current) return
+    const line = lyricsListRef.current?.querySelector<HTMLElement>(`[data-lyric-index="${activeLyricIndex}"]`)
+    line?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [activeLyricIndex])
 
   function handleProgressClick(e: React.MouseEvent<HTMLDivElement>) {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -202,27 +211,41 @@ export function NowPlayingView() {
             </div>
           </div>
 
-          <div className={`now-playing-lyrics ${lyrics.synchronized ? 'is-synced' : ''}`}>
-            {lyricsLoading ? (
-              <div className="now-playing-empty-state">Loading lyrics…</div>
-            ) : lyrics.lines.length ? (
-              lyrics.lines.map((line, index) => (
-                <button
-                  key={`${line.timestamp ?? 'text'}-${index}`}
-                  type="button"
-                  className={`lyric-line ${index === activeLyricIndex ? 'is-active' : ''}`}
-                  disabled={line.timestamp == null}
-                  onClick={() => line.timestamp != null && seek(line.timestamp)}
-                  title={line.timestamp != null ? `Seek to ${fmt(line.timestamp)}` : undefined}
-                >
-                  {line.text}
-                </button>
-              ))
-            ) : (
-              <div className="now-playing-lyrics-empty">
-                {currentTrack ? 'No lyrics found. Add a matching .lrc or .txt file, or use embedded lyrics.' : 'Choose a track to see its lyrics.'}
-              </div>
-            )}
+          <div
+            ref={lyricsListRef}
+            className={`now-playing-lyrics ${lyrics.synchronized ? 'is-synced' : ''}`}
+            onWheel={() => { userScrolledLyricsUntil.current = Date.now() + 3500 }}
+            onTouchMove={() => { userScrolledLyricsUntil.current = Date.now() + 3500 }}
+            onPointerDown={() => { isLyricsPointerDown.current = true }}
+            onPointerUp={() => {
+              isLyricsPointerDown.current = false
+              userScrolledLyricsUntil.current = Date.now() + 3500
+            }}
+            onPointerCancel={() => { isLyricsPointerDown.current = false }}
+          >
+            <div className="now-playing-lyrics-list">
+              {lyricsLoading ? (
+                <div className="now-playing-empty-state">Loading lyrics…</div>
+              ) : lyrics.lines.length ? (
+                lyrics.lines.map((line, index) => (
+                  <button
+                    key={`${line.timestamp ?? 'text'}-${index}`}
+                    type="button"
+                    data-lyric-index={index}
+                    className={`lyric-line ${!line.text ? 'is-gap' : ''} ${index === activeLyricIndex ? 'is-active' : ''}`}
+                    disabled={line.timestamp == null || !line.text}
+                    onClick={() => line.timestamp != null && seek(line.timestamp)}
+                    title={line.timestamp != null ? `Seek to ${fmt(line.timestamp)}` : undefined}
+                  >
+                    {line.text}
+                  </button>
+                ))
+              ) : (
+                <div className="now-playing-lyrics-empty">
+                  {currentTrack ? 'No lyrics found. Add a matching .lrc or .txt file, or use embedded lyrics.' : 'Choose a track to see its lyrics.'}
+                </div>
+              )}
+            </div>
           </div>
         </section>
 
