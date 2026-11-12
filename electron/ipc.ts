@@ -8,6 +8,7 @@ import {
   dbGetArtist,
   dbGetArtists,
   dbGetArtwork,
+  dbGetTrack,
   dbGetPlaylists,
   dbGetStats,
   dbGetTracks,
@@ -31,6 +32,7 @@ import { discordPresence } from './discord'
 import { getMpv } from './mpv'
 import { scanLibrary } from './scanner'
 import { getAppSettings, setAppSettings } from './settings'
+import { getLyrics } from './lyrics'
 import type { ScanProgress } from './types'
 
 // ---------------------------------------------------------------------------
@@ -47,6 +49,7 @@ export const IPC = {
   LIBRARY_TRACKS:   'library:tracks',
   LIBRARY_SEARCH:   'library:search',
   LIBRARY_ARTWORK:  'library:artwork',
+  LIBRARY_LYRICS:   'library:lyrics',
   LIBRARY_PLAYLISTS: 'library:playlists',
   LIBRARY_CREATE_PLAYLIST: 'library:create-playlist',
   LIBRARY_RENAME_PLAYLIST: 'library:rename-playlist',
@@ -162,6 +165,11 @@ export function registerIpcHandlers(): void {
       mime_type: artwork.mime_type,
       data: Buffer.from(artwork.data).toString('base64'),
     }
+  })
+
+  ipcMain.handle(IPC.LIBRARY_LYRICS, async (_event, trackId: number) => {
+    const track = dbGetTrack(trackId)
+    return track ? getLyrics(track.path) : { source: null, lines: [], synchronized: false }
   })
 
   ipcMain.handle(IPC.LIBRARY_PLAYLISTS, () => {

@@ -5,6 +5,7 @@ import type {
   Album,
   Artist,
   LibraryStats,
+  LyricsResult,
   PlaybackStateEvent,
   ScanProgress,
   ScanResult,
@@ -33,6 +34,7 @@ interface LibraryAPI {
   }) => Promise<Track[]>
   search: (query: string) => Promise<SearchResults>
   artwork: (id: number) => Promise<ArtworkResponse | null>
+  lyrics: (trackId: number) => Promise<LyricsResult>
   playlists: () => Promise<Playlist[]>
   createPlaylist: (name: string, trackIds: number[]) => Promise<Playlist[] | null>
   renamePlaylist: (playlistId: string, newName: string) => Promise<Playlist[] | null>
@@ -118,6 +120,7 @@ export type {
   DiscordActivityInput,
   LibraryAPI,
   LibraryStats,
+  LyricsResult,
   PlaybackAPI,
   PlaybackBackendMode,
   PlaybackStateEvent,

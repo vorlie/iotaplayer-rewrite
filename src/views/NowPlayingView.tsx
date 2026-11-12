@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   ArrowDown,
   ArrowUp,
@@ -17,6 +17,10 @@ import {
 } from 'lucide-react'
 import { useArtwork, useFormatDuration } from '../hooks/useLibrary'
 import { usePlaybackStore } from '../store'
+import type { LyricsResult } from '../types/electron'
+import '../styles/library.css'
+
+const EMPTY_LYRICS: LyricsResult = { source: null, lines: [], synchronized: false }
 
 export function NowPlayingView() {
   const fmt = useFormatDuration()
@@ -51,10 +55,42 @@ export function NowPlayingView() {
   const isFav = currentTrack ? favoriteIds.includes(currentTrack.id) : false
   const progress = duration > 0 ? (position / duration) * 100 : 0
   const [contextMenu, setContextMenu] = useState<{ track: NonNullable<typeof currentTrack>; x: number; y: number } | null>(null)
+  const [lyrics, setLyrics] = useState<LyricsResult>(EMPTY_LYRICS)
+  const [lyricsLoading, setLyricsLoading] = useState(false)
 
   // Drag and drop state for queue reordering
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dragOverInfo, setDragOverInfo] = useState<{ index: number; position: 'top' | 'bottom' } | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    if (!currentTrack) {
+      setLyrics(EMPTY_LYRICS)
+      return
+    }
+
+    setLyricsLoading(true)
+    window.library.lyrics(currentTrack.id)
+      .then((result) => {
+        if (!cancelled) setLyrics(result)
+      })
+      .catch(() => {
+        if (!cancelled) setLyrics(EMPTY_LYRICS)
+      })
+      .finally(() => {
+        if (!cancelled) setLyricsLoading(false)
+      })
+
+    return () => { cancelled = true }
+  }, [currentTrack?.id])
+
+  const activeLyricIndex = lyrics.synchronized
+    ? lyrics.lines.reduce((active, line, index) => line.timestamp != null && line.timestamp <= position ? index : active, -1)
+    : -1
+  const lyricsSource = lyrics.source === 'sidecar-lrc' ? 'LRC sidecar'
+    : lyrics.source === 'sidecar-text' ? 'Text sidecar'
+      : lyrics.source === 'embedded' ? 'Embedded'
+        : null
 
   function handleProgressClick(e: React.MouseEvent<HTMLDivElement>) {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -157,6 +193,38 @@ export function NowPlayingView() {
             </div>
           </div>
         </aside>
+
+        <section className="now-playing-panel now-playing-lyrics-panel">
+          <div className="now-playing-lyrics-top">
+            <div>
+              <div className="now-playing-queue-header" style={{ margin: 0, padding: 0 }}>Lyrics</div>
+              {lyricsSource && <span className="now-playing-lyrics-source">{lyricsSource}{lyrics.synchronized ? ' · synced' : ''}</span>}
+            </div>
+          </div>
+
+          <div className={`now-playing-lyrics ${lyrics.synchronized ? 'is-synced' : ''}`}>
+            {lyricsLoading ? (
+              <div className="now-playing-empty-state">Loading lyrics…</div>
+            ) : lyrics.lines.length ? (
+              lyrics.lines.map((line, index) => (
+                <button
+                  key={`${line.timestamp ?? 'text'}-${index}`}
+                  type="button"
+                  className={`lyric-line ${index === activeLyricIndex ? 'is-active' : ''}`}
+                  disabled={line.timestamp == null}
+                  onClick={() => line.timestamp != null && seek(line.timestamp)}
+                  title={line.timestamp != null ? `Seek to ${fmt(line.timestamp)}` : undefined}
+                >
+                  {line.text}
+                </button>
+              ))
+            ) : (
+              <div className="now-playing-lyrics-empty">
+                {currentTrack ? 'No lyrics found. Add a matching .lrc or .txt file, or use embedded lyrics.' : 'Choose a track to see its lyrics.'}
+              </div>
+            )}
+          </div>
+        </section>
 
         <section className="now-playing-panel now-playing-queue-panel">
           <div className="now-playing-queue-top">

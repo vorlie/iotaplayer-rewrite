@@ -378,6 +378,20 @@ export function dbGetTracks(opts?: {
     .all(...args) as Track[]
 }
 
+export function dbGetTrack(id: number): Track | null {
+  const db = getDatabase()
+  const row = db.prepare(
+    `SELECT
+       t.id, t.title, t.artist, t.album_artist, t.album, t.album_id, t.artist_id,
+       t.track_number, t.track_total, t.disc_number, t.disc_total,
+       t.year, t.genre, t.duration, t.bitrate, t.sample_rate,
+       t.bits_per_sample, t.codec, t.format,
+       t.path, t.file_size, t.modified_time, t.artwork_id
+     FROM tracks t WHERE t.id = ?`,
+  ).get(id)
+  return (row as Track) ?? null
+}
+
 export function dbGetArtwork(id: number): Artwork | null {
   const db = getDatabase()
   const row = db

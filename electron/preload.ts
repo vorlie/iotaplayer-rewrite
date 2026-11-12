@@ -5,6 +5,7 @@ import type {
   Album,
   Artist,
   LibraryStats,
+  LyricsResult,
   PlaybackStateEvent,
   Playlist,
   ScanProgress,
@@ -55,6 +56,9 @@ const libraryAPI = {
 
   artwork: (id: number): Promise<ArtworkResponse | null> =>
     ipcRenderer.invoke('library:artwork', id),
+
+  lyrics: (trackId: number): Promise<LyricsResult> =>
+    ipcRenderer.invoke('library:lyrics', trackId),
 
   playlists: (): Promise<Playlist[]> =>
     ipcRenderer.invoke('library:playlists'),
@@ -180,7 +184,7 @@ function initializeAnalyser(): void {
   const nextAnalyser = context.createAnalyser()
 
   nextAnalyser.fftSize = 2048
-  nextAnalyser.smoothingTimeConstant = 0.8
+  nextAnalyser.smoothingTimeConstant = 0.4
 
   const source = context.createMediaElementSource(browserAudio)
 

@@ -59,6 +59,18 @@ export interface LibraryStats {
   total_duration: number // seconds
 }
 
+export interface LyricLine {
+  text: string
+  /** Position in seconds when this is a time-synchronised lyric line. */
+  timestamp?: number
+}
+
+export interface LyricsResult {
+  source: 'sidecar-lrc' | 'sidecar-text' | 'embedded' | null
+  lines: LyricLine[]
+  synchronized: boolean
+}
+
 export interface ScanResult {
   total: number
   unchanged: number
