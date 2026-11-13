@@ -110,6 +110,7 @@ export class DiscordPresence {
       : DEFAULT_PAUSED_IMAGE_KEY
 
     const discordActivity: Record<string, unknown> = {
+      type: 2,
       details: activity.details || 'Listening in iotaPlayer',
       state: activity.state || 'Browsing the library',
       largeImageKey: DEFAULT_LARGE_IMAGE_KEY,
