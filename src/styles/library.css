@@ -226,15 +226,46 @@
   font-size: clamp(17px, 2vw, 25px);
   font-weight: 600;
   line-height: 1.28;
+  opacity: 0.34;
+  filter: blur(0.65px);
+  transform: scale(0.978);
+  transform-origin: center;
+  letter-spacing: 0.01em;
   cursor: default;
-  transition: color var(--transition), transform var(--transition);
+  will-change: transform, filter, opacity, color;
+  transition:
+    color 260ms ease,
+    opacity 320ms ease,
+    filter 360ms ease,
+    transform 380ms cubic-bezier(0.22, 0.8, 0.24, 1),
+    letter-spacing 320ms ease;
 }
 
 .now-playing-lyrics.is-synced .lyric-line:not(:disabled) { cursor: pointer; }
-.now-playing-lyrics.is-synced .lyric-line:not(:disabled):hover { color: var(--color-text); }
-.lyric-line.is-active { color: var(--color-accent); transform: scale(1.03); }
+.now-playing-lyrics.is-synced .lyric-line:not(:disabled):hover {
+  color: var(--color-text);
+  opacity: 0.8;
+  filter: blur(0.2px);
+  transform: scale(0.994);
+}
+.lyric-line.is-active {
+  color: var(--color-accent);
+  opacity: 1;
+  filter: blur(0);
+  transform: scale(1.12);
+  letter-spacing: 0.02em;
+  text-shadow:
+    0 0 14px rgba(255, 255, 255, 0.2),
+    0 0 28px color-mix(in srgb, var(--color-accent) 45%, transparent);
+}
 .lyric-line.is-gap { min-height: 0.7em; padding: 0; }
 .now-playing-lyrics-empty { margin: auto; max-width: 280px; color: var(--color-text-3); text-align: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lyric-line {
+    transition: none;
+  }
+}
 
 @media (max-width: 1050px) {
   .now-playing-page {
