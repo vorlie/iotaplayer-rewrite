@@ -1,85 +1,152 @@
-# Project Status
+# iotaPlayer
+
+A desktop music player built with Electron, React, TypeScript, SQLite, and MPV. It scans a local music library, indexes metadata, and offers a polished library browsing and playback experience with queue management, favorites, playlists, and Rich Presence integration.
 
 ## Overview
-This project is a desktop music player built with Electron + React + TypeScript, backed by mpv for core playback and a browser media fallback for selected formats. The app scans a local music library into SQLite, renders a library UI, and supports queue-based playback, playlists, and now-playing views.
 
-## Current State
+This app is designed around a local-first music library workflow:
 
-### Core features implemented
-- Electron app shell with main/renderer/preload separation
-- Local library scanning and metadata indexing using SQLite
-- Multi-token, multi-field search (artist, album, track title, genre, year)
-- In-view live filtering and sorting across Tracks, Albums, and Artists
-- Track, artist, album, and search views
-- Queue and now-playing playback flow with drag-and-drop reordering
-- Playlist creation, rename, delete, add-to-playlist, remove track, and drag-and-drop reordering
-- Favorites system (starred tracks) and Recently Played playback history
-- Per-track resume state and playback preferences persistence across restarts
-- Album and artist detail pages
-- Settings view for library scanning and playback configuration
-- Playback controls for play/pause, prev/next, seek, volume, repeat, and shuffle
-- MPV integration as the primary backend
-- Browser fallback for browser-supported file types
-- Live active playback backend indicator (MPV vs. Browser)
-- Graceful app shutdown handling while media is active
+- scan a folder and index supported audio files into a SQLite database
+- browse artists, albums, tracks, and playlists from the indexed library
+- play files through MPV with a browser fallback for compatible formats
+- manage queue, repeat, shuffle, playback resume, and now-playing state
+- keep favorites, recently played tracks, playlist edits, and preferences persistent
 
-### Playback backend rules
-- MPV is the default and primary playback backend
-- Browser fallback is used only when the file is supported and the preference allows it
-- WAV files are forced to MPV
-- Playback backend selection is configurable from Settings
-- Active backend status is reported live to the renderer and UI
+## Current feature set
 
-### Playlist and queue behavior
-- Queue can be built from tracks, albums, artists, or playlists
-- Queue management controls: clear queue, remove item, move track up/down, and drag-and-drop reordering
-- Repeat modes: off, all, one
-- Shuffle support is available
-- User can save the current queue as a playlist
-- Playlist detail view supports playing, renaming, deleting, removing individual tracks, move up/down, and drag-and-drop reordering
+### Library & metadata
+- Local music library scanning from a chosen root directory
+- Recursive discovery of supported audio extensions
+- Metadata extraction with `music-metadata`
+- SQLite-backed storage for tracks, artists, albums, artwork, playlists, favorites, resume data, and playback history
+- Artist, album, track, and search indexing
+- Multi-field search across artist, album, track title, genre, and year
+- Live in-view filtering and sorting on library lists
+- Artwork caching and album art support
 
-### UI status
-- Player bar is functional and styled with active backend badge and quick-favorite heart button
-- Now-playing view includes queue management controls (clear, remove, reorder), track meta, backend badge, and favorite toggle
-- Context menus for adding tracks to playlists and toggling favorites
-- Favorites page with "Play all" and instant favorite toggles
-- Recently played page with playback history and clear history action
-- Album and track lists support interactive filtering, column sorting, and drag-and-drop reordering
+### Browsing views
+- Artists view
+- Albums view
+- Album detail view
+- Artist detail view
+- Tracks view
+- Search view
+- Favorites view
+- Recently played view
+- Settings view
+- Now playing view
+- Playlist overview and playlist detail screens
 
-## Completed improvements
+### Playback
+- MPV as the primary playback backend
+- Browser fallback for browser-supported formats
+- Playback backend selection via settings
+- Live playback backend indicator in the UI
+- Play, pause, resume, seek, stop, and volume control
+- Previous/next track handling
+- Repeat modes: off, all, and one
+- Shuffle mode
+- Resume-per-track position persistence
+- Playback state persistence for settings like volume, repeat mode, and shuffle mode
+- Graceful shutdown and media cleanup handling
 
-### High-priority (Completed)
-- [x] 1. Add per-track resume state and last-position persistence
-- [x] 2. Add favorites and recently played history
-- [x] 3. Add playlist track removal and reordering
-- [x] 4. Add better queue management (clear queue, remove item, move up/down)
-- [x] 5. Add a playback status indicator showing the active backend
+### Queue & now playing
+- Queue-based playback flow
+- Add tracks/albums to queue from library views
+- Clear queue
+- Remove items from queue
+- Move queue items up/down
+- Drag-and-drop queue reordering
+- Save current queue as a playlist
+- Now playing panel with track metadata, artwork, controls, and queue panel
 
-### Medium-priority (In Progress)
-- [x] 1. Improve search and filtering logic across the library (multi-field/token search, in-view live filtering, column header sorting)
-- [x] 5. Add drag-enabled playlist & queue editing (HTML5 drag-and-drop reordering with visual drag/drop indicators)
+### Playlists & library actions
+- Create playlists
+- Rename playlists
+- Delete playlists
+- Add tracks to playlists
+- Remove tracks from playlists
+- Reorder playlist tracks
+- Drag-and-drop playlist editing
+- Playlist metadata editing (name/description/cover support)
+- Album-to-playlist and track-to-playlist actions from context menus
 
-## Next feature roadmap
+### Favorites & history
+- Favorite/unfavorite tracks
+- Favorites page with quick actions
+- Playback history tracking
+- Recently played list
+- Clear playback history
+- Favorite IDs and favorite state synchronization with the playback store
 
-### Remaining Medium-priority
-1. Add playback preference persistence across app restarts (restore active queue & last played track on launch)
-2. Add better error handling for unsupported codecs and failed loads
-3. Add library cleanup tools (prune missing/deleted tracks from DB) and better DB migration management
+### Lyrics & extras
+- Lyrics lookup and display in the now playing screen
+- Embedded/sidecar lyric support through the existing IPC layer
+- Discord Rich Presence integration
+- App settings persistence for Discord and playback options
 
-### Nice-to-have
-1. Equalizer / audio effect controls
-2. Mini-player mode
-3. Auto-play when opening a playlist or album
-4. Last.fm / external metadata sources
-5. Smart recommendations and auto-generated mixes
+### Settings & configuration
+- Library scan configuration
+- Playback backend preference
+- Discord presence toggling and client configuration
+- Persistent app settings stored in user data
 
-## Architecture Notes
-- Renderer: React UI for library and playback screens
-- Main process: app lifecycle, mpv lifecycle, IPC exposure, persistent state coordination
-- Preload: mediator between UI code and Electron IPC
-- SQLite: persistent metadata store, playlist state, favorites, history, and track resume
-- MPV: primary media engine
-- Browser fallback: fallback for compatible codecs/file types
+## Architecture
 
-## Conclusion
-High-priority items as well as Medium-priority items #1 and #5 (improved search/filtering across the library, and drag-enabled playlist & queue editing) are now complete and verified. Remaining medium-priority items include queue restoration on launch, error toasts, and missing track pruning.
+- Electron main process manages app lifecycle, IPC exposure, database initialization, and MPV integration
+- Renderer uses React + TypeScript for the UI
+- Preload bridge exposes library and playback APIs to the renderer
+- SQLite stores metadata, playlists, favorites, playback history, and resume state
+- MPV is the default playback engine
+- Browser media fallback handles cases where the browser can play the file directly
+
+## Tech stack
+
+- Electron
+- React
+- TypeScript
+- Vite
+- SQLite (`better-sqlite3`)
+- MPV
+- `music-metadata`
+- `discord-rpc`
+
+## Discord RPC note
+
+The app currently relies on a small local compatibility patch in the installed `discord-rpc` dependency so the activity payload forwards the Discord activity `type` field instead of silently dropping it. Without that patch, the library sends the default activity type (`0`, or "Playing"), even when the app is trying to set a listening status.
+
+This is a dependency-level workaround rather than a normal app setting, so other source builds will need to apply the same change themselves if they install dependencies from scratch.
+
+This is especially relevant because the app intentionally sets Rich Presence as a listening activity for the currently playing track.
+
+## Current roadmap
+
+### Near-term ideas
+- Subsonic/OpenSubsonic source support
+- Better unsupported codec and failed-load handling
+- Library cleanup tools for missing or deleted tracks
+- Stronger DB migration tooling
+
+### Longer-term ideas
+- Equalizer or audio effects
+- Mini-player mode
+- Auto-play when opening an album or playlist
+- Last.fm or other external metadata integrations
+- Smart recommendations and generated mixes
+
+## Running locally
+
+```bash
+npm install
+npm run dev
+```
+
+## Building
+
+```bash
+npm run package
+```
+
+## Notes
+
+The project is already fairly feature-complete as a local music player and is in a working desktop-app state. The next major extension is adding a remote media source model such as Subsonic/OpenSubsonic without disturbing the existing local-library workflow.

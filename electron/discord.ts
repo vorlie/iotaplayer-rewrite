@@ -122,7 +122,7 @@ export class DiscordPresence {
           ? 'Repeat one'
           : activity.repeatMode === 'all'
             ? 'Repeat all'
-            : 'Playing',
+            : 'Listening',
       buttons: [{ label: 'Source code', url: 'https://github.com/vorlie/iotaplayer-rewrite' }],
       ...(hasProgress ? { startTimestamp, endTimestamp } : { startTimestamp: now }),
       ...(activity.isPlaying ? {} : { endTimestamp: undefined }),
