@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain } from 'electron'
+import { BrowserWindow, dialog, ipcMain } from 'electron'
 import {
   dbGetAlbum,
   dbGetAlbums,
@@ -280,6 +280,19 @@ export function registerIpcHandlers(): void {
     }
 
     return saved
+  })
+
+  ipcMain.handle('settings:pick-library-root', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Select your music library folder',
+      properties: ['openDirectory', 'createDirectory', 'promptToCreate'],
+    })
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return null
+    }
+
+    return result.filePaths[0]
   })
 
   ipcMain.handle('discord:set-enabled', async (_event, enabled: boolean) => {

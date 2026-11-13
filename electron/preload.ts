@@ -403,10 +403,12 @@ attachBrowserAudioEvents()
 // ---------------------------------------------------------------------------
 
 const settingsAPI = {
-  get: (): Promise<{ discordClientId: string; imgurClientId: string; discordEnabled: boolean }> =>
+  get: (): Promise<{ discordClientId: string; imgurClientId: string; discordEnabled: boolean; libraryRoot: string }> =>
     ipcRenderer.invoke('settings:get'),
-  set: (value: { discordClientId?: string; imgurClientId?: string; discordEnabled?: boolean }): Promise<void> =>
+  set: (value: { discordClientId?: string; imgurClientId?: string; discordEnabled?: boolean; libraryRoot?: string }): Promise<void> =>
     ipcRenderer.invoke('settings:set', value),
+  pickLibraryRoot: (): Promise<string | null> =>
+    ipcRenderer.invoke('settings:pick-library-root'),
 }
 
 const discordAPI = {

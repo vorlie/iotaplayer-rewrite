@@ -28,6 +28,7 @@ export function SettingsView() {
       setDiscordEnabled(settings.discordEnabled)
       setDiscordClientId(settings.discordClientId)
       setImgurClientId(settings.imgurClientId)
+      setLibraryRoot(settings.libraryRoot || DEFAULT_LIBRARY_ROOT)
     })
   }, [])
 
@@ -42,10 +43,18 @@ export function SettingsView() {
         discordEnabled,
         discordClientId,
         imgurClientId,
+        libraryRoot,
       })
       await window.discord.setEnabled(discordEnabled)
     } finally {
       setSavingSettings(false)
+    }
+  }
+
+  async function handlePickLibraryRoot() {
+    const selectedPath = await window.settings.pickLibraryRoot()
+    if (selectedPath) {
+      setLibraryRoot(selectedPath)
     }
   }
 
@@ -272,6 +281,22 @@ export function SettingsView() {
                 style={{ flex: 1 }}
                 placeholder="e.g. D:\Media\Music"
               />
+              <button
+                type="button"
+                onClick={handlePickLibraryRoot}
+                style={{
+                  padding: 'var(--space-2) var(--space-3)',
+                  background: 'var(--color-surface-2)',
+                  color: 'var(--color-text-1)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius)',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Browse
+              </button>
               <button
                 onClick={handleScan}
                 disabled={scanning}

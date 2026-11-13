@@ -1,22 +1,28 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
-import { app } from 'electron'
+import { app as electronApp } from 'electron'
 
 export interface AppSettings {
   discordClientId: string
   imgurClientId: string
   discordEnabled: boolean
+  libraryRoot: string
   equalizerEnabled: boolean
   equalizerPreset: string
   equalizerBands: number[]
 }
 
 const DEFAULT_EQUALIZER_BANDS = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+const DEFAULT_LIBRARY_ROOT = process.platform === 'win32'
+  ? 'D:\\Media\\Music'
+  : path.join(os.homedir(), 'Music')
 
 const DEFAULT_SETTINGS: AppSettings = {
   discordClientId: '',
   imgurClientId: '',
   discordEnabled: true,
+  libraryRoot: DEFAULT_LIBRARY_ROOT,
   equalizerEnabled: false,
   equalizerPreset: 'Flat',
   equalizerBands: [...DEFAULT_EQUALIZER_BANDS],
@@ -31,7 +37,7 @@ function normalizeEqualizerBands(value: unknown): number[] {
 }
 
 function getSettingsPath(): string {
-  const userDataDir = app.getPath('userData')
+  const userDataDir = electronApp?.getPath?.('userData') ?? path.join(os.homedir(), '.iotaplayer')
   const settingsDir = path.join(userDataDir, 'settings')
 
   if (!existsSync(settingsDir)) {
@@ -56,6 +62,7 @@ export function getAppSettings(): AppSettings {
       discordClientId: parsed.discordClientId ?? DEFAULT_SETTINGS.discordClientId,
       imgurClientId: parsed.imgurClientId ?? DEFAULT_SETTINGS.imgurClientId,
       discordEnabled: parsed.discordEnabled ?? DEFAULT_SETTINGS.discordEnabled,
+      libraryRoot: parsed.libraryRoot || DEFAULT_SETTINGS.libraryRoot,
       equalizerEnabled: parsed.equalizerEnabled ?? DEFAULT_SETTINGS.equalizerEnabled,
       equalizerPreset: parsed.equalizerPreset ?? DEFAULT_SETTINGS.equalizerPreset,
       equalizerBands: normalizeEqualizerBands(parsed.equalizerBands),
@@ -71,6 +78,7 @@ export function setAppSettings(nextSettings: Partial<AppSettings>): AppSettings 
   const merged: AppSettings = {
     ...current,
     ...nextSettings,
+    libraryRoot: nextSettings.libraryRoot || current.libraryRoot || DEFAULT_SETTINGS.libraryRoot,
     equalizerBands: normalizeEqualizerBands(nextSettings.equalizerBands ?? current.equalizerBands),
   }
   const settingsPath = getSettingsPath()

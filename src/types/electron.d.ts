@@ -85,6 +85,7 @@ interface AppSettings {
   discordClientId: string
   imgurClientId: string
   discordEnabled: boolean
+  libraryRoot: string
   equalizerEnabled: boolean
   equalizerPreset: string
   equalizerBands: number[]
@@ -93,6 +94,7 @@ interface AppSettings {
 interface SettingsAPI {
   get: () => Promise<AppSettings>
   set: (value: Partial<AppSettings>) => Promise<void>
+  pickLibraryRoot: () => Promise<string | null>
 }
 
 interface DiscordAPI {
