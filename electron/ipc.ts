@@ -31,7 +31,7 @@ import {
 } from './database'
 import { discordPresence } from './discord'
 import { getMpv } from './mpv'
-import { scanLibrary } from './scanner'
+import { cleanupMissingTracks, scanLibrary } from './scanner'
 import { getAppSettings, setAppSettings } from './settings'
 import { getLyrics } from './lyrics'
 import type { ScanProgress } from './types'
@@ -50,6 +50,7 @@ export const IPC = {
   LIBRARY_TRACKS:   'library:tracks',
   LIBRARY_SEARCH:   'library:search',
   LIBRARY_ARTWORK:  'library:artwork',
+  LIBRARY_CLEANUP_MISSING: 'library:cleanup-missing',
   LIBRARY_LYRICS:   'library:lyrics',
   LIBRARY_PLAYLISTS: 'library:playlists',
   LIBRARY_CREATE_PLAYLIST: 'library:create-playlist',
@@ -73,6 +74,7 @@ export const IPC = {
   PLAYBACK_TOGGLE:  'playback:toggle',
   PLAYBACK_SEEK:    'playback:seek',
   PLAYBACK_VOLUME:  'playback:volume',
+  PLAYBACK_SET_EQUALIZER: 'playback:set-equalizer',
   PLAYBACK_STOP:    'playback:stop',
   PLAYBACK_STATE:   'playback:state',
   PLAYBACK_ENDED:   'playback:ended',
@@ -167,6 +169,10 @@ export function registerIpcHandlers(): void {
       mime_type: artwork.mime_type,
       data: Buffer.from(artwork.data).toString('base64'),
     }
+  })
+
+  ipcMain.handle(IPC.LIBRARY_CLEANUP_MISSING, () => {
+    return cleanupMissingTracks()
   })
 
   ipcMain.handle(IPC.LIBRARY_LYRICS, async (_event, trackId: number) => {
@@ -324,6 +330,11 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(IPC.PLAYBACK_VOLUME, (_event, volume: number) => {
     mpv.setVolume(volume)
+  })
+
+  ipcMain.handle(IPC.PLAYBACK_SET_EQUALIZER, (_event, gains: number[]) => {
+    mpv.setEqualizer(gains)
+    return true
   })
 
   ipcMain.handle(IPC.PLAYBACK_STOP, () => {

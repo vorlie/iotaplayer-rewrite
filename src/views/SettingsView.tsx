@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, Trash2 } from 'lucide-react'
 import { useAppStore } from '../store'
 import type { PlaybackBackendMode, ScanResult } from '../types/electron'
 import '../styles/library.css'
@@ -8,9 +8,10 @@ import '../styles/library.css'
 const DEFAULT_LIBRARY_ROOT = 'D:\\Media\\Music'
 
 export function SettingsView() {
-  const { library, scanLibrary } = useAppStore()
+  const { library, scanLibrary, cleanupMissingTracks } = useAppStore()
   const [libraryRoot, setLibraryRoot] = useState(DEFAULT_LIBRARY_ROOT)
   const [scanning, setScanning] = useState(false)
+  const [cleaningMissing, setCleaningMissing] = useState(false)
   const [lastResult, setLastResult] = useState<ScanResult | null>(library.lastScanResult)
   const [backendMode, setBackendMode] = useState<PlaybackBackendMode>('auto')
   const [discordEnabled, setDiscordEnabled] = useState(true)
@@ -57,6 +58,37 @@ export function SettingsView() {
       setLastResult(result)
     } finally {
       setScanning(false)
+    }
+  }
+
+  async function handleCleanupMissing() {
+    if (cleaningMissing) return
+    setCleaningMissing(true)
+
+    try {
+      const result = await cleanupMissingTracks()
+      setLastResult((previous) => {
+        if (!previous) {
+          return {
+            total: 0,
+            unchanged: 0,
+            added: 0,
+            updated: 0,
+            removed: result.removed,
+            failed: 0,
+            errors: result.errors,
+            duration_ms: 0,
+          }
+        }
+
+        return {
+          ...previous,
+          removed: previous.removed + result.removed,
+          errors: [...previous.errors, ...result.errors],
+        }
+      })
+    } finally {
+      setCleaningMissing(false)
     }
   }
 
@@ -262,6 +294,29 @@ export function SettingsView() {
                 {scanning ? 'Scanning…' : 'Scan Library'}
               </button>
             </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--space-4)' }}>
+            <button
+              type="button"
+              onClick={handleCleanupMissing}
+              disabled={cleaningMissing}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                padding: 'var(--space-2) var(--space-4)',
+                background: cleaningMissing ? 'var(--color-surface-3)' : 'var(--color-surface-2)',
+                color: cleaningMissing ? 'var(--color-text-3)' : 'var(--color-text-1)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius)',
+                fontWeight: 600,
+                cursor: cleaningMissing ? 'not-allowed' : 'pointer',
+              }}
+            >
+              <Trash2 size={14} />
+              {cleaningMissing ? 'Cleaning…' : 'Clean missing tracks'}
+            </button>
           </div>
 
           {/* Scan progress */}

@@ -155,6 +155,86 @@ interface RawTrack {
   album_id: number | null
 }
 
+export function classifyScanFailure(error: unknown): 'unsupported-codec' | 'missing-file' | 'io' | 'unknown' {
+  const message = error instanceof Error ? error.message : String(error)
+  const normalized = message.toLowerCase()
+
+  if (/(unsupported|codec|unsupported format|unknown format|invalid audio|cannot read file)/i.test(normalized)) {
+    return 'unsupported-codec'
+  }
+
+  if (/(enoent|no such file|not found|file does not exist|missing file)/i.test(normalized)) {
+    return 'missing-file'
+  }
+
+  if (/(eacces|permission denied|access denied|read-only|ioerror)/i.test(normalized)) {
+    return 'io'
+  }
+
+  return 'unknown'
+}
+
+export function formatScanError(filePath: string, error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error)
+  const trimmed = message.replace(/\s+/g, ' ').trim()
+  const classification = classifyScanFailure(error)
+
+  if (classification === 'unsupported-codec') {
+    return `${filePath}: Unsupported or unreadable codec/file format (${trimmed})`
+  }
+
+  if (classification === 'missing-file') {
+    return `${filePath}: File is missing or no longer accessible (${trimmed})`
+  }
+
+  if (classification === 'io') {
+    return `${filePath}: File could not be read (${trimmed})`
+  }
+
+  return `${filePath}: ${trimmed}`
+}
+
+function cleanupOrphanedLibraryData(db: Database.Database): void {
+  db.exec(`
+    DELETE FROM albums WHERE id NOT IN (SELECT DISTINCT album_id FROM tracks WHERE album_id IS NOT NULL);
+    DELETE FROM artists WHERE id NOT IN (SELECT DISTINCT artist_id FROM tracks WHERE artist_id IS NOT NULL);
+    DELETE FROM artwork WHERE id NOT IN (
+      SELECT DISTINCT artwork_id FROM tracks WHERE artwork_id IS NOT NULL
+      UNION
+      SELECT DISTINCT artwork_id FROM albums WHERE artwork_id IS NOT NULL
+    );
+  `)
+}
+
+export function cleanupMissingTracks(): { removed: number; errors: string[] } {
+  const db = getDatabase()
+  const rows = db
+    .prepare('SELECT id, path FROM tracks')
+    .all() as Array<{ id: number; path: string }>
+
+  const errors: string[] = []
+  let removed = 0
+
+  for (const row of rows) {
+    if (!fs.existsSync(row.path)) {
+      try {
+        db.prepare('DELETE FROM tracks WHERE id = ?').run(row.id)
+        removed += 1
+      } catch (err) {
+        errors.push(formatScanError(row.path, err))
+      }
+    }
+  }
+
+  cleanupOrphanedLibraryData(db)
+
+  if (removed > 0) {
+    console.log(`[Scanner] Removed ${removed} missing tracks from the library database`)
+  }
+
+  return { removed, errors }
+}
+
 async function processFile(
   db: Database.Database,
   filePath: string,
@@ -317,7 +397,7 @@ export async function scanLibrary(
       await processFile(db, filePath)
       return existing ? 'updated' : 'added'
     } catch (err) {
-      const msg = `${filePath}: ${err instanceof Error ? err.message : String(err)}`
+      const msg = formatScanError(filePath, err)
       result.errors.push(msg)
       console.error(`[Scanner] Failed: ${msg}`)
       return 'failed'
@@ -356,15 +436,7 @@ export async function scanLibrary(
   }
 
   // Clean up orphaned artists and albums
-  db.exec(`
-    DELETE FROM albums  WHERE id NOT IN (SELECT DISTINCT album_id  FROM tracks WHERE album_id  IS NOT NULL);
-    DELETE FROM artists WHERE id NOT IN (SELECT DISTINCT artist_id FROM tracks WHERE artist_id IS NOT NULL);
-    DELETE FROM artwork WHERE id NOT IN (
-      SELECT DISTINCT artwork_id FROM tracks WHERE artwork_id IS NOT NULL
-      UNION
-      SELECT DISTINCT artwork_id FROM albums WHERE artwork_id IS NOT NULL
-    );
-  `)
+  cleanupOrphanedLibraryData(db)
 
   result.duration_ms = Date.now() - startTime
   onProgress?.({ phase: 'done', current: files.length, total: files.length })

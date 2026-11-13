@@ -57,6 +57,9 @@ const libraryAPI = {
   artwork: (id: number): Promise<ArtworkResponse | null> =>
     ipcRenderer.invoke('library:artwork', id),
 
+  cleanupMissing: (): Promise<{ removed: number; errors: string[] }> =>
+    ipcRenderer.invoke('library:cleanup-missing'),
+
   lyrics: (trackId: number): Promise<LyricsResult> =>
     ipcRenderer.invoke('library:lyrics', trackId),
 
@@ -161,8 +164,10 @@ type AudioContextConstructor = new () => AudioContextLike
 
 interface AudioContextLike {
   state: string
+  currentTime: number
   destination: AudioNodeLike
   createAnalyser(): AnalyserNodeLike
+  createBiquadFilter(): BiquadFilterNodeLike
   createMediaElementSource(element: any): {
     connect(destination: AudioNodeLike): void
   }
@@ -180,9 +185,32 @@ interface AnalyserNodeLike extends AudioNodeLike {
   getByteFrequencyData(array: Uint8Array): void
 }
 
+interface BiquadFilterNodeLike extends AudioNodeLike {
+  type: string
+  frequency: { value: number }
+  Q: { value: number }
+  gain: { value: number; setTargetAtTime: (value: number, startTime: number, timeConstant: number) => void }
+}
+
 let audioContext: AudioContextLike | null = null
 let analyser: AnalyserNodeLike | null = null
 let analyserData: Uint8Array | null = null
+let browserAudioSource: any = null
+let browserEqualizerNodes: BiquadFilterNodeLike[] = []
+let browserEqualizerBands = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+const browserEqualizerFrequencies = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
+
+function applyBrowserEqualizer(): void {
+  if (!audioContext || browserEqualizerNodes.length === 0) return
+
+  const now = audioContext.currentTime
+  browserEqualizerNodes.forEach((filter, index) => {
+    filter.type = 'peaking'
+    filter.frequency.value = browserEqualizerFrequencies[index]
+    filter.Q.value = 1
+    filter.gain.setTargetAtTime(browserEqualizerBands[index], now, 0.02)
+  })
+}
 
 function initializeAnalyser(): void {
   if (analyser) return
@@ -203,14 +231,29 @@ function initializeAnalyser(): void {
   nextAnalyser.fftSize = 2048
   nextAnalyser.smoothingTimeConstant = 0.4
 
-  const source = context.createMediaElementSource(browserAudio as any)
+  if (!browserAudioSource) {
+    browserAudioSource = context.createMediaElementSource(browserAudio as any)
+  }
 
-  source.connect(nextAnalyser)
+  let previousNode: any = browserAudioSource
+  browserEqualizerNodes = browserEqualizerFrequencies.map((frequency) => {
+    const filter = context.createBiquadFilter()
+    filter.type = 'peaking'
+    filter.frequency.value = frequency
+    filter.Q.value = 1
+    filter.gain.value = 0
+    previousNode.connect(filter)
+    previousNode = filter
+    return filter
+  })
+
+  previousNode.connect(nextAnalyser)
   nextAnalyser.connect(context.destination)
 
   audioContext = context
   analyser = nextAnalyser
   analyserData = new Uint8Array(nextAnalyser.frequencyBinCount)
+  applyBrowserEqualizer()
 }
 
 function getSpectrum(): number[] | null {
@@ -473,6 +516,15 @@ const playbackAPI = {
       return Promise.resolve()
     }
     return ipcRenderer.invoke('playback:volume', clamped)
+  },
+
+  setEqualizer: (gains: number[]): Promise<void> => {
+    const normalized = gains.map((gain) => Math.max(-12, Math.min(12, Number(gain) || 0)))
+    browserEqualizerBands = normalized
+    if (audioContext && browserEqualizerNodes.length > 0) {
+      applyBrowserEqualizer()
+    }
+    return ipcRenderer.invoke('playback:set-equalizer', normalized)
   },
 
   stop: (): Promise<void> => {

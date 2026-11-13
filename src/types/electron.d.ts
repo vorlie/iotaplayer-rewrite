@@ -34,6 +34,7 @@ interface LibraryAPI {
   }) => Promise<Track[]>
   search: (query: string) => Promise<SearchResults>
   artwork: (id: number) => Promise<ArtworkResponse | null>
+  cleanupMissing: () => Promise<{ removed: number; errors: string[] }>
   lyrics: (trackId: number) => Promise<LyricsResult>
   playlists: () => Promise<Playlist[]>
   createPlaylist: (
@@ -84,6 +85,9 @@ interface AppSettings {
   discordClientId: string
   imgurClientId: string
   discordEnabled: boolean
+  equalizerEnabled: boolean
+  equalizerPreset: string
+  equalizerBands: number[]
 }
 
 interface SettingsAPI {
@@ -107,6 +111,7 @@ interface PlaybackAPI {
   toggle: () => Promise<void>
   seek: (seconds: number) => Promise<void>
   setVolume: (volume: number) => Promise<void>
+  setEqualizer: (gains: number[]) => Promise<void>
   stop: () => Promise<void>
   saveTrackResume: (trackId: number, position: number) => Promise<void>
   getTrackResume: (trackId: number) => Promise<number | null>

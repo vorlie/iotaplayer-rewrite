@@ -14,6 +14,7 @@ export type NavSection =
   | 'now-playing'
   | 'favorites'
   | 'recently-played'
+  | 'equalizer'
   | 'settings'
   | 'artist-detail'
   | 'album-detail'
@@ -65,6 +66,7 @@ interface AppStore {
   loadArtists: () => Promise<void>
   loadAlbums: (artistId?: number) => Promise<void>
   scanLibrary: (rootDir: string) => Promise<ScanResult>
+  cleanupMissingTracks: () => Promise<{ removed: number; errors: string[] }>
   setScanProgress: (progress: ScanProgress | null) => void
 }
 
@@ -155,6 +157,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
     } finally {
       unsubscribe()
     }
+  },
+
+  cleanupMissingTracks: async () => {
+    const result = await window.library.cleanupMissing()
+    await get().loadStats()
+    await get().loadAlbums()
+    return result
   },
 
   setScanProgress: (scanProgress) =>

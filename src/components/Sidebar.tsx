@@ -9,6 +9,7 @@ import {
   ListMusic,
   Search,
   Settings,
+  SlidersHorizontal,
 } from 'lucide-react'
 import { type NavSection, useAppStore } from '../store'
 import '../styles/layout.css'
@@ -107,8 +108,17 @@ export function Sidebar() {
 
       <div style={{ padding: '8px 12px 12px' }}>
         <button
+          className={`sidebar__item ${isActive('equalizer') ? 'active' : ''}`}
+          onClick={() => navigate('equalizer')}
+        >
+          <span className="sidebar__item-icon"><SlidersHorizontal size={15} /></span>
+          Equalizer
+        </button>
+
+        <button
           className={`sidebar__item ${isActive('settings') ? 'active' : ''}`}
           onClick={() => navigate('settings')}
+          style={{ marginTop: 6 }}
         >
           <span className="sidebar__item-icon"><Settings size={15} /></span>
           Settings

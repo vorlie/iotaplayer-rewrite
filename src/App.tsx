@@ -13,6 +13,7 @@ import { PlaylistsView } from './views/PlaylistsView'
 import { RecentlyPlayedView } from './views/RecentlyPlayedView'
 import { SearchView } from './views/SearchView'
 import { SettingsView } from './views/SettingsView'
+import { EqualizerView } from './views/EqualizerView'
 import { TracksView } from './views/TracksView'
 import './styles/layout.css'
 import { BrowserSpectrum } from './components/BrowserSpectrum'
@@ -30,6 +31,7 @@ function MainContent() {
     case 'artist-detail':  return <ArtistDetailView />
     case 'album-detail':   return <AlbumDetailView />
     case 'search':         return <SearchView />
+    case 'equalizer':      return <EqualizerView />
     case 'settings':       return <SettingsView />
     case 'favorites':      return <FavoritesView />
     case 'recently-played': return <RecentlyPlayedView />

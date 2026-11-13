@@ -12,6 +12,8 @@ export class MpvController {
   private isDestroyed = false
   private isPlaying = false
   private currentVolume = 0.8
+  private equalizerBands = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  private readonly equalizerFrequencies = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
 
   private onStateChangeCb?: (state: PlaybackStateEvent) => void
   private onTrackEndedCb?: () => void
@@ -111,6 +113,19 @@ export class MpvController {
     this.sendCommand(['observe_property', 2, 'duration'])
     this.sendCommand(['observe_property', 3, 'pause'])
     this.sendCommand(['observe_property', 4, 'volume'])
+    this.applyEqualizer()
+  }
+
+  private applyEqualizer(): void {
+    if (!this.socket || !this.isConnected) return
+
+    this.sendCommand(['af', 'clr'])
+
+    this.equalizerBands.forEach((gain, index) => {
+      const frequency = this.equalizerFrequencies[index]
+      const filter = `@iotaplayer_eq_${index}:equalizer=f=${frequency}:width_type=h:width=100:g=${gain.toFixed(2)}`
+      this.sendCommand(['af', 'add', filter])
+    })
   }
 
   private handleSocketData(chunk: Buffer): void {
@@ -171,6 +186,7 @@ export class MpvController {
     console.log(`[MPV] Playing file: ${filePath}`)
     this.sendCommand(['loadfile', filePath, 'replace'])
     this.sendCommand(['set_property', 'pause', false])
+    this.applyEqualizer()
     this.isPlaying = true
     this.onStateChangeCb?.({ isPlaying: true })
   }
@@ -205,6 +221,11 @@ export class MpvController {
     this.currentVolume = clamped
     this.sendCommand(['set_property', 'volume', Math.round(clamped * 100)])
     this.onStateChangeCb?.({ volume: clamped })
+  }
+
+  public setEqualizer(gains: number[]): void {
+    this.equalizerBands = gains.map((gain) => Math.max(-12, Math.min(12, Number(gain) || 0)))
+    this.applyEqualizer()
   }
 
   public stop(): void {
