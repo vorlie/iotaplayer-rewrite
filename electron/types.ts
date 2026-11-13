@@ -98,6 +98,9 @@ export interface SearchResults {
 export interface Playlist {
   id: string
   name: string
+  description: string
+  coverData: string | null
+  coverMimeType: string | null
   createdAt: number
   tracks: Track[]
 }

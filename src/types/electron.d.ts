@@ -36,8 +36,23 @@ interface LibraryAPI {
   artwork: (id: number) => Promise<ArtworkResponse | null>
   lyrics: (trackId: number) => Promise<LyricsResult>
   playlists: () => Promise<Playlist[]>
-  createPlaylist: (name: string, trackIds: number[]) => Promise<Playlist[] | null>
+  createPlaylist: (
+    name: string,
+    trackIds: number[],
+    description?: string,
+    coverData?: string | null,
+    coverMimeType?: string | null,
+  ) => Promise<Playlist[] | null>
   renamePlaylist: (playlistId: string, newName: string) => Promise<Playlist[] | null>
+  updatePlaylistDetails: (
+    playlistId: string,
+    updates: {
+      name?: string
+      description?: string
+      coverData?: string | null
+      coverMimeType?: string | null
+    },
+  ) => Promise<Playlist[] | null>
   deletePlaylist: (playlistId: string) => Promise<Playlist[]>
   addTrackToPlaylist: (playlistId: string, trackId: number) => Promise<Playlist[]>
   removeTrackFromPlaylist: (playlistId: string, position: number) => Promise<Playlist[]>

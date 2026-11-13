@@ -63,11 +63,28 @@ const libraryAPI = {
   playlists: (): Promise<Playlist[]> =>
     ipcRenderer.invoke('library:playlists'),
 
-  createPlaylist: (name: string, trackIds: number[]): Promise<Playlist[] | null> =>
-    ipcRenderer.invoke('library:create-playlist', name, trackIds),
+  createPlaylist: (
+    name: string,
+    trackIds: number[],
+    description?: string,
+    coverData?: string | null,
+    coverMimeType?: string | null,
+  ): Promise<Playlist[] | null> =>
+    ipcRenderer.invoke('library:create-playlist', name, trackIds, description, coverData, coverMimeType),
 
   renamePlaylist: (playlistId: string, newName: string): Promise<Playlist[] | null> =>
     ipcRenderer.invoke('library:rename-playlist', playlistId, newName),
+
+  updatePlaylistDetails: (
+    playlistId: string,
+    updates: {
+      name?: string
+      description?: string
+      coverData?: string | null
+      coverMimeType?: string | null
+    },
+  ): Promise<Playlist[] | null> =>
+    ipcRenderer.invoke('library:update-playlist-details', playlistId, updates),
 
   deletePlaylist: (playlistId: string): Promise<Playlist[]> =>
     ipcRenderer.invoke('library:delete-playlist', playlistId),
@@ -146,7 +163,7 @@ interface AudioContextLike {
   state: string
   destination: AudioNodeLike
   createAnalyser(): AnalyserNodeLike
-  createMediaElementSource(element: BrowserAudioElement): {
+  createMediaElementSource(element: any): {
     connect(destination: AudioNodeLike): void
   }
   resume(): Promise<void>
@@ -186,7 +203,7 @@ function initializeAnalyser(): void {
   nextAnalyser.fftSize = 2048
   nextAnalyser.smoothingTimeConstant = 0.4
 
-  const source = context.createMediaElementSource(browserAudio)
+  const source = context.createMediaElementSource(browserAudio as any)
 
   source.connect(nextAnalyser)
   nextAnalyser.connect(context.destination)

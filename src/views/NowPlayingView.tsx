@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import {
   ArrowDown,
   ArrowUp,
@@ -57,13 +57,39 @@ export function NowPlayingView() {
   const [contextMenu, setContextMenu] = useState<{ track: NonNullable<typeof currentTrack>; x: number; y: number } | null>(null)
   const [lyrics, setLyrics] = useState<LyricsResult>(EMPTY_LYRICS)
   const [lyricsLoading, setLyricsLoading] = useState(false)
+  const [queuePanelWidth, setQueuePanelWidth] = useState(300)
   const lyricsListRef = useRef<HTMLDivElement>(null)
   const userScrolledLyricsUntil = useRef(0)
   const isLyricsPointerDown = useRef(false)
+  const resizeState = useRef<{ active: boolean; startX: number; startWidth: number }>({ active: false, startX: 0, startWidth: 300 })
 
   // Drag and drop state for queue reordering
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dragOverInfo, setDragOverInfo] = useState<{ index: number; position: 'top' | 'bottom' } | null>(null)
+
+  useEffect(() => {
+    const handlePointerMove = (event: PointerEvent) => {
+      if (!resizeState.current.active) return
+
+      const nextWidth = resizeState.current.startWidth - (event.clientX - resizeState.current.startX)
+      const clampedWidth = Math.min(500, Math.max(240, nextWidth))
+      setQueuePanelWidth(clampedWidth)
+    }
+
+    const handlePointerUp = () => {
+      resizeState.current.active = false
+    }
+
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', handlePointerUp)
+    window.addEventListener('pointercancel', handlePointerUp)
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp)
+      window.removeEventListener('pointercancel', handlePointerUp)
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -120,6 +146,19 @@ export function NowPlayingView() {
 
   const repeatLabel = repeatMode === 'off' ? 'Repeat off' : repeatMode === 'all' ? 'Repeat all' : 'Repeat one'
 
+  const nowPlayingStyle = {
+    ['--queue-panel-width' as string]: `${queuePanelWidth}px`,
+  } as CSSProperties
+
+  const beginResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    resizeState.current = {
+      active: true,
+      startX: event.clientX,
+      startWidth: queuePanelWidth,
+    }
+    event.preventDefault()
+  }
+
   return (
     <div className="page">
       <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -135,7 +174,7 @@ export function NowPlayingView() {
         </span>
       </div>
 
-      <div className="page-body now-playing-page">
+      <div className="page-body now-playing-page" style={nowPlayingStyle}>
         <aside className="now-playing-panel now-playing-main-panel">
           <div className="now-playing-artwork">
             {artworkSrc ? (
@@ -249,7 +288,9 @@ export function NowPlayingView() {
           </div>
         </section>
 
-        <section className="now-playing-panel now-playing-queue-panel">
+        <div className="now-playing-splitter" onPointerDown={beginResize} aria-label="Resize queue panel" />
+
+        <section className="now-playing-panel now-playing-queue-panel" style={{ minWidth: 0 }}>
           <div className="now-playing-queue-top">
             <div>
               <div className="now-playing-queue-header" style={{ margin: 0, padding: 0 }}>Up next</div>

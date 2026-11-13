@@ -233,6 +233,21 @@ function runMigrations(db: Database.Database): void {
     db.exec('ALTER TABLE playlists ADD COLUMN last_modified INTEGER NOT NULL DEFAULT 0')
     db.exec('UPDATE playlists SET last_modified = created_at WHERE last_modified = 0 OR last_modified IS NULL')
   }
+
+  const hasDescription = playlistsSchema.some((column) => column.name === 'description')
+  if (!hasDescription) {
+    db.exec("ALTER TABLE playlists ADD COLUMN description TEXT NOT NULL DEFAULT ''")
+  }
+
+  const hasCoverData = playlistsSchema.some((column) => column.name === 'cover_data')
+  if (!hasCoverData) {
+    db.exec('ALTER TABLE playlists ADD COLUMN cover_data TEXT')
+  }
+
+  const hasCoverMime = playlistsSchema.some((column) => column.name === 'cover_mime')
+  if (!hasCoverMime) {
+    db.exec('ALTER TABLE playlists ADD COLUMN cover_mime TEXT')
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -500,15 +515,30 @@ export function dbSearch(query: string): {
   return { artists, albums, tracks }
 }
 
-export function dbGetPlaylists(): Array<{ id: string; name: string; createdAt: number; tracks: Track[] }> {
+export function dbGetPlaylists(): Array<{
+  id: string
+  name: string
+  description: string
+  coverData: string | null
+  coverMimeType: string | null
+  createdAt: number
+  tracks: Track[]
+}> {
   const db = getDatabase()
   const playlists = db
     .prepare(
-      `SELECT id, name, created_at AS createdAt
+      `SELECT id, name, description, cover_data AS coverData, cover_mime AS coverMimeType, created_at AS createdAt
        FROM playlists
        ORDER BY created_at DESC`,
     )
-    .all() as Array<{ id: string; name: string; createdAt: number }>
+    .all() as Array<{
+      id: string
+      name: string
+      description: string
+      coverData: string | null
+      coverMimeType: string | null
+      createdAt: number
+    }>
 
   return playlists.map((playlist) => ({
     ...playlist,
@@ -529,18 +559,74 @@ export function dbGetPlaylists(): Array<{ id: string; name: string; createdAt: n
   }))
 }
 
-export function dbRenamePlaylist(playlistId: string, newName: string): Array<{ id: string; name: string; createdAt: number; tracks: Track[] }> | null {
-  const trimmed = newName.trim()
-  if (!trimmed) return null
-
+export function dbUpdatePlaylistMetadata(
+  playlistId: string,
+  updates: {
+    name?: string
+    description?: string
+    coverData?: string | null
+    coverMimeType?: string | null
+  },
+): Array<{
+  id: string
+  name: string
+  description: string
+  coverData: string | null
+  coverMimeType: string | null
+  createdAt: number
+  tracks: Track[]
+}> | null {
   const db = getDatabase()
+  const nextName = updates.name?.trim()
+  if (nextName !== undefined && !nextName) return null
+
+  const assignments: string[] = []
+  const params: Array<string | number | null> = []
+
+  if (updates.name !== undefined) {
+    assignments.push('name = ?')
+    params.push(nextName ?? '')
+  }
+
+  if (updates.description !== undefined) {
+    assignments.push('description = ?')
+    params.push(updates.description ?? '')
+  }
+
+  if (updates.coverData !== undefined) {
+    assignments.push('cover_data = ?')
+    params.push(updates.coverData ?? null)
+  }
+
+  if (updates.coverMimeType !== undefined) {
+    assignments.push('cover_mime = ?')
+    params.push(updates.coverMimeType ?? null)
+  }
+
+  if (assignments.length === 0) {
+    return dbGetPlaylists()
+  }
+
+  params.push(Date.now(), playlistId)
   const result = db
-    .prepare('UPDATE playlists SET name = ?, last_modified = ? WHERE id = ?')
-    .run(trimmed, Date.now(), playlistId)
+    .prepare(`UPDATE playlists SET ${assignments.join(', ')}, last_modified = ? WHERE id = ?`)
+    .run(...params)
 
   if (result.changes === 0) return null
 
   return dbGetPlaylists()
+}
+
+export function dbRenamePlaylist(playlistId: string, newName: string): Array<{
+  id: string
+  name: string
+  description: string
+  coverData: string | null
+  coverMimeType: string | null
+  createdAt: number
+  tracks: Track[]
+}> | null {
+  return dbUpdatePlaylistMetadata(playlistId, { name: newName })
 }
 
 export function dbDeletePlaylist(playlistId: string): Array<{ id: string; name: string; createdAt: number; tracks: Track[] }> {
@@ -550,7 +636,21 @@ export function dbDeletePlaylist(playlistId: string): Array<{ id: string; name: 
   return dbGetPlaylists()
 }
 
-export function dbCreatePlaylist(name: string, trackIds: number[]): Array<{ id: string; name: string; createdAt: number; tracks: Track[] }> | null {
+export function dbCreatePlaylist(
+  name: string,
+  trackIds: number[],
+  description: string = '',
+  coverData: string | null = null,
+  coverMimeType: string | null = null,
+): Array<{
+  id: string
+  name: string
+  description: string
+  coverData: string | null
+  coverMimeType: string | null
+  createdAt: number
+  tracks: Track[]
+}> | null {
   const trimmed = name.trim()
   if (!trimmed) return null
 
@@ -558,8 +658,10 @@ export function dbCreatePlaylist(name: string, trackIds: number[]): Array<{ id: 
   const id = `playlist-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const createdAt = Date.now()
 
-  const insert = db.prepare(`INSERT INTO playlists (id, name, created_at) VALUES (?, ?, ?)`)
-  insert.run(id, trimmed, createdAt)
+  const insert = db.prepare(
+    `INSERT INTO playlists (id, name, description, cover_data, cover_mime, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+  )
+  insert.run(id, trimmed, description, coverData ?? null, coverMimeType ?? null, createdAt)
 
   if (trackIds.length > 0) {
     const insertTrack = db.prepare(

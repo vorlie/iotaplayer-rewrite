@@ -13,6 +13,7 @@ import {
   dbGetStats,
   dbGetTracks,
   dbRenamePlaylist,
+  dbUpdatePlaylistMetadata,
   dbSearch,
   dbRemoveTrackFromPlaylist,
   dbReorderPlaylist,
@@ -53,6 +54,7 @@ export const IPC = {
   LIBRARY_PLAYLISTS: 'library:playlists',
   LIBRARY_CREATE_PLAYLIST: 'library:create-playlist',
   LIBRARY_RENAME_PLAYLIST: 'library:rename-playlist',
+  LIBRARY_UPDATE_PLAYLIST_DETAILS: 'library:update-playlist-details',
   LIBRARY_DELETE_PLAYLIST: 'library:delete-playlist',
   LIBRARY_ADD_TRACK_TO_PLAYLIST: 'library:add-track-to-playlist',
   LIBRARY_REMOVE_TRACK_FROM_PLAYLIST: 'library:remove-track-from-playlist',
@@ -176,13 +178,39 @@ export function registerIpcHandlers(): void {
     return dbGetPlaylists()
   })
 
-  ipcMain.handle(IPC.LIBRARY_CREATE_PLAYLIST, (_event, name: string, trackIds: number[]) => {
-    return dbCreatePlaylist(name, trackIds)
-  })
+  ipcMain.handle(
+    IPC.LIBRARY_CREATE_PLAYLIST,
+    (
+      _event,
+      name: string,
+      trackIds: number[],
+      description?: string,
+      coverData?: string | null,
+      coverMimeType?: string | null,
+    ) => {
+      return dbCreatePlaylist(name, trackIds, description ?? '', coverData ?? null, coverMimeType ?? null)
+    },
+  )
 
   ipcMain.handle(IPC.LIBRARY_RENAME_PLAYLIST, (_event, playlistId: string, newName: string) => {
     return dbRenamePlaylist(playlistId, newName)
   })
+
+  ipcMain.handle(
+    IPC.LIBRARY_UPDATE_PLAYLIST_DETAILS,
+    (
+      _event,
+      playlistId: string,
+      updates: {
+        name?: string
+        description?: string
+        coverData?: string | null
+        coverMimeType?: string | null
+      },
+    ) => {
+      return dbUpdatePlaylistMetadata(playlistId, updates)
+    },
+  )
 
   ipcMain.handle(IPC.LIBRARY_DELETE_PLAYLIST, (_event, playlistId: string) => {
     return dbDeletePlaylist(playlistId)

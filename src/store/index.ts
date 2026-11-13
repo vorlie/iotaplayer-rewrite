@@ -188,6 +188,15 @@ interface PlaybackStore extends PlaybackState {
   playQueue: (tracks: Track[], startTrackId?: number, opts?: { name?: string }) => void
   createPlaylist: (name: string, tracks?: Track[]) => Playlist | null
   renamePlaylist: (playlistId: string, newName: string) => void
+  updatePlaylistDetails: (
+    playlistId: string,
+    updates: {
+      name?: string
+      description?: string
+      coverData?: string | null
+      coverMimeType?: string | null
+    },
+  ) => void
   deletePlaylist: (playlistId: string) => void
   saveCurrentQueueAsPlaylist: (name?: string) => Playlist | null
   addTrackToPlaylist: (playlistId: string, track: Track) => void
@@ -352,6 +361,9 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
       {
         id: 'favorites',
         name: 'Favorites',
+        description: 'Your starred tracks',
+        coverData: null,
+        coverMimeType: null,
         tracks: [],
         createdAt: Date.now(),
       },
@@ -474,6 +486,9 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
         const playlist: Playlist = {
           id: `playlist-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           name: trimmed,
+          description: '',
+          coverData: null,
+          coverMimeType: null,
           tracks,
           createdAt: Date.now(),
         }
@@ -494,6 +509,20 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
     renamePlaylist: (playlistId, newName) => {
       if (typeof window !== 'undefined' && 'library' in window) {
         void window.library.renamePlaylist(playlistId, newName).then((playlists) => {
+          if (playlists) set({ playlists })
+        })
+      }
+    },
+
+    updatePlaylistDetails: (playlistId, updates) => {
+      if (typeof window !== 'undefined' && 'library' in window) {
+        const nextName = updates.name?.trim()
+        const nextDescription = updates.description?.trim() ?? updates.description
+        void window.library.updatePlaylistDetails(playlistId, {
+          ...updates,
+          name: nextName !== undefined ? nextName : updates.name,
+          description: nextDescription !== undefined ? nextDescription : updates.description,
+        }).then((playlists) => {
           if (playlists) set({ playlists })
         })
       }
@@ -613,6 +642,7 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
 
       const track = queue[nextIndex]
       set({ currentTrack: track, queueIndex: nextIndex, position: 0, duration: track.duration, isPlaying: true })
+      updateDiscordPresence(track, true)
       if (typeof window !== 'undefined' && 'playback' in window) {
         void window.playback.play(track.path)
         if ('library' in window) {
@@ -653,6 +683,7 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
 
       const track = queue[prevIndex]
       set({ currentTrack: track, queueIndex: prevIndex, position: 0, duration: track.duration, isPlaying: true })
+      updateDiscordPresence(track, true)
       if (typeof window !== 'undefined' && 'playback' in window) {
         void window.playback.play(track.path)
         if ('library' in window) {
