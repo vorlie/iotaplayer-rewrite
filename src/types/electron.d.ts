@@ -125,12 +125,26 @@ interface PlaybackAPI {
   getSpectrum: () => Promise<number[]>
 }
 
+interface SystemMediaSessionSnapshot {
+  title: string
+  artist: string
+  album: string
+  artworkUrl: string | null
+  duration: number
+  position: number
+  isPlaying: boolean
+}
+
 declare global {
   interface Window {
     library: LibraryAPI
     settings: SettingsAPI
     discord: DiscordAPI
     playback: PlaybackAPI
+    __iotaplayerMediaControls?: {
+      sync?: () => void
+      getSnapshot?: () => SystemMediaSessionSnapshot
+    }
   }
 }
 

@@ -242,54 +242,6 @@ export function NowPlayingView() {
           </div>
         </aside>
 
-        <section className="now-playing-panel now-playing-lyrics-panel">
-          <div className="now-playing-lyrics-top">
-            <div>
-              <div className="now-playing-queue-header" style={{ margin: 0, padding: 0 }}>Lyrics</div>
-              {lyricsSource && <span className="now-playing-lyrics-source">{lyricsSource}{lyrics.synchronized ? ' · synced' : ''}</span>}
-            </div>
-          </div>
-
-          <div
-            ref={lyricsListRef}
-            className={`now-playing-lyrics ${lyrics.synchronized ? 'is-synced' : ''}`}
-            onWheel={() => { userScrolledLyricsUntil.current = Date.now() + 3500 }}
-            onTouchMove={() => { userScrolledLyricsUntil.current = Date.now() + 3500 }}
-            onPointerDown={() => { isLyricsPointerDown.current = true }}
-            onPointerUp={() => {
-              isLyricsPointerDown.current = false
-              userScrolledLyricsUntil.current = Date.now() + 3500
-            }}
-            onPointerCancel={() => { isLyricsPointerDown.current = false }}
-          >
-            <div className="now-playing-lyrics-list">
-              {lyricsLoading ? (
-                <div className="now-playing-empty-state">Loading lyrics…</div>
-              ) : lyrics.lines.length ? (
-                lyrics.lines.map((line, index) => (
-                  <button
-                    key={`${line.timestamp ?? 'text'}-${index}`}
-                    type="button"
-                    data-lyric-index={index}
-                    className={`lyric-line ${!line.text ? 'is-gap' : ''} ${index === activeLyricIndex ? 'is-active' : ''}`}
-                    disabled={line.timestamp == null || !line.text}
-                    onClick={() => line.timestamp != null && seek(line.timestamp)}
-                    title={line.timestamp != null ? `Seek to ${fmt(line.timestamp)}` : undefined}
-                  >
-                    {line.text}
-                  </button>
-                ))
-              ) : (
-                <div className="now-playing-lyrics-empty">
-                  {currentTrack ? 'No lyrics found. Add a matching .lrc or .txt file, or use embedded lyrics.' : 'Choose a track to see its lyrics.'}
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
-        <div className="now-playing-splitter" onPointerDown={beginResize} aria-label="Resize queue panel" />
-
         <section className="now-playing-panel now-playing-queue-panel" style={{ minWidth: 0 }}>
           <div className="now-playing-queue-top">
             <div>
@@ -398,6 +350,55 @@ export function NowPlayingView() {
               })}
             </div>
           )}
+        </section>
+
+        <div className="now-playing-splitter" onPointerDown={beginResize} aria-label="Resize queue panel" />
+
+
+                <section className="now-playing-panel now-playing-lyrics-panel">
+          <div className="now-playing-lyrics-top">
+            <div>
+              <div className="now-playing-queue-header" style={{ margin: 0, padding: 0 }}>Lyrics</div>
+              {lyricsSource && <span className="now-playing-lyrics-source">{lyricsSource}{lyrics.synchronized ? ' · synced' : ''}</span>}
+            </div>
+          </div>
+
+          <div
+            ref={lyricsListRef}
+            className={`now-playing-lyrics ${lyrics.synchronized ? 'is-synced' : ''}`}
+            onWheel={() => { userScrolledLyricsUntil.current = Date.now() + 3500 }}
+            onTouchMove={() => { userScrolledLyricsUntil.current = Date.now() + 3500 }}
+            onPointerDown={() => { isLyricsPointerDown.current = true }}
+            onPointerUp={() => {
+              isLyricsPointerDown.current = false
+              userScrolledLyricsUntil.current = Date.now() + 3500
+            }}
+            onPointerCancel={() => { isLyricsPointerDown.current = false }}
+          >
+            <div className="now-playing-lyrics-list">
+              {lyricsLoading ? (
+                <div className="now-playing-empty-state">Loading lyrics…</div>
+              ) : lyrics.lines.length ? (
+                lyrics.lines.map((line, index) => (
+                  <button
+                    key={`${line.timestamp ?? 'text'}-${index}`}
+                    type="button"
+                    data-lyric-index={index}
+                    className={`lyric-line ${!line.text ? 'is-gap' : ''} ${index === activeLyricIndex ? 'is-active' : ''}`}
+                    disabled={line.timestamp == null || !line.text}
+                    onClick={() => line.timestamp != null && seek(line.timestamp)}
+                    title={line.timestamp != null ? `Seek to ${fmt(line.timestamp)}` : undefined}
+                  >
+                    {line.text}
+                  </button>
+                ))
+              ) : (
+                <div className="now-playing-lyrics-empty">
+                  {currentTrack ? 'No lyrics found. Add a matching .lrc or .txt file, or use embedded lyrics.' : 'Choose a track to see its lyrics.'}
+                </div>
+              )}
+            </div>
+          </div>
         </section>
       </div>
 

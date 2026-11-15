@@ -1,11 +1,17 @@
 import { useEffect, useState } from 'react'
-import { RefreshCw, Trash2 } from 'lucide-react'
+import { AudioLines, Library, RefreshCw, ShieldCheck, Sparkles, Trash2 } from 'lucide-react'
 import { useAppStore } from '../store'
 import type { PlaybackBackendMode, ScanResult } from '../types/electron'
 import '../styles/library.css'
 
 // Default library root
 const DEFAULT_LIBRARY_ROOT = 'D:\\Media\\Music'
+
+const settingsCategories = [
+  { id: 'playback', label: 'Playback', Icon: AudioLines },
+  { id: 'library', label: 'Library', Icon: Library },
+  { id: 'integrations', label: 'Integrations', Icon: ShieldCheck },
+]
 
 export function SettingsView() {
   const { library, scanLibrary, cleanupMissingTracks } = useAppStore()
@@ -107,389 +113,224 @@ export function SettingsView() {
     <div className="page">
       <div className="page-header">
         <h1 className="page-title">Settings</h1>
+        <p className="page-subtitle">Manage playback, library, and app integrations.</p>
       </div>
 
-      <div className="page-body" style={{ maxWidth: 560 }}>
-        <section style={{ marginBottom: 'var(--space-8)' }}>
-          <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, marginBottom: 'var(--space-4)' }}>
-            Playback
-          </h2>
-
-          <div style={{ marginBottom: 'var(--space-4)' }}>
-            <label
-              style={{
-                display: 'block',
-                fontSize: 'var(--text-xs)',
-                color: 'var(--color-text-3)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                fontWeight: 600,
-                marginBottom: 'var(--space-2)',
-              }}
-            >
-              Audio backend
-            </label>
-
-            <select
-              value={backendMode}
-              onChange={(e) => setBackendMode(e.target.value as PlaybackBackendMode)}
-              style={{
-                width: '100%',
-                background: 'var(--color-surface-2)',
-                color: 'var(--color-text-1)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius)',
-                padding: 'var(--space-2) var(--space-3)',
-              }}
-            >
-              <option value="auto">Automatic</option>
-              <option value="mpv">MPV only</option>
-              <option value="browser">Browser fallback only</option>
-            </select>
-
-            <div
-              style={{
-                marginTop: 'var(--space-2)',
-                color: 'var(--color-text-3)',
-                fontSize: 'var(--text-xs)',
-              }}
-            >
-              .wav files always use MPV.
-            </div>
-          </div>
-
-          <div style={{ marginTop: 'var(--space-4)' }}>
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 'var(--space-3)',
-                padding: 'var(--space-3) var(--space-4)',
-                background: 'var(--color-surface-2)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius)',
-                cursor: 'pointer',
-              }}
-            >
-              <div>
-                <div style={{ fontWeight: 600 }}>Discord Rich Presence</div>
-                <div style={{ color: 'var(--color-text-3)', fontSize: 'var(--text-xs)' }}>
-                  Shows the current track and audio progress in Discord.
-                </div>
-              </div>
-
-              <input
-                type="checkbox"
-                checked={discordEnabled}
-                onChange={(e) => setDiscordEnabled(e.target.checked)}
-                style={{ width: 18, height: 18 }}
-              />
-            </label>
-          </div>
-
-          <div style={{ marginTop: 'var(--space-4)' }}>
-            <label
-              style={{
-                display: 'block',
-                fontSize: 'var(--text-xs)',
-                color: 'var(--color-text-3)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                fontWeight: 600,
-                marginBottom: 'var(--space-2)',
-              }}
-            >
-              Discord Application ID
-            </label>
-            <input
-              type="text"
-              value={discordClientId}
-              onChange={(e) => setDiscordClientId(e.target.value)}
-              placeholder="Paste your Discord app ID"
-              style={{ width: '100%' }}
-            />
-          </div>
-
-          <div style={{ marginTop: 'var(--space-4)' }}>
-            <label
-              style={{
-                display: 'block',
-                fontSize: 'var(--text-xs)',
-                color: 'var(--color-text-3)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                fontWeight: 600,
-                marginBottom: 'var(--space-2)',
-              }}
-            >
-              Imgur Client ID
-            </label>
-            <input
-              type="text"
-              value={imgurClientId}
-              onChange={(e) => setImgurClientId(e.target.value)}
-              placeholder="Paste your Imgur client ID"
-              style={{ width: '100%' }}
-            />
-          </div>
-
-          <div style={{ marginTop: 'var(--space-5)', display: 'flex', justifyContent: 'flex-end' }}>
-            <button
-              type="button"
-              onClick={handleSaveSettings}
-              disabled={savingSettings}
-              style={{
-                padding: 'var(--space-2) var(--space-4)',
-                background: savingSettings ? 'var(--color-surface-3)' : 'var(--color-accent)',
-                color: savingSettings ? 'var(--color-text-3)' : '#fff',
-                borderRadius: 'var(--radius)',
-                fontWeight: 600,
-                cursor: savingSettings ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {savingSettings ? 'Saving…' : 'Save Settings'}
-            </button>
-          </div>
-        </section>
-
-        {/* Library section */}
-        <section style={{ marginBottom: 'var(--space-8)' }}>
-          <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, marginBottom: 'var(--space-4)' }}>
-            Music Library
-          </h2>
-
-          <div style={{ marginBottom: 'var(--space-4)' }}>
-            <label
-              style={{
-                display: 'block',
-                fontSize: 'var(--text-xs)',
-                color: 'var(--color-text-3)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                fontWeight: 600,
-                marginBottom: 'var(--space-2)',
-              }}
-            >
-              Library Root
-            </label>
-            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-              <input
-                type="text"
-                value={libraryRoot}
-                onChange={(e) => setLibraryRoot(e.target.value)}
-                style={{ flex: 1 }}
-                placeholder="e.g. D:\Media\Music"
-              />
-              <button
-                type="button"
-                onClick={handlePickLibraryRoot}
-                style={{
-                  padding: 'var(--space-2) var(--space-3)',
-                  background: 'var(--color-surface-2)',
-                  color: 'var(--color-text-1)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius)',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                Browse
-              </button>
-              <button
-                onClick={handleScan}
-                disabled={scanning}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--space-2)',
-                  padding: 'var(--space-2) var(--space-4)',
-                  background: scanning ? 'var(--color-surface-3)' : 'var(--color-accent)',
-                  color: scanning ? 'var(--color-text-3)' : '#fff',
-                  borderRadius: 'var(--radius)',
-                  fontWeight: 600,
-                  fontSize: 'var(--text-sm)',
-                  cursor: scanning ? 'not-allowed' : 'pointer',
-                  transition: 'background var(--transition)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <RefreshCw size={14} className={scanning ? 'spin' : ''} />
-                {scanning ? 'Scanning…' : 'Scan Library'}
+      <div className="page-body settings-page-body">
+        <div className="settings-shell">
+          <aside className="settings-sidebar">
+            <div className="settings-sidebar__label">Navigation</div>
+            {settingsCategories.map(({ id, label, Icon }) => (
+              <a key={id} href={`#${id}`} className="settings-sidebar__link">
+                <Icon size={14} />
+                <span>{label}</span>
+              </a>
+            ))}
+            <div className="settings-sidebar__divider" />
+            <div className="settings-actions">
+              <button type="button" className="settings-button settings-button--primary settings-button--save" onClick={handleSaveSettings} disabled={savingSettings}>
+                {savingSettings ? 'Saving…' : 'Save Settings'}
               </button>
             </div>
-          </div>
+          </aside>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--space-4)' }}>
-            <button
-              type="button"
-              onClick={handleCleanupMissing}
-              disabled={cleaningMissing}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 'var(--space-2)',
-                padding: 'var(--space-2) var(--space-4)',
-                background: cleaningMissing ? 'var(--color-surface-3)' : 'var(--color-surface-2)',
-                color: cleaningMissing ? 'var(--color-text-3)' : 'var(--color-text-1)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius)',
-                fontWeight: 600,
-                cursor: cleaningMissing ? 'not-allowed' : 'pointer',
-              }}
-            >
-              <Trash2 size={14} />
-              {cleaningMissing ? 'Cleaning…' : 'Clean missing tracks'}
-            </button>
-          </div>
-
-          {/* Scan progress */}
-          {scanning && scanProgress && (
-            <div
-              style={{
-                background: 'var(--color-surface-2)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius)',
-                padding: 'var(--space-3) var(--space-4)',
-                fontSize: 'var(--text-sm)',
-                marginBottom: 'var(--space-4)',
-              }}
-            >
-              <div style={{ color: 'var(--color-text-2)', marginBottom: 'var(--space-2)' }}>
-                {scanProgress.phase === 'discovering' && 'Discovering files…'}
-                {scanProgress.phase === 'scanning' && (
-                  <>Scanning {scanProgress.current} / {scanProgress.total}…</>
-                )}
-                {scanProgress.phase === 'removing' && 'Cleaning up…'}
-                {scanProgress.phase === 'done' && 'Done!'}
-              </div>
-              {scanProgress.current_file && (
-                <div
-                  style={{
-                    color: 'var(--color-text-3)',
-                    fontSize: 'var(--text-xs)',
-                    fontFamily: 'var(--font-mono)',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {scanProgress.current_file}
+          <main className="settings-content">
+            <section id="playback" className="settings-section">
+              <header className="settings-section__header">
+                <div>
+                  <p className="settings-section__eyebrow">Playback</p>
+                  <h2>Audio settings</h2>
                 </div>
-              )}
-              {scanProgress.total > 0 && (
-                <div
-                  style={{
-                    marginTop: 'var(--space-2)',
-                    height: 3,
-                    background: 'var(--color-surface-3)',
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: `${(scanProgress.current / scanProgress.total) * 100}%`,
-                      height: '100%',
-                      background: 'var(--color-accent)',
-                      transition: 'width 0.15s ease',
-                      borderRadius: 2,
-                    }}
+                <Sparkles size={16} className="settings-section__icon" />
+              </header>
+
+              <div className="settings-card">
+                <div className="settings-field">
+                  <label htmlFor="audio-backend">Audio backend</label>
+                  <select
+                    id="audio-backend"
+                    value={backendMode}
+                    onChange={(e) => setBackendMode(e.target.value as PlaybackBackendMode)}
+                  >
+                    <option value="auto">Automatic</option>
+                    <option value="mpv">MPV only</option>
+                    <option value="browser">Browser fallback only</option>
+                  </select>
+                  <small>.wav files always use MPV.</small>
+                </div>
+
+                <div className="settings-toggle-row">
+                  <div>
+                    <h3>Discord Rich Presence</h3>
+                    <p>Shows the current track and audio progress in Discord.</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={discordEnabled}
+                    onChange={(e) => setDiscordEnabled(e.target.checked)}
                   />
                 </div>
-              )}
-            </div>
-          )}
 
-          {/* Last scan result */}
-          {lastResult && !scanning && (
-            <div
-              style={{
-                background: 'var(--color-surface-2)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius)',
-                padding: 'var(--space-3) var(--space-4)',
-                fontSize: 'var(--text-sm)',
-                marginBottom: 'var(--space-4)',
-              }}
-            >
-              <div style={{ color: 'var(--color-text-2)', fontWeight: 600, marginBottom: 'var(--space-2)' }}>
-                Last scan · {(lastResult.duration_ms / 1000).toFixed(1)}s
+                <div className="settings-field">
+                  <label htmlFor="discord-app-id">Discord Application ID</label>
+                  <input
+                    id="discord-app-id"
+                    type="text"
+                    value={discordClientId}
+                    onChange={(e) => setDiscordClientId(e.target.value)}
+                    placeholder="Paste your Discord app ID"
+                  />
+                </div>
+
+                <div className="settings-field">
+                  <label htmlFor="imgur-client-id">Imgur Client ID</label>
+                  <input
+                    id="imgur-client-id"
+                    type="text"
+                    value={imgurClientId}
+                    onChange={(e) => setImgurClientId(e.target.value)}
+                    placeholder="Paste your Imgur client ID"
+                  />
+                </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 16px' }}>
-                {[
-                  ['Total', lastResult.total],
-                  ['Unchanged', lastResult.unchanged],
-                  ['Added', lastResult.added],
-                  ['Updated', lastResult.updated],
-                  ['Removed', lastResult.removed],
-                  ['Failed', lastResult.failed],
-                ].map(([label, value]) => (
-                  <div key={label as string} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--color-text-3)' }}>{label}</span>
-                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{value}</span>
-                  </div>
-                ))}
-              </div>
+            </section>
 
-              {lastResult.errors.length > 0 && (
-                <details style={{ marginTop: 'var(--space-3)' }}>
-                  <summary style={{ color: '#ef4444', cursor: 'pointer', fontSize: 'var(--text-xs)' }}>
-                    {lastResult.errors.length} errors
-                  </summary>
-                  <div
-                    style={{
-                      marginTop: 'var(--space-2)',
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 'var(--text-xs)',
-                      color: 'var(--color-text-3)',
-                      maxHeight: 120,
-                      overflowY: 'auto',
-                    }}
-                  >
-                    {lastResult.errors.map((e, i) => (
-                      <div key={i}>{e}</div>
-                    ))}
-                  </div>
-                </details>
-              )}
-            </div>
-          )}
+            <section id="library" className="settings-section">
+              <header className="settings-section__header">
+                <div>
+                  <p className="settings-section__eyebrow">Library</p>
+                  <h2>Music collection</h2>
+                </div>
+                <Library size={16} className="settings-section__icon" />
+              </header>
 
-          {/* Library stats */}
-          {stats && (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: 'var(--space-3)',
-              }}
-            >
-              {[
-                ['Tracks', stats.track_count],
-                ['Albums', stats.album_count],
-                ['Artists', stats.artist_count],
-              ].map(([label, value]) => (
-                <div
-                  key={label as string}
-                  style={{
-                    background: 'var(--color-surface-2)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius)',
-                    padding: 'var(--space-3) var(--space-4)',
-                    textAlign: 'center',
-                  }}
-                >
-                  <div style={{ fontSize: 'var(--text-xl)', fontWeight: 700 }}>{value}</div>
-                  <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
-                    {label}
+              <div className="settings-card">
+                <div className="settings-field">
+                  <label htmlFor="library-root">Library root</label>
+                  <div className="settings-input-row">
+                    <input
+                      id="library-root"
+                      type="text"
+                      value={libraryRoot}
+                      onChange={(e) => setLibraryRoot(e.target.value)}
+                      placeholder="e.g. D:\Media\Music"
+                    />
+                    <button type="button" className="settings-button settings-button--secondary" onClick={handlePickLibraryRoot}>
+                      Browse
+                    </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
+
+                <div className="settings-button-row">
+                  <button type="button" className="settings-button settings-button--primary" onClick={handleScan} disabled={scanning}>
+                    <RefreshCw size={14} className={scanning ? 'spin' : ''} />
+                    {scanning ? 'Scanning…' : 'Scan Library'}
+                  </button>
+
+                  <button type="button" className="settings-button settings-button--ghost" onClick={handleCleanupMissing} disabled={cleaningMissing}>
+                    <Trash2 size={14} />
+                    {cleaningMissing ? 'Cleaning…' : 'Clean missing'}
+                  </button>
+                </div>
+
+                {scanning && scanProgress && (
+                  <div className="settings-progress">
+                    <div className="settings-progress__label">
+                      {scanProgress.phase === 'discovering' && 'Discovering files…'}
+                      {scanProgress.phase === 'scanning' && (
+                        <>Scanning {scanProgress.current} / {scanProgress.total}…</>
+                      )}
+                      {scanProgress.phase === 'removing' && 'Cleaning up…'}
+                      {scanProgress.phase === 'done' && 'Done!'}
+                    </div>
+                    {scanProgress.current_file && (
+                      <div className="settings-progress__file">{scanProgress.current_file}</div>
+                    )}
+                    {scanProgress.total > 0 && (
+                      <div className="settings-progress__track">
+                        <div
+                          className="settings-progress__fill"
+                          style={{ width: `${(scanProgress.current / scanProgress.total) * 100}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {lastResult && !scanning && (
+                  <div className="settings-summary">
+                    <div className="settings-summary__header">
+                      <span>Last scan</span>
+                      <strong>{(lastResult.duration_ms / 1000).toFixed(1)}s</strong>
+                    </div>
+                    <div className="settings-summary__grid">
+                      {[
+                        ['Total', lastResult.total],
+                        ['Unchanged', lastResult.unchanged],
+                        ['Added', lastResult.added],
+                        ['Updated', lastResult.updated],
+                        ['Removed', lastResult.removed],
+                        ['Failed', lastResult.failed],
+                      ].map(([label, value]) => (
+                        <div key={label as string} className="settings-summary__item">
+                          <span>{label}</span>
+                          <strong>{value}</strong>
+                        </div>
+                      ))}
+                    </div>
+
+                    {lastResult.errors.length > 0 && (
+                      <details className="settings-errors">
+                        <summary>{lastResult.errors.length} errors</summary>
+                        <div className="settings-errors__list">
+                          {lastResult.errors.map((error, index) => (
+                            <div key={`${error}-${index}`}>{error}</div>
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                )}
+
+                {stats && (
+                  <div className="settings-stat-grid">
+                    {[
+                      ['Tracks', stats.track_count],
+                      ['Albums', stats.album_count],
+                      ['Artists', stats.artist_count],
+                    ].map(([label, value]) => (
+                      <div key={label as string} className="settings-stat">
+                        <div className="settings-stat__value">{value}</div>
+                        <div className="settings-stat__label">{label}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section id="integrations" className="settings-section">
+              <header className="settings-section__header">
+                <div>
+                  <p className="settings-section__eyebrow">Integrations</p>
+                  <h2>Connected services</h2>
+                </div>
+                <ShieldCheck size={16} className="settings-section__icon" />
+              </header>
+
+              <div className="settings-card settings-card--compact">
+                <div className="settings-status">
+                  <span className="settings-status__dot" />
+                  Discord presence is {discordEnabled ? 'enabled' : 'disabled'}
+                </div>
+                <div className="settings-status settings-status--muted">
+                  <span className="settings-status__dot settings-status__dot--muted" />
+                  Imgur client ID {imgurClientId ? 'configured' : 'not configured'}
+                </div>
+              </div>
+            </section>
+          </main>
+        </div>
       </div>
     </div>
   )
