@@ -12,7 +12,8 @@
     "build": "npm run build:electron && npm run build:renderer",
     "package": "npm run build && electron-forge package",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postinstall": "node scripts/patch-discord-rpc.js"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
