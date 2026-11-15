@@ -9,7 +9,7 @@ function textLines(text: string): LyricLine[] {
   return text.replace(/^\uFEFF/, '').split(/\r?\n/).map((line) => ({ text: line.trimEnd() })).filter((line) => line.text)
 }
 
-function parseLrc(text: string): LyricLine[] {
+export function parseLrc(text: string): LyricLine[] {
   const raw = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').trim()
   const timestamp = /\[(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?]/g
   const wordTimestamp = /<\d{1,3}:\d{2}(?:[.:]\d{1,3})?>/g
@@ -42,13 +42,27 @@ function parseLrc(text: string): LyricLine[] {
       .replace(/\s*\/$/, '')
       .trim()
 
+    const isGap = !lyric
     for (const value of pending) {
-      lines.push({ text: lyric, timestamp: Math.max(0, value - offset) })
+      lines.push({
+        text: lyric,
+        timestamp: Math.max(0, value - offset),
+        isGap,
+      })
     }
     pending.length = 0
   }
 
-  return lines.sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))
+  const sorted = lines.sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))
+  // Collapse multiple consecutive empty/gap entries into a single indicator with the earliest timestamp
+  const deduped: LyricLine[] = []
+  for (const line of sorted) {
+    if (line.isGap && deduped.length > 0 && deduped[deduped.length - 1].isGap) {
+      continue
+    }
+    deduped.push(line)
+  }
+  return deduped
 }
 
 async function getEmbeddedLyrics(filePath: string): Promise<LyricsResult> {
@@ -63,9 +77,26 @@ async function getEmbeddedLyrics(filePath: string): Promise<LyricsResult> {
       })[0]
     if (!tag) return EMPTY_LYRICS
 
-    const synced = tag.syncText
-      .filter((line) => line.text.trim() && line.timestamp != null)
-      .map((line) => ({ text: line.text.trim(), timestamp: line.timestamp! / 1000 }))
+    const rawSynced = tag.syncText
+      .filter((line) => line.timestamp != null)
+      .map((line) => {
+        const text = line.text ? line.text.trim() : ''
+        return {
+          text,
+          timestamp: line.timestamp! / 1000,
+          isGap: !text,
+        }
+      })
+      .sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))
+
+    const synced: LyricLine[] = []
+    for (const line of rawSynced) {
+      if (line.isGap && synced.length > 0 && synced[synced.length - 1].isGap) {
+        continue
+      }
+      synced.push(line)
+    }
+
     if (synced.length) return { source: 'embedded', lines: synced, synchronized: true }
 
     const lines = tag.text ? textLines(tag.text) : []

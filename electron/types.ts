@@ -63,6 +63,8 @@ export interface LyricLine {
   text: string
   /** Position in seconds when this is a time-synchronised lyric line. */
   timestamp?: number
+  /** True when this entry represents an explicit empty timestamped gap. */
+  isGap?: boolean
 }
 
 export interface LyricsResult {

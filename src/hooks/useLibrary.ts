@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { Album, Artist, Track } from '../types/electron'
+import type { Album, Artist, LyricsResult, Track } from '../types/electron'
 
 // Convenience hook for loading data from the IPC bridge
 export function useArtists() {
@@ -167,3 +167,67 @@ export function useFormatDuration() {
     return `${m}:${String(sec).padStart(2, '0')}`
   }, [])
 }
+
+const EMPTY_LYRICS: LyricsResult = { source: null, lines: [], synchronized: false }
+const lyricsCache = new Map<number, LyricsResult>()
+
+function normalizeLyrics(result: LyricsResult): LyricsResult {
+  if (!result || !result.lines || !result.lines.length) return result
+
+  const lines: LyricLine[] = []
+  for (const line of result.lines) {
+    const isGap = Boolean(line.isGap || (!line.text && line.timestamp != null))
+    if (isGap && lines.length > 0 && (lines[lines.length - 1].isGap || !lines[lines.length - 1].text)) {
+      continue
+    }
+    lines.push(isGap ? { ...line, isGap: true, text: '' } : line)
+  }
+
+  return { ...result, lines }
+}
+
+export function useLyrics(trackId: number | null | undefined) {
+  const [data, setData] = useState<{ id: number | null; lyrics: LyricsResult }>({
+    id: null,
+    lyrics: EMPTY_LYRICS,
+  })
+  const [reloadKey, setReloadKey] = useState(0)
+
+  useEffect(() => {
+    if (trackId == null) return
+    if (lyricsCache.has(trackId) && reloadKey === 0) return
+
+    let cancelled = false
+    window.library.lyrics(trackId)
+      .then((result) => {
+        if (!cancelled) {
+          const normalized = normalizeLyrics(result)
+          lyricsCache.set(trackId, normalized)
+          setData({ id: trackId, lyrics: normalized })
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setData({ id: trackId, lyrics: EMPTY_LYRICS })
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [trackId, reloadKey])
+
+  const reload = useCallback(() => {
+    if (trackId != null) {
+      lyricsCache.delete(trackId)
+      setReloadKey((k) => k + 1)
+    }
+  }, [trackId])
+
+  const cached = trackId != null ? lyricsCache.get(trackId) : null
+  const lyrics = cached ?? (data.id === trackId ? data.lyrics : EMPTY_LYRICS)
+  const loading = trackId != null && !cached && data.id !== trackId
+
+  return { lyrics, loading, reload }
+}
+

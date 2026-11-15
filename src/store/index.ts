@@ -55,6 +55,11 @@ interface AppStore {
   // Navigation
   nav: NavState
 
+  // Immersive Fullscreen Now Playing overlay
+  isFullscreenNowPlaying: boolean
+  setFullscreenNowPlaying: (open: boolean) => void
+  toggleFullscreenNowPlaying: () => void
+
   // Library
   library: LibraryState
 
@@ -84,6 +89,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
     playlistId: null,
     searchQuery: '',
   },
+
+  isFullscreenNowPlaying: false,
+  setFullscreenNowPlaying: (open) => set({ isFullscreenNowPlaying: open }),
+  toggleFullscreenNowPlaying: () => set((s) => ({ isFullscreenNowPlaying: !s.isFullscreenNowPlaying })),
 
   library: {
     stats: null,

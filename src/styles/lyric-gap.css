@@ -1,0 +1,141 @@
+/* -------------------------------------------------------------------------
+   Horizontal Animated Lyric Gap Indicator
+   Understated, flowing three-dot indicator for timestamped instrumental gaps
+   ------------------------------------------------------------------------- */
+
+.lyric-gap-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  background: transparent;
+  border: none;
+  cursor: default;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 320ms cubic-bezier(0.16, 1, 0.3, 1),
+              visibility 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  border-radius: var(--radius);
+  outline: none;
+  padding: 0;
+}
+
+.lyric-gap-indicator.is-active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.lyric-gap-indicator.is-clickable {
+  cursor: pointer;
+}
+
+.lyric-gap-indicator.is-clickable:not(.is-active):hover {
+  opacity: 0.35;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Dots wrapper */
+.lyric-gap-dots {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Individual dot */
+.lyric-gap-dot {
+  border-radius: 50%;
+  background: var(--color-accent);
+  transition: transform 260ms ease, opacity 260ms ease;
+  will-change: transform, opacity;
+  flex-shrink: 0;
+}
+
+/* Wave animation when active */
+.lyric-gap-indicator.is-active .lyric-gap-dot {
+  animation: lyricGapWave 1.4s infinite ease-in-out;
+}
+
+.lyric-gap-dot--1 {
+  animation-delay: 0s !important;
+}
+
+.lyric-gap-dot--2 {
+  animation-delay: 0.2s !important;
+}
+
+.lyric-gap-dot--3 {
+  animation-delay: 0.4s !important;
+}
+
+/* Keyframe: subtle opacity, scale, and left-to-right flowing motion */
+@keyframes lyricGapWave {
+  0%, 100% {
+    opacity: 0.32;
+    transform: translateX(-4px) scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(4px) scale(1.18);
+  }
+}
+
+/* Fullscreen variant */
+.lyric-gap-indicator--fullscreen {
+  justify-content: flex-start;
+  padding-left: 14px;
+  height: 48px;
+  min-height: 48px;
+}
+
+.lyric-gap-indicator--fullscreen .lyric-gap-dots {
+  gap: 12px;
+}
+
+.lyric-gap-indicator--fullscreen .lyric-gap-dot {
+  width: 9px;
+  height: 9px;
+}
+
+.lyric-gap-indicator--fullscreen.is-active .lyric-gap-dot {
+  box-shadow: 0 0 10px rgba(255, 167, 167, 0.5),
+              0 0 20px color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+
+/* Normal Now Playing variant */
+.lyric-gap-indicator--normal {
+  height: 36px;
+  min-height: 36px;
+}
+
+.lyric-gap-indicator--normal .lyric-gap-dots {
+  gap: 8px;
+}
+
+.lyric-gap-indicator--normal .lyric-gap-dot {
+  width: 7px;
+  height: 7px;
+}
+
+.lyric-gap-indicator--normal.is-active .lyric-gap-dot {
+  box-shadow: 0 0 8px rgba(255, 167, 167, 0.45);
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .lyric-gap-indicator,
+  .lyric-gap-dot {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .lyric-gap-indicator.is-active .lyric-gap-dot {
+    opacity: 0.85 !important;
+    transform: none !important;
+  }
+}

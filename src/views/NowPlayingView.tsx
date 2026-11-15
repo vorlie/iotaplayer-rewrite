@@ -6,6 +6,7 @@ import {
   ChevronRight,
   GripVertical,
   Heart,
+  Maximize2,
   Pause,
   Play,
   Repeat,
@@ -15,14 +16,13 @@ import {
   Volume2,
   X,
 } from 'lucide-react'
-import { useArtwork, useFormatDuration } from '../hooks/useLibrary'
-import { usePlaybackStore } from '../store'
-import type { LyricsResult } from '../types/electron'
+import { useArtwork, useFormatDuration, useLyrics } from '../hooks/useLibrary'
+import { useAppStore, usePlaybackStore } from '../store'
+import { LyricGapIndicator } from '../components/LyricGapIndicator'
 import '../styles/library.css'
 
-const EMPTY_LYRICS: LyricsResult = { source: null, lines: [], synchronized: false }
-
 export function NowPlayingView() {
+  const setFullscreen = useAppStore((s) => s.setFullscreenNowPlaying)
   const fmt = useFormatDuration()
   const {
     currentTrack,
@@ -55,8 +55,7 @@ export function NowPlayingView() {
   const isFav = currentTrack ? favoriteIds.includes(currentTrack.id) : false
   const progress = duration > 0 ? (position / duration) * 100 : 0
   const [contextMenu, setContextMenu] = useState<{ track: NonNullable<typeof currentTrack>; x: number; y: number } | null>(null)
-  const [lyrics, setLyrics] = useState<LyricsResult>(EMPTY_LYRICS)
-  const [lyricsLoading, setLyricsLoading] = useState(false)
+  const { lyrics, loading: lyricsLoading } = useLyrics(currentTrack?.id)
   const [queuePanelWidth, setQueuePanelWidth] = useState(300)
   const lyricsListRef = useRef<HTMLDivElement>(null)
   const userScrolledLyricsUntil = useRef(0)
@@ -91,28 +90,6 @@ export function NowPlayingView() {
     }
   }, [])
 
-  useEffect(() => {
-    let cancelled = false
-    if (!currentTrack) {
-      setLyrics(EMPTY_LYRICS)
-      return
-    }
-
-    setLyricsLoading(true)
-    window.library.lyrics(currentTrack.id)
-      .then((result) => {
-        if (!cancelled) setLyrics(result)
-      })
-      .catch(() => {
-        if (!cancelled) setLyrics(EMPTY_LYRICS)
-      })
-      .finally(() => {
-        if (!cancelled) setLyricsLoading(false)
-      })
-
-    return () => { cancelled = true }
-  }, [currentTrack?.id])
-
   const activeLyricIndex = lyrics.synchronized
     ? lyrics.lines.reduce((active, line, index) => line.timestamp != null && line.timestamp <= position ? index : active, -1)
     : -1
@@ -123,8 +100,19 @@ export function NowPlayingView() {
 
   useEffect(() => {
     if (activeLyricIndex < 0 || isLyricsPointerDown.current || Date.now() < userScrolledLyricsUntil.current) return
-    const line = lyricsListRef.current?.querySelector<HTMLElement>(`[data-lyric-index="${activeLyricIndex}"]`)
-    line?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    const container = lyricsListRef.current
+    if (!container) return
+    const line = container.querySelector<HTMLElement>(`[data-lyric-index="${activeLyricIndex}"]`)
+    if (line) {
+      const containerRect = container.getBoundingClientRect()
+      const lineRect = line.getBoundingClientRect()
+      const targetTop =
+        container.scrollTop +
+        (lineRect.top - containerRect.top) -
+        container.clientHeight / 2 +
+        lineRect.height / 2
+      container.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' })
+    }
   }, [activeLyricIndex])
 
   function handleProgressClick(e: React.MouseEvent<HTMLDivElement>) {
@@ -166,12 +154,24 @@ export function NowPlayingView() {
           <h1 className="page-title">Now Playing</h1>
           <p className="page-subtitle">{playlistName}</p>
         </div>
-        <span
-          className={`player-backend-badge player-backend-badge--${activeBackend}`}
-          title={`Active playback backend: ${activeBackend.toUpperCase()}`}
-        >
-          {activeBackend}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            type="button"
+            className="queue-action-btn"
+            onClick={() => setFullscreen(true)}
+            title="Open Immersive Fullscreen Now Playing (F)"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px' }}
+          >
+            <Maximize2 size={13} />
+            Fullscreen
+          </button>
+          <span
+            className={`player-backend-badge player-backend-badge--${activeBackend}`}
+            title={`Active playback backend: ${activeBackend.toUpperCase()}`}
+          >
+            {activeBackend}
+          </span>
+        </div>
       </div>
 
       <div className="page-body now-playing-page" style={nowPlayingStyle}>
@@ -379,19 +379,38 @@ export function NowPlayingView() {
               {lyricsLoading ? (
                 <div className="now-playing-empty-state">Loading lyrics…</div>
               ) : lyrics.lines.length ? (
-                lyrics.lines.map((line, index) => (
-                  <button
-                    key={`${line.timestamp ?? 'text'}-${index}`}
-                    type="button"
-                    data-lyric-index={index}
-                    className={`lyric-line ${!line.text ? 'is-gap' : ''} ${index === activeLyricIndex ? 'is-active' : ''}`}
-                    disabled={line.timestamp == null || !line.text}
-                    onClick={() => line.timestamp != null && seek(line.timestamp)}
-                    title={line.timestamp != null ? `Seek to ${fmt(line.timestamp)}` : undefined}
-                  >
-                    {line.text}
-                  </button>
-                ))
+                lyrics.lines.map((line, index) => {
+                  const isActive = index === activeLyricIndex
+                  const isGap = Boolean(line.isGap || (!line.text && line.timestamp != null))
+
+                  if (isGap) {
+                    return (
+                      <LyricGapIndicator
+                        key={`${line.timestamp ?? 'gap'}-${index}`}
+                        index={index}
+                        isActive={isActive}
+                        timestamp={line.timestamp}
+                        onSeek={seek}
+                        formattedTimestamp={line.timestamp != null ? fmt(line.timestamp) : undefined}
+                        variant="normal"
+                      />
+                    )
+                  }
+
+                  return (
+                    <button
+                      key={`${line.timestamp ?? 'text'}-${index}`}
+                      type="button"
+                      data-lyric-index={index}
+                      className={`lyric-line ${isActive ? 'is-active' : ''}`}
+                      disabled={line.timestamp == null || !line.text}
+                      onClick={() => line.timestamp != null && seek(line.timestamp)}
+                      title={line.timestamp != null ? `Seek to ${fmt(line.timestamp)}` : undefined}
+                    >
+                      {line.text}
+                    </button>
+                  )
+                })
               ) : (
                 <div className="now-playing-lyrics-empty">
                   {currentTrack ? 'No lyrics found. Add a matching .lrc or .txt file, or use embedded lyrics.' : 'Choose a track to see its lyrics.'}

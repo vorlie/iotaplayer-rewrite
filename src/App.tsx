@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
+import { FullscreenNowPlaying } from './components/FullscreenNowPlaying'
 import { PlayerBar } from './components/PlayerBar'
 import { Sidebar } from './components/Sidebar'
-import { useAppStore } from './store'
+import { useAppStore, usePlaybackStore } from './store'
 import { AlbumDetailView } from './views/AlbumDetailView'
 import { AlbumsView } from './views/AlbumsView'
 import { ArtistDetailView } from './views/ArtistDetailView'
@@ -48,6 +49,39 @@ export default function App() {
     loadAlbums()
   }, [loadStats, loadAlbums])
 
+  // Global keyboard shortcuts: F (toggle fullscreen), Escape (exit fullscreen), Space (play/pause)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      const isInput =
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+
+      if (isInput) return
+
+      if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault()
+        useAppStore.getState().toggleFullscreenNowPlaying()
+      } else if (e.key === 'Escape') {
+        if (useAppStore.getState().isFullscreenNowPlaying) {
+          e.preventDefault()
+          useAppStore.getState().setFullscreenNowPlaying(false)
+        }
+      } else if (e.code === 'Space') {
+        e.preventDefault()
+        usePlaybackStore.getState().toggle()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [])
+
   return (
     <div className="app-layout">
       {/* Titlebar */}
@@ -68,6 +102,9 @@ export default function App() {
 
       {/* Player bar */}
       <PlayerBar />
+
+      {/* Immersive Fullscreen Now Playing Overlay */}
+      <FullscreenNowPlaying />
     </div>
   )
 }
