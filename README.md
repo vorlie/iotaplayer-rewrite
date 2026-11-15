@@ -23,6 +23,7 @@ This app is designed around a local-first music library workflow:
 - Multi-field search across artist, album, track title, genre, and year
 - Live in-view filtering and sorting on library lists
 - Artwork caching and album art support
+- Library cleanup tool to remove missing or deleted tracks from the database
 
 ### Browsing views
 - Artists view
@@ -34,8 +35,10 @@ This app is designed around a local-first music library workflow:
 - Favorites view
 - Recently played view
 - Settings view
-- Now playing view
+- Now playing view (sidebar panel with queue)
+- Fullscreen immersive Now Playing overlay
 - Playlist overview and playlist detail screens
+- Equalizer view
 
 ### Playback
 - MPV as the primary playback backend
@@ -43,12 +46,19 @@ This app is designed around a local-first music library workflow:
 - Playback backend selection via settings
 - Live playback backend indicator in the UI
 - Play, pause, resume, seek, stop, and volume control
-- Previous/next track handling
+- Previous/next track handling (restarts track if more than 3 seconds in, then goes to previous)
 - Repeat modes: off, all, and one
 - Shuffle mode
 - Resume-per-track position persistence
 - Playback state persistence for settings like volume, repeat mode, and shuffle mode
 - Graceful shutdown and media cleanup handling
+- Real-time browser spectrum visualizer
+
+### Equalizer
+- 10-band parametric equalizer (31 Hz – 16 kHz)
+- Adjustable gain per band (−12 dB to +12 dB)
+- Built-in presets: Flat, Warm, Bright, Bass, Vocal, Club
+- Enable/disable toggle with persistent settings
 
 ### Queue & now playing
 - Queue-based playback flow
@@ -59,6 +69,7 @@ This app is designed around a local-first music library workflow:
 - Drag-and-drop queue reordering
 - Save current queue as a playlist
 - Now playing panel with track metadata, artwork, controls, and queue panel
+- Immersive fullscreen overlay with large artwork, synchronized lyrics, and queue
 
 ### Playlists & library actions
 - Create playlists
@@ -81,8 +92,9 @@ This app is designed around a local-first music library workflow:
 
 ### Lyrics & extras
 - Lyrics lookup and display in the now playing screen
+- Synchronized (LRC) and plain-text lyric display
 - Embedded/sidecar lyric support through the existing IPC layer
-- Discord Rich Presence integration
+- Discord Rich Presence integration with listening activity type
 - App settings persistence for Discord and playback options
 
 ### Settings & configuration
@@ -90,6 +102,34 @@ This app is designed around a local-first music library workflow:
 - Playback backend preference
 - Discord presence toggling and client configuration
 - Persistent app settings stored in user data
+
+### Hotkeys
+
+#### In-app keyboard shortcuts
+
+| Key | Action |
+|-----|--------|
+| `Space` | Play / Pause |
+| `F` | Toggle fullscreen Now Playing overlay |
+| `Escape` | Close fullscreen Now Playing overlay |
+
+> Keyboard shortcuts are suppressed when focus is inside an input, textarea, select, or contenteditable element.
+
+#### System media keys
+
+iotaPlayer registers with the OS media session API so hardware media keys and OS-level media controls work system-wide.
+
+| Media key | Action |
+|-----------|--------|
+| ▶ Play | Resume playback |
+| ⏸ Pause | Pause playback |
+| ⏮ Previous track | Restart current track (if > 3 s in), otherwise go to previous track |
+| ⏭ Next track | Skip to next track in queue |
+| ⏪ Seek backward | Seek back 15 seconds (or the amount requested by the OS) |
+| ⏩ Seek forward | Seek forward 15 seconds (or the amount requested by the OS) |
+| ⏹ Stop | Pause playback |
+
+The media session also pushes track metadata (title, artist, album, artwork) to the OS so lock screen and notification-area media controls display current track information.
 
 ## Architecture
 
@@ -128,7 +168,6 @@ This is especially relevant because the app intentionally sets Rich Presence as 
 - Stronger DB migration tooling
 
 ### Longer-term ideas
-- Equalizer or audio effects
 - Mini-player mode
 - Auto-play when opening an album or playlist
 - Last.fm or other external metadata integrations
