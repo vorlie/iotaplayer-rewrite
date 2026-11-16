@@ -479,7 +479,7 @@ export function FullscreenNowPlaying() {
                             ? getLineWordSyncStates(line, syncPosition, nextLineTimestamp)
                             : null
                         const hasEmbeddedSpaces = words
-                          ? words.some((w) => /\s/.test(w.text))
+                          ? words.some((w) => /^\s|\s$/.test(w.text))
                           : false
                         const hasLineSpaces = words ? /\s/.test(line.text) : false
 
