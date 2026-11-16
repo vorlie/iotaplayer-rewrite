@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
+import { DEFAULT_VOLUME, VolumeController, normalizeVolume } from './volume'
 import type {
   Album,
   Artist,
@@ -137,7 +138,7 @@ const browserStateCallbacks = new Set<(state: PlaybackStateEvent) => void>()
 const browserEndedCallbacks = new Set<() => void>()
 let browserAudioActive = false
 let browserObjectUrl: string | null = null
-let browserVolume = 0.8
+let browserVolume = DEFAULT_VOLUME
 
 type PlaybackBackendMode = 'auto' | 'mpv' | 'browser'
 let preferredPlaybackBackend: PlaybackBackendMode = 'auto'
@@ -159,7 +160,30 @@ type BrowserAudioElement = {
   onended: (() => void) | null
 }
 
-const browserAudio = new (globalThis as unknown as { Audio: new () => BrowserAudioElement }).Audio()
+function createRawBrowserAudio(): BrowserAudioElement {
+  const AudioCtor = (globalThis as unknown as { Audio: new () => BrowserAudioElement }).Audio
+  const audio = new AudioCtor()
+  audio.volume = browserVolume
+  return audio
+}
+
+let browserAudio: BrowserAudioElement = createRawBrowserAudio()
+
+const volumeController = new VolumeController<BrowserAudioElement>({
+  initialVolume: DEFAULT_VOLUME,
+  createAudioElement: createRawBrowserAudio,
+  loadPersistedVolume: async () => {
+    const saved = (await ipcRenderer.invoke('playback:get-state')) as Record<string, string> | undefined
+    return saved?.volume
+  },
+  applyMpvVolume: (vol) => ipcRenderer.invoke('playback:volume', vol),
+  onVolumeApplied: (vol) => {
+    browserVolume = vol
+    browserAudio.volume = vol
+  },
+})
+
+browserAudio = volumeController.setAudioElement(browserAudio)
 
 type AudioContextConstructor = new () => AudioContextLike
 
@@ -351,53 +375,61 @@ function emitBrowserEnded(): void {
   browserEndedCallbacks.forEach((cb) => cb())
 }
 
-function attachBrowserAudioEvents(): void {
-  browserAudio.onplay = () => {
+function attachBrowserAudioEvents(targetAudio: BrowserAudioElement = browserAudio): void {
+  targetAudio.volume = volumeController.getVolume()
+
+  targetAudio.onplay = () => {
+    const currentVol = volumeController.applyToAudioElement(targetAudio)
     emitBrowserState({
       isPlaying: true,
-      position: browserAudio.currentTime || 0,
-      duration: Number.isFinite(browserAudio.duration) ? browserAudio.duration : 0,
-      volume: browserAudio.volume,
+      position: targetAudio.currentTime || 0,
+      duration: Number.isFinite(targetAudio.duration) ? targetAudio.duration : 0,
+      volume: currentVol,
     })
   }
 
-  browserAudio.onpause = () => {
+  targetAudio.onpause = () => {
+    const currentVol = volumeController.applyToAudioElement(targetAudio)
     emitBrowserState({
       isPlaying: false,
-      position: browserAudio.currentTime || 0,
-      duration: Number.isFinite(browserAudio.duration) ? browserAudio.duration : 0,
-      volume: browserAudio.volume,
+      position: targetAudio.currentTime || 0,
+      duration: Number.isFinite(targetAudio.duration) ? targetAudio.duration : 0,
+      volume: currentVol,
     })
   }
 
-  browserAudio.ontimeupdate = () => {
+  targetAudio.ontimeupdate = () => {
+    const currentVol = volumeController.applyToAudioElement(targetAudio)
     emitBrowserState({
-      position: browserAudio.currentTime || 0,
-      duration: Number.isFinite(browserAudio.duration) ? browserAudio.duration : 0,
-      volume: browserAudio.volume,
+      position: targetAudio.currentTime || 0,
+      duration: Number.isFinite(targetAudio.duration) ? targetAudio.duration : 0,
+      volume: currentVol,
     })
   }
 
-  browserAudio.onloadedmetadata = () => {
+  targetAudio.onloadedmetadata = () => {
+    const currentVol = volumeController.applyToAudioElement(targetAudio)
     emitBrowserState({
-      duration: Number.isFinite(browserAudio.duration) ? browserAudio.duration : 0,
-      position: browserAudio.currentTime || 0,
-      volume: browserAudio.volume,
+      duration: Number.isFinite(targetAudio.duration) ? targetAudio.duration : 0,
+      position: targetAudio.currentTime || 0,
+      volume: currentVol,
     })
   }
 
-  browserAudio.onended = () => {
+  targetAudio.onended = () => {
+    const currentVol = volumeController.applyToAudioElement(targetAudio)
     emitBrowserState({
       isPlaying: false,
-      position: browserAudio.duration || 0,
-      duration: browserAudio.duration || 0,
-      volume: browserAudio.volume,
+      position: targetAudio.duration || 0,
+      duration: targetAudio.duration || 0,
+      volume: currentVol,
     })
     emitBrowserEnded()
   }
 }
 
-attachBrowserAudioEvents()
+attachBrowserAudioEvents(browserAudio)
+void volumeController.ensureHydrated()
 
 // ---------------------------------------------------------------------------
 // Playback API
@@ -460,9 +492,11 @@ const playbackAPI = {
         void ipcRenderer.invoke('playback:stop')
       }
       browserAudioActive = true
-      browserAudio.volume = browserVolume
+      const appliedVolume = await volumeController.prepareForPlayback('browser')
+      browserAudio.volume = appliedVolume
       browserAudio.src = toBrowserAudioUrl(filePath)
       browserAudio.load()
+      browserAudio.volume = appliedVolume
 
       try {
         initializeAnalyser()
@@ -475,6 +509,7 @@ const playbackAPI = {
       }
 
       try {
+        browserAudio.volume = volumeController.getVolume()
         await browserAudio.play()
       } catch {
         browserAudioActive = false
@@ -488,6 +523,7 @@ const playbackAPI = {
       browserAudio.currentTime = 0
     }
     browserAudioActive = false
+    await volumeController.prepareForPlayback('mpv')
     await ipcRenderer.invoke('playback:play', filePath)
   },
 
@@ -501,6 +537,7 @@ const playbackAPI = {
 
   resume: (): Promise<void> => {
     if (browserAudioActive) {
+      browserAudio.volume = volumeController.getVolume()
       void browserAudio.play()
       return Promise.resolve()
     }
@@ -509,6 +546,7 @@ const playbackAPI = {
 
   toggle: (): Promise<void> => {
     if (browserAudioActive) {
+      browserAudio.volume = volumeController.getVolume()
       if (browserAudio.paused) {
         void browserAudio.play()
       } else {
@@ -525,7 +563,7 @@ const playbackAPI = {
       emitBrowserState({
         position: browserAudio.currentTime,
         duration: Number.isFinite(browserAudio.duration) ? browserAudio.duration : 0,
-        volume: browserAudio.volume,
+        volume: volumeController.getVolume(),
       })
       return Promise.resolve()
     }
@@ -533,13 +571,9 @@ const playbackAPI = {
   },
 
   setVolume: (volume: number): Promise<void> => {
-    const clamped = Math.max(0, Math.min(1, volume))
-    browserVolume = clamped
-
+    const clamped = volumeController.setVolume(volume)
     if (browserAudioActive) {
-      browserAudio.volume = clamped
-      emitBrowserState({ volume: browserAudio.volume })
-      return Promise.resolve()
+      emitBrowserState({ volume: clamped })
     }
     return ipcRenderer.invoke('playback:volume', clamped)
   },
@@ -573,11 +607,21 @@ const playbackAPI = {
   clearTrackResume: (trackId: number): Promise<void> =>
     ipcRenderer.invoke('playback:clear-resume', trackId),
 
-  savePlaybackState: (state: Record<string, string>): Promise<void> =>
-    ipcRenderer.invoke('playback:save-state', state),
+  savePlaybackState: (state: Record<string, string>): Promise<void> => {
+    if (state.volume !== undefined) {
+      const normalized = normalizeVolume(state.volume, volumeController.getVolume())
+      volumeController.setVolume(normalized)
+    }
+    return ipcRenderer.invoke('playback:save-state', state)
+  },
 
-  getPlaybackState: (): Promise<Record<string, string>> =>
-    ipcRenderer.invoke('playback:get-state'),
+  getPlaybackState: async (): Promise<Record<string, string>> => {
+    const saved = (await ipcRenderer.invoke('playback:get-state')) as Record<string, string>
+    if (saved && saved.volume !== undefined) {
+      volumeController.hydrate(saved.volume)
+    }
+    return saved
+  },
 
   onStateChange: (
     cb: (state: PlaybackStateEvent) => void,
@@ -585,6 +629,9 @@ const playbackAPI = {
     browserStateCallbacks.add(cb)
     const handler = (_: IpcRendererEvent, state: PlaybackStateEvent) => {
       if (browserAudioActive && state.backend === 'mpv') return
+      if (state.volume !== undefined) {
+        volumeController.syncFromBackend(state.volume)
+      }
       cb(state)
     }
     ipcRenderer.on('playback:state', handler)
