@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { app as electronApp } from 'electron'
+import type { LyricsSourcePreference } from './types'
 
 export interface AppSettings {
   discordClientId: string
@@ -11,12 +12,29 @@ export interface AppSettings {
   equalizerEnabled: boolean
   equalizerPreset: string
   equalizerBands: number[]
+  lyricsSourcePreference: LyricsSourcePreference
 }
 
 const DEFAULT_EQUALIZER_BANDS = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 const DEFAULT_LIBRARY_ROOT = process.platform === 'win32'
   ? 'D:\\Media\\Music'
   : path.join(os.homedir(), 'Music')
+
+const VALID_LYRICS_SOURCE_PREFERENCES: LyricsSourcePreference[] = [
+  'embedded',
+  'synchronized',
+  'sidecar',
+]
+
+function normalizeLyricsSourcePreference(value: unknown): LyricsSourcePreference {
+  if (
+    typeof value === 'string' &&
+    VALID_LYRICS_SOURCE_PREFERENCES.includes(value as LyricsSourcePreference)
+  ) {
+    return value as LyricsSourcePreference
+  }
+  return 'embedded'
+}
 
 const DEFAULT_SETTINGS: AppSettings = {
   discordClientId: '',
@@ -26,6 +44,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   equalizerEnabled: false,
   equalizerPreset: 'Flat',
   equalizerBands: [...DEFAULT_EQUALIZER_BANDS],
+  lyricsSourcePreference: 'embedded',
 }
 
 function normalizeEqualizerBands(value: unknown): number[] {
@@ -66,6 +85,7 @@ export function getAppSettings(): AppSettings {
       equalizerEnabled: parsed.equalizerEnabled ?? DEFAULT_SETTINGS.equalizerEnabled,
       equalizerPreset: parsed.equalizerPreset ?? DEFAULT_SETTINGS.equalizerPreset,
       equalizerBands: normalizeEqualizerBands(parsed.equalizerBands),
+      lyricsSourcePreference: normalizeLyricsSourcePreference(parsed.lyricsSourcePreference),
     }
   } catch {
     writeFileSync(settingsPath, JSON.stringify(DEFAULT_SETTINGS, null, 2), 'utf8')
@@ -80,6 +100,9 @@ export function setAppSettings(nextSettings: Partial<AppSettings>): AppSettings 
     ...nextSettings,
     libraryRoot: nextSettings.libraryRoot || current.libraryRoot || DEFAULT_SETTINGS.libraryRoot,
     equalizerBands: normalizeEqualizerBands(nextSettings.equalizerBands ?? current.equalizerBands),
+    lyricsSourcePreference: normalizeLyricsSourcePreference(
+      nextSettings.lyricsSourcePreference ?? current.lyricsSourcePreference,
+    ),
   }
   const settingsPath = getSettingsPath()
   writeFileSync(settingsPath, JSON.stringify(merged, null, 2), 'utf8')

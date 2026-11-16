@@ -34,7 +34,7 @@ import { getMpv } from './mpv'
 import { cleanupMissingTracks, scanLibrary } from './scanner'
 import { getAppSettings, setAppSettings } from './settings'
 import { getLyrics } from './lyrics'
-import type { ScanProgress } from './types'
+import type { LyricsSourcePreference, ScanProgress } from './types'
 
 // ---------------------------------------------------------------------------
 // IPC channel names (must match preload.ts)
@@ -175,9 +175,13 @@ export function registerIpcHandlers(): void {
     return cleanupMissingTracks()
   })
 
-  ipcMain.handle(IPC.LIBRARY_LYRICS, async (_event, trackId: number) => {
+  ipcMain.handle(IPC.LIBRARY_LYRICS, async (_event, trackId: number, preference?: LyricsSourcePreference) => {
     const track = dbGetTrack(trackId)
-    return track ? getLyrics(track.path) : { source: null, lines: [], synchronized: false }
+    if (!track) {
+      return { source: null, format: null, syncQuality: 'none', lines: [], synchronized: false }
+    }
+    const effectivePreference = preference ?? getAppSettings().lyricsSourcePreference ?? 'embedded'
+    return getLyrics(track.path, effectivePreference)
   })
 
   ipcMain.handle(IPC.LIBRARY_PLAYLISTS, () => {

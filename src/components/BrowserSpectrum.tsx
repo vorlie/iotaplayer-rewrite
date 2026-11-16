@@ -17,15 +17,17 @@ export function BrowserSpectrum({
 
     if (!canvas || !ctx) return
 
+    const canvasEl = canvas
+    const ctx2d = ctx
     let animationFrame = 0
     const gap = 2
-    const color = barColor ?? getComputedStyle(canvas).color
+    const color = barColor ?? getComputedStyle(canvasEl).color
 
     function draw() {
       animationFrame = requestAnimationFrame(draw)
 
-      const width = canvas.clientWidth
-      const height = canvas.clientHeight
+      const width = canvasEl.clientWidth
+      const height = canvasEl.clientHeight
 
       if (width === 0 || height === 0) return
 
@@ -34,15 +36,15 @@ export function BrowserSpectrum({
       const pixelHeight = Math.round(height * dpr)
 
       if (
-        canvas.width !== pixelWidth ||
-        canvas.height !== pixelHeight
+        canvasEl.width !== pixelWidth ||
+        canvasEl.height !== pixelHeight
       ) {
-        canvas.width = pixelWidth
-        canvas.height = pixelHeight
-        ctx!.setTransform(dpr, 0, 0, dpr, 0, 0)
+        canvasEl.width = pixelWidth
+        canvasEl.height = pixelHeight
+        ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0)
       }
 
-      ctx!.clearRect(0, 0, width, height)
+      ctx2d.clearRect(0, 0, width, height)
 
       const spectrum = window.playback.getSpectrum()
 
@@ -54,14 +56,14 @@ export function BrowserSpectrum({
         (width - gap * (spectrum.length - 1)) / spectrum.length,
       )
 
-      ctx!.fillStyle = color
+      ctx2d.fillStyle = color
 
-      spectrum.forEach((value, index) => {
+      spectrum.forEach((value: number, index: number) => {
         const barHeight = Math.max(2, value * height)
         const x = index * (barWidth + gap)
         const y = height - barHeight
 
-        ctx!.fillRect(x, y, barWidth, barHeight)
+        ctx2d.fillRect(x, y, barWidth, barHeight)
       })
     }
 

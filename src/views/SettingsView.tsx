@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { AudioLines, Library, RefreshCw, ShieldCheck, Sparkles, Trash2 } from 'lucide-react'
+import { notifyLyricsReload } from '../hooks/useLibrary'
 import { useAppStore } from '../store'
-import type { PlaybackBackendMode, ScanResult } from '../types/electron'
-import '../styles/library.css'
+import type { LyricsSourcePreference, PlaybackBackendMode, ScanResult } from '../types/electron'
+import '../styles/settings.css'
 
 // Default library root
 const DEFAULT_LIBRARY_ROOT = 'D:\\Media\\Music'
@@ -20,6 +21,7 @@ export function SettingsView() {
   const [cleaningMissing, setCleaningMissing] = useState(false)
   const [lastResult, setLastResult] = useState<ScanResult | null>(library.lastScanResult)
   const [backendMode, setBackendMode] = useState<PlaybackBackendMode>('auto')
+  const [lyricsSourcePreference, setLyricsSourcePreference] = useState<LyricsSourcePreference>('embedded')
   const [discordEnabled, setDiscordEnabled] = useState(true)
   const [discordClientId, setDiscordClientId] = useState('')
   const [imgurClientId, setImgurClientId] = useState('')
@@ -35,12 +37,19 @@ export function SettingsView() {
       setDiscordClientId(settings.discordClientId)
       setImgurClientId(settings.imgurClientId)
       setLibraryRoot(settings.libraryRoot || DEFAULT_LIBRARY_ROOT)
+      setLyricsSourcePreference(settings.lyricsSourcePreference ?? 'embedded')
     })
   }, [])
 
   useEffect(() => {
     void window.playback.setPreferredBackend(backendMode)
   }, [backendMode])
+
+  async function handleLyricsPreferenceChange(nextPreference: LyricsSourcePreference) {
+    setLyricsSourcePreference(nextPreference)
+    await window.settings.set({ lyricsSourcePreference: nextPreference })
+    notifyLyricsReload()
+  }
 
   async function handleSaveSettings() {
     setSavingSettings(true)
@@ -50,8 +59,10 @@ export function SettingsView() {
         discordClientId,
         imgurClientId,
         libraryRoot,
+        lyricsSourcePreference,
       })
       await window.discord.setEnabled(discordEnabled)
+      notifyLyricsReload()
     } finally {
       setSavingSettings(false)
     }
@@ -157,6 +168,28 @@ export function SettingsView() {
                     <option value="browser">Browser fallback only</option>
                   </select>
                   <small>.wav files always use MPV.</small>
+                </div>
+
+                <div className="settings-field">
+                  <p className="settings-section__eyebrow" style={{ marginBottom: 2 }}>Lyrics</p>
+                  <label htmlFor="lyrics-source-preference">Lyrics source preference</label>
+                  <select
+                    id="lyrics-source-preference"
+                    value={lyricsSourcePreference}
+                    onChange={(e) => void handleLyricsPreferenceChange(e.target.value as LyricsSourcePreference)}
+                  >
+                    <option value="embedded">Embedded (default)</option>
+                    <option value="synchronized">Synchronized</option>
+                    <option value="sidecar">Sidecar</option>
+                  </select>
+                  <small>
+                    {lyricsSourcePreference === 'embedded' &&
+                      'Prefer lyrics embedded in audio files, then fall back to sidecars.'}
+                    {lyricsSourcePreference === 'synchronized' &&
+                      'Prefer lyrics with the highest synchronization quality, regardless of source.'}
+                    {lyricsSourcePreference === 'sidecar' &&
+                      'Prefer external lyrics files, then fall back to embedded lyrics.'}
+                  </small>
                 </div>
 
                 <div className="settings-toggle-row">
