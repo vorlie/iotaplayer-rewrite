@@ -34,6 +34,7 @@ import { getMpv } from './mpv'
 import { cleanupMissingTracks, scanLibrary } from './scanner'
 import { getAppSettings, setAppSettings } from './settings'
 import { getLyrics } from './lyrics'
+import { normalizeVolume } from './volume'
 import type { LyricsSourcePreference, ScanProgress } from './types'
 
 // ---------------------------------------------------------------------------
@@ -92,6 +93,10 @@ export const IPC = {
 export function registerIpcHandlers(): void {
   // Setup MPV controller callbacks to push state to renderer
   const mpv = getMpv()
+  const initialPlaybackState = dbGetAllPlaybackState()
+  if (initialPlaybackState.volume !== undefined) {
+    mpv.setVolume(normalizeVolume(initialPlaybackState.volume))
+  }
   mpv.setCallbacks(
     (state) => {
       BrowserWindow.getAllWindows().forEach((win) => {
@@ -346,7 +351,9 @@ export function registerIpcHandlers(): void {
   })
 
   ipcMain.handle(IPC.PLAYBACK_VOLUME, (_event, volume: number) => {
-    mpv.setVolume(volume)
+    const normalized = normalizeVolume(volume, mpv.getVolume())
+    mpv.setVolume(normalized)
+    dbSetPlaybackState('volume', normalized.toString())
   })
 
   ipcMain.handle(IPC.PLAYBACK_SET_EQUALIZER, (_event, gains: number[]) => {
@@ -374,7 +381,13 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(IPC.PLAYBACK_SAVE_STATE, (_event, state: Record<string, string>) => {
     for (const [key, val] of Object.entries(state)) {
-      dbSetPlaybackState(key, typeof val === 'string' ? val : JSON.stringify(val))
+      if (key === 'volume') {
+        const normalized = normalizeVolume(val, mpv.getVolume())
+        mpv.setVolume(normalized)
+        dbSetPlaybackState('volume', normalized.toString())
+      } else {
+        dbSetPlaybackState(key, typeof val === 'string' ? val : JSON.stringify(val))
+      }
     }
     return true
   })

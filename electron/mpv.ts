@@ -2,6 +2,7 @@ import { ChildProcess, spawn } from 'child_process'
 import net from 'net'
 import path from 'path'
 import type { PlaybackStateEvent } from './types'
+import { DEFAULT_VOLUME, fromMpvVolume, normalizeVolume, toMpvVolume } from './volume'
 
 export class MpvController {
   private process: ChildProcess | null = null
@@ -11,7 +12,8 @@ export class MpvController {
   private isConnected = false
   private isDestroyed = false
   private isPlaying = false
-  private currentVolume = 0.8
+  private initPromise: Promise<void> | null = null
+  private currentVolume = DEFAULT_VOLUME
   private equalizerBands = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
   private readonly equalizerFrequencies = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
 
@@ -33,11 +35,29 @@ export class MpvController {
     this.onTrackEndedCb = onTrackEnded
   }
 
+  public getVolume(): number {
+    return this.currentVolume
+  }
+
   public init(): Promise<void> {
-    return new Promise((resolve) => {
-      this.spawnProcess()
-      this.connectSocket(resolve)
+    if (this.isConnected) {
+      return Promise.resolve()
+    }
+    if (this.initPromise) {
+      return this.initPromise
+    }
+
+    this.initPromise = new Promise<void>((resolve) => {
+      if (!this.process) {
+        this.spawnProcess()
+      }
+      this.connectSocket(() => {
+        this.initPromise = null
+        resolve()
+      })
     })
+
+    return this.initPromise
   }
 
   private spawnProcess(): void {
@@ -48,7 +68,7 @@ export class MpvController {
       `--input-ipc-server=${this.pipePath}`,
       '--keep-open=yes',
       '--gapless-audio=yes',
-      `--volume=${Math.round(this.currentVolume * 100)}`,
+      `--volume=${toMpvVolume(this.currentVolume)}`,
     ]
 
     try {
@@ -108,6 +128,8 @@ export class MpvController {
   }
 
   private setupObservers(): void {
+    // Apply currentVolume before observing so any volume changes made during async init are enforced immediately
+    this.sendCommand(['set_property', 'volume', toMpvVolume(this.currentVolume)])
     // Observe core playback properties
     this.sendCommand(['observe_property', 1, 'time-pos'])
     this.sendCommand(['observe_property', 2, 'duration'])
@@ -164,7 +186,7 @@ export class MpvController {
         this.isPlaying = !isPaused
         this.onStateChangeCb?.({ isPlaying: this.isPlaying })
       } else if (msg.name === 'volume') {
-        const vol = typeof msg.data === 'number' ? msg.data / 100 : 0.8
+        const vol = fromMpvVolume(msg.data, this.currentVolume)
         this.currentVolume = vol
         this.onStateChangeCb?.({ volume: vol })
       }
@@ -184,11 +206,13 @@ export class MpvController {
       await this.init()
     }
     console.log(`[MPV] Playing file: ${filePath}`)
+    this.sendCommand(['set_property', 'volume', toMpvVolume(this.currentVolume)])
     this.sendCommand(['loadfile', filePath, 'replace'])
+    this.sendCommand(['set_property', 'volume', toMpvVolume(this.currentVolume)])
     this.sendCommand(['set_property', 'pause', false])
     this.applyEqualizer()
     this.isPlaying = true
-    this.onStateChangeCb?.({ isPlaying: true })
+    this.onStateChangeCb?.({ isPlaying: true, volume: this.currentVolume })
   }
 
   public pause(): void {
@@ -217,9 +241,9 @@ export class MpvController {
   }
 
   public setVolume(vol: number): void {
-    const clamped = Math.max(0, Math.min(1, vol))
+    const clamped = normalizeVolume(vol, this.currentVolume)
     this.currentVolume = clamped
-    this.sendCommand(['set_property', 'volume', Math.round(clamped * 100)])
+    this.sendCommand(['set_property', 'volume', toMpvVolume(clamped)])
     this.onStateChangeCb?.({ volume: clamped })
   }
 

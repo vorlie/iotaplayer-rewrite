@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { normalizeMediaControlSnapshot } from '../../electron/mediaControls'
+import { DEFAULT_VOLUME, normalizeVolume } from '../../electron/volume'
 import type { Album, Artist, Playlist, ScanProgress, ScanResult, Track } from '../types/electron'
 
 // ---------------------------------------------------------------------------
@@ -243,6 +244,9 @@ interface PlaybackStore extends PlaybackState {
 export const usePlaybackStore = create<PlaybackStore>((set, get) => {
   let lastResumeSaveTime = 0
   let cachedArtworkUrl: string | null = null
+  let hasUserChangedVolume = false
+  let hasUserChangedRepeat = false
+  let hasUserChangedShuffle = false
 
   const syncSystemMediaSession = async () => {
     if (typeof window === 'undefined' || typeof navigator === 'undefined' || !('mediaSession' in navigator)) {
@@ -369,17 +373,18 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
       get().next()
     })
 
-    // Restore saved playback preferences on startup
+    // Restore saved playback preferences on startup and apply volume to active backends
     void window.playback.getPlaybackState().then((saved) => {
       if (!saved) return
-      if (saved.volume !== undefined) {
-        const vol = parseFloat(saved.volume)
-        if (!isNaN(vol)) set({ volume: Math.max(0, Math.min(1, vol)) })
+      if (!hasUserChangedVolume && saved.volume !== undefined) {
+        const vol = normalizeVolume(saved.volume, get().volume)
+        set({ volume: vol })
+        void window.playback.setVolume(vol)
       }
-      if (saved.repeatMode && ['off', 'all', 'one'].includes(saved.repeatMode)) {
+      if (!hasUserChangedRepeat && saved.repeatMode && ['off', 'all', 'one'].includes(saved.repeatMode)) {
         set({ repeatMode: saved.repeatMode as PlaybackRepeatMode })
       }
-      if (saved.shuffle !== undefined) {
+      if (!hasUserChangedShuffle && saved.shuffle !== undefined) {
         set({ shuffle: saved.shuffle === 'true' })
       }
     })
@@ -466,7 +471,7 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
     isPlaying: false,
     position: 0,
     duration: 0,
-    volume: 0.8,
+    volume: DEFAULT_VOLUME,
     queue: [],
     queueIndex: -1,
     playlistName: 'Queue',
@@ -823,7 +828,8 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
     },
 
     setVolume: (volume) => {
-      const clamped = Math.max(0, Math.min(1, volume))
+      hasUserChangedVolume = true
+      const clamped = normalizeVolume(volume, get().volume)
       set({ volume: clamped })
       persistSettings()
       if (typeof window !== 'undefined' && 'playback' in window) {
@@ -832,11 +838,13 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
     },
 
     setRepeatMode: (mode) => {
+      hasUserChangedRepeat = true
       set({ repeatMode: mode })
       persistSettings()
     },
 
     toggleRepeat: () => {
+      hasUserChangedRepeat = true
       set((s) => ({
         repeatMode: s.repeatMode === 'off' ? 'all' : s.repeatMode === 'all' ? 'one' : 'off',
       }))
@@ -844,6 +852,7 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
     },
 
     toggleShuffle: () => {
+      hasUserChangedShuffle = true
       set((s) => ({ shuffle: !s.shuffle }))
       persistSettings()
     },
