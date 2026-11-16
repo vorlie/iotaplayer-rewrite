@@ -15,8 +15,9 @@
   cursor: default;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 320ms cubic-bezier(0.16, 1, 0.3, 1),
-              visibility 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    opacity 320ms var(--ease-out-expo),
+    visibility 320ms var(--ease-out-expo);
   pointer-events: none;
   border-radius: var(--radius);
   outline: none;
@@ -60,16 +61,16 @@
   animation: lyricGapWave 1.4s infinite ease-in-out;
 }
 
-.lyric-gap-dot--1 {
-  animation-delay: 0s !important;
+.lyric-gap-indicator.is-active .lyric-gap-dot--1 {
+  animation-delay: 0s;
 }
 
-.lyric-gap-dot--2 {
-  animation-delay: 0.2s !important;
+.lyric-gap-indicator.is-active .lyric-gap-dot--2 {
+  animation-delay: 0.2s;
 }
 
-.lyric-gap-dot--3 {
-  animation-delay: 0.4s !important;
+.lyric-gap-indicator.is-active .lyric-gap-dot--3 {
+  animation-delay: 0.4s;
 }
 
 /* Keyframe: subtle opacity, scale, and left-to-right flowing motion */
@@ -93,7 +94,7 @@
 }
 
 .lyric-gap-indicator--fullscreen .lyric-gap-dots {
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .lyric-gap-indicator--fullscreen .lyric-gap-dot {
@@ -102,8 +103,9 @@
 }
 
 .lyric-gap-indicator--fullscreen.is-active .lyric-gap-dot {
-  box-shadow: 0 0 10px rgba(255, 167, 167, 0.5),
-              0 0 20px color-mix(in srgb, var(--color-accent) 35%, transparent);
+  box-shadow:
+    0 0 10px rgba(255, 167, 167, 0.5),
+    0 0 20px color-mix(in srgb, var(--color-accent) 35%, transparent);
 }
 
 /* Normal Now Playing variant */
@@ -113,7 +115,7 @@
 }
 
 .lyric-gap-indicator--normal .lyric-gap-dots {
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .lyric-gap-indicator--normal .lyric-gap-dot {
@@ -128,14 +130,13 @@
 /* Reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   .lyric-gap-indicator,
-  .lyric-gap-dot {
-    transition: none !important;
-    animation: none !important;
-    transform: none !important;
+  .lyric-gap-indicator.is-active .lyric-gap-dot {
+    transition: none;
+    animation: none;
+    transform: none;
   }
 
   .lyric-gap-indicator.is-active .lyric-gap-dot {
-    opacity: 0.85 !important;
-    transform: none !important;
+    opacity: 0.85;
   }
 }

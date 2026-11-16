@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { Album, Artist, LyricsResult, Track } from '../types/electron'
+import { determineSyncQuality } from '../../electron/lyricsSync'
+import type { Album, Artist, LyricLine, LyricsResult, Track } from '../types/electron'
 
 // Convenience hook for loading data from the IPC bridge
 export function useArtists() {
@@ -168,11 +169,24 @@ export function useFormatDuration() {
   }, [])
 }
 
-const EMPTY_LYRICS: LyricsResult = { source: null, lines: [], synchronized: false }
-const lyricsCache = new Map<number, LyricsResult>()
+const EMPTY_LYRICS: LyricsResult = {
+  source: null,
+  format: null,
+  syncQuality: 'none',
+  lines: [],
+  synchronized: false,
+}
+
+const lyricsReloadListeners = new Set<() => void>()
+
+export function notifyLyricsReload(): void {
+  lyricsReloadListeners.forEach((listener) => listener())
+}
 
 function normalizeLyrics(result: LyricsResult): LyricsResult {
-  if (!result || !result.lines || !result.lines.length) return result
+  if (!result || !result.lines || !result.lines.length) {
+    return { ...EMPTY_LYRICS }
+  }
 
   const lines: LyricLine[] = []
   for (const line of result.lines) {
@@ -183,32 +197,48 @@ function normalizeLyrics(result: LyricsResult): LyricsResult {
     lines.push(isGap ? { ...line, isGap: true, text: '' } : line)
   }
 
-  return { ...result, lines }
+  const syncQuality = result.syncQuality ?? determineSyncQuality(lines)
+  const synchronized = Boolean(result.synchronized && syncQuality !== 'none')
+
+  return {
+    ...result,
+    format: result.format ?? null,
+    syncQuality,
+    synchronized,
+    lines,
+  }
 }
 
 export function useLyrics(trackId: number | null | undefined) {
-  const [data, setData] = useState<{ id: number | null; lyrics: LyricsResult }>({
+  const [data, setData] = useState<{ id: number | null; reloadKey: number; lyrics: LyricsResult }>({
     id: null,
+    reloadKey: -1,
     lyrics: EMPTY_LYRICS,
   })
   const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
+    const listener = () => setReloadKey((k) => k + 1)
+    lyricsReloadListeners.add(listener)
+    return () => {
+      lyricsReloadListeners.delete(listener)
+    }
+  }, [])
+
+  useEffect(() => {
     if (trackId == null) return
-    if (lyricsCache.has(trackId) && reloadKey === 0) return
 
     let cancelled = false
     window.library.lyrics(trackId)
       .then((result) => {
         if (!cancelled) {
           const normalized = normalizeLyrics(result)
-          lyricsCache.set(trackId, normalized)
-          setData({ id: trackId, lyrics: normalized })
+          setData({ id: trackId, reloadKey, lyrics: normalized })
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setData({ id: trackId, lyrics: EMPTY_LYRICS })
+          setData({ id: trackId, reloadKey, lyrics: EMPTY_LYRICS })
         }
       })
 
@@ -219,14 +249,12 @@ export function useLyrics(trackId: number | null | undefined) {
 
   const reload = useCallback(() => {
     if (trackId != null) {
-      lyricsCache.delete(trackId)
-      setReloadKey((k) => k + 1)
+      notifyLyricsReload()
     }
   }, [trackId])
 
-  const cached = trackId != null ? lyricsCache.get(trackId) : null
-  const lyrics = cached ?? (data.id === trackId ? data.lyrics : EMPTY_LYRICS)
-  const loading = trackId != null && !cached && data.id !== trackId
+  const lyrics = data.id === trackId ? data.lyrics : EMPTY_LYRICS
+  const loading = trackId != null && (data.id !== trackId || data.reloadKey !== reloadKey)
 
   return { lyrics, loading, reload }
 }

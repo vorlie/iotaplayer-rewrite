@@ -2,7 +2,7 @@ import { ArrowLeft, ImagePlus, Pencil, Play, Trash2 } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { useAppStore, usePlaybackStore } from '../store'
 import { TracksTable } from './TracksView'
-import '../styles/library.css'
+import '../styles/playlists.css'
 
 export function PlaylistDetailView() {
   const playlistId = useAppStore((s) => s.nav.playlistId)

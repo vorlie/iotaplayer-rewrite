@@ -131,20 +131,8 @@ export function PlayerBar() {
         </span>
         <div className="player-volume">
           <Volume2 size={14} color="var(--color-text-3)" />
-          <div
-            className="volume-track"
-            onClick={handleVolumeClick}
-            style={{ background: 'var(--color-surface-3)' }}
-          >
-            <div
-              className="volume-fill"
-              style={{
-                width: `${volume * 100}%`,
-                height: '100%',
-                background: 'var(--color-accent)',
-                borderRadius: 2,
-              }}
-            />
+          <div className="volume-track" onClick={handleVolumeClick}>
+            <div className="volume-fill" style={{ width: `${volume * 100}%` }} />
           </div>
         </div>
         <button

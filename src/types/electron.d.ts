@@ -6,11 +6,16 @@ import type {
   Artist,
   LibraryStats,
   LyricLine,
+  LyricsFormat,
   LyricsResult,
+  LyricsSource,
+  LyricsSourcePreference,
+  LyricWord,
   PlaybackStateEvent,
   ScanProgress,
   ScanResult,
   SearchResults,
+  SyncQuality,
   Track,
   Playlist,
 } from '../../electron/types'
@@ -36,7 +41,7 @@ interface LibraryAPI {
   search: (query: string) => Promise<SearchResults>
   artwork: (id: number) => Promise<ArtworkResponse | null>
   cleanupMissing: () => Promise<{ removed: number; errors: string[] }>
-  lyrics: (trackId: number) => Promise<LyricsResult>
+  lyrics: (trackId: number, preference?: LyricsSourcePreference) => Promise<LyricsResult>
   playlists: () => Promise<Playlist[]>
   createPlaylist: (
     name: string,
@@ -90,6 +95,7 @@ interface AppSettings {
   equalizerEnabled: boolean
   equalizerPreset: string
   equalizerBands: number[]
+  lyricsSourcePreference: LyricsSourcePreference
 }
 
 interface SettingsAPI {
@@ -123,7 +129,7 @@ interface PlaybackAPI {
   getPlaybackState: () => Promise<Record<string, string>>
   onStateChange: (cb: (state: PlaybackStateEvent) => void) => () => void
   onTrackEnded: (cb: () => void) => () => void
-  getSpectrum: () => Promise<number[]>
+  getSpectrum: () => number[] | null
 }
 
 interface SystemMediaSessionSnapshot {
@@ -151,6 +157,7 @@ declare global {
 
 export type {
   Album,
+  AppSettings,
   Artist,
   ArtworkResponse,
   DiscordAPI,
@@ -158,7 +165,11 @@ export type {
   LibraryAPI,
   LibraryStats,
   LyricLine,
+  LyricsFormat,
   LyricsResult,
+  LyricsSource,
+  LyricsSourcePreference,
+  LyricWord,
   PlaybackAPI,
   PlaybackBackendMode,
   PlaybackStateEvent,
@@ -166,5 +177,6 @@ export type {
   ScanProgress,
   ScanResult,
   SearchResults,
+  SyncQuality,
   Track,
 }

@@ -6,6 +6,7 @@ import type {
   Artist,
   LibraryStats,
   LyricsResult,
+  LyricsSourcePreference,
   PlaybackStateEvent,
   Playlist,
   ScanProgress,
@@ -60,8 +61,8 @@ const libraryAPI = {
   cleanupMissing: (): Promise<{ removed: number; errors: string[] }> =>
     ipcRenderer.invoke('library:cleanup-missing'),
 
-  lyrics: (trackId: number): Promise<LyricsResult> =>
-    ipcRenderer.invoke('library:lyrics', trackId),
+  lyrics: (trackId: number, preference?: LyricsSourcePreference): Promise<LyricsResult> =>
+    ipcRenderer.invoke('library:lyrics', trackId, preference),
 
   playlists: (): Promise<Playlist[]> =>
     ipcRenderer.invoke('library:playlists'),
@@ -403,10 +404,26 @@ attachBrowserAudioEvents()
 // ---------------------------------------------------------------------------
 
 const settingsAPI = {
-  get: (): Promise<{ discordClientId: string; imgurClientId: string; discordEnabled: boolean; libraryRoot: string }> =>
-    ipcRenderer.invoke('settings:get'),
-  set: (value: { discordClientId?: string; imgurClientId?: string; discordEnabled?: boolean; libraryRoot?: string }): Promise<void> =>
-    ipcRenderer.invoke('settings:set', value),
+  get: (): Promise<{
+    discordClientId: string
+    imgurClientId: string
+    discordEnabled: boolean
+    libraryRoot: string
+    equalizerEnabled: boolean
+    equalizerPreset: string
+    equalizerBands: number[]
+    lyricsSourcePreference: LyricsSourcePreference
+  }> => ipcRenderer.invoke('settings:get'),
+  set: (value: {
+    discordClientId?: string
+    imgurClientId?: string
+    discordEnabled?: boolean
+    libraryRoot?: string
+    equalizerEnabled?: boolean
+    equalizerPreset?: string
+    equalizerBands?: number[]
+    lyricsSourcePreference?: LyricsSourcePreference
+  }): Promise<void> => ipcRenderer.invoke('settings:set', value),
   pickLibraryRoot: (): Promise<string | null> =>
     ipcRenderer.invoke('settings:pick-library-root'),
 }
@@ -439,6 +456,9 @@ const playbackAPI = {
 
   play: async (filePath: string): Promise<void> => {
     if (shouldUseBrowserAudio(filePath)) {
+      if (!browserAudioActive) {
+        void ipcRenderer.invoke('playback:stop')
+      }
       browserAudioActive = true
       browserAudio.volume = browserVolume
       browserAudio.src = toBrowserAudioUrl(filePath)
@@ -463,6 +483,10 @@ const playbackAPI = {
       return
     }
 
+    if (browserAudioActive) {
+      browserAudio.pause()
+      browserAudio.currentTime = 0
+    }
     browserAudioActive = false
     await ipcRenderer.invoke('playback:play', filePath)
   },
@@ -559,7 +583,10 @@ const playbackAPI = {
     cb: (state: PlaybackStateEvent) => void,
   ): (() => void) => {
     browserStateCallbacks.add(cb)
-    const handler = (_: IpcRendererEvent, state: PlaybackStateEvent) => cb(state)
+    const handler = (_: IpcRendererEvent, state: PlaybackStateEvent) => {
+      if (browserAudioActive && state.backend === 'mpv') return
+      cb(state)
+    }
     ipcRenderer.on('playback:state', handler)
     return () => {
       browserStateCallbacks.delete(cb)

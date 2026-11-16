@@ -20,6 +20,7 @@ import {
   VolumeX,
   X,
 } from 'lucide-react'
+import { formatLyricsSourceLabel, getActiveLyricIndex } from '../../electron/lyricsSync'
 import { useArtwork, useFormatDuration, useLyrics } from '../hooks/useLibrary'
 import { useAppStore, usePlaybackStore } from '../store'
 import { LyricGapIndicator } from './LyricGapIndicator'
@@ -73,13 +74,7 @@ export function FullscreenNowPlaying() {
   const prevVolume = useRef(volume || 0.8)
 
   // Find active lyric line index based on current playback position
-  const activeLyricIndex = lyrics.synchronized
-    ? lyrics.lines.reduce(
-        (active, line, index) =>
-          line.timestamp != null && line.timestamp <= position ? index : active,
-        -1,
-      )
-    : -1
+  const activeLyricIndex = getActiveLyricIndex(lyrics, position)
 
   // Auto-scroll active lyric into center view
   useEffect(() => {
@@ -141,14 +136,7 @@ export function FullscreenNowPlaying() {
     repeatMode === 'off' ? 'Repeat off' : repeatMode === 'all' ? 'Repeat all' : 'Repeat one'
 
   // Lyrics source human-readable tag
-  const lyricsSource =
-    lyrics.source === 'sidecar-lrc'
-      ? 'LRC'
-      : lyrics.source === 'sidecar-text'
-        ? 'TXT'
-        : lyrics.source === 'embedded'
-          ? 'Embedded'
-          : null
+  const lyricsSource = formatLyricsSourceLabel(lyrics)
 
   return (
     <div
@@ -387,7 +375,7 @@ export function FullscreenNowPlaying() {
           <section className="fullscreen-secondary-pane">
             {secondaryTab === 'lyrics' ? (
               <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, width: '100%', minWidth: 0, overflow: 'hidden' }}>
-                {lyricsSource && (
+                {(lyricsSource || currentTrack) && (
                   <div
                     style={{
                       display: 'flex',
@@ -395,20 +383,31 @@ export function FullscreenNowPlaying() {
                       justifyContent: 'space-between',
                       padding: '16px clamp(20px, 3vw, 28px) 0',
                       flexShrink: 0,
+                      gap: 12,
                     }}
                   >
                     <span
                       style={{
                         fontSize: '11px',
                         fontWeight: 600,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.08em',
+                        letterSpacing: '0.04em',
                         color: 'var(--color-text-3)',
                       }}
                     >
-                      Lyrics · {lyricsSource}
-                      {lyrics.synchronized ? ' (synced)' : ''}
+                      {lyricsSource ?? 'Lyrics'}
                     </span>
+                    {currentTrack && lyrics.lines.length > 0 && (
+                      <button
+                        type="button"
+                        className="fullscreen-reload-btn"
+                        onClick={reloadLyrics}
+                        title="Search for lyrics file again"
+                        style={{ padding: '4px 10px' }}
+                      >
+                        <RotateCcw size={11} />
+                        Check Again
+                      </button>
+                    )}
                   </div>
                 )}
                 <div

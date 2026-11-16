@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
+import "../styles/settings.css";
 
 const DEFAULT_EQUALIZER_BANDS = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 const EQUALIZER_BANDS = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];

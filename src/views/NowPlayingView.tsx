@@ -11,15 +11,17 @@ import {
   Play,
   Repeat,
   Repeat1,
+  RotateCcw,
   Shuffle,
   Trash2,
   Volume2,
   X,
 } from 'lucide-react'
+import { formatLyricsSourceLabel, getActiveLyricIndex } from '../../electron/lyricsSync'
 import { useArtwork, useFormatDuration, useLyrics } from '../hooks/useLibrary'
 import { useAppStore, usePlaybackStore } from '../store'
 import { LyricGapIndicator } from '../components/LyricGapIndicator'
-import '../styles/library.css'
+import '../styles/now-playing.css'
 
 export function NowPlayingView() {
   const setFullscreen = useAppStore((s) => s.setFullscreenNowPlaying)
@@ -55,7 +57,7 @@ export function NowPlayingView() {
   const isFav = currentTrack ? favoriteIds.includes(currentTrack.id) : false
   const progress = duration > 0 ? (position / duration) * 100 : 0
   const [contextMenu, setContextMenu] = useState<{ track: NonNullable<typeof currentTrack>; x: number; y: number } | null>(null)
-  const { lyrics, loading: lyricsLoading } = useLyrics(currentTrack?.id)
+  const { lyrics, loading: lyricsLoading, reload: reloadLyrics } = useLyrics(currentTrack?.id)
   const [queuePanelWidth, setQueuePanelWidth] = useState(300)
   const lyricsListRef = useRef<HTMLDivElement>(null)
   const userScrolledLyricsUntil = useRef(0)
@@ -90,13 +92,8 @@ export function NowPlayingView() {
     }
   }, [])
 
-  const activeLyricIndex = lyrics.synchronized
-    ? lyrics.lines.reduce((active, line, index) => line.timestamp != null && line.timestamp <= position ? index : active, -1)
-    : -1
-  const lyricsSource = lyrics.source === 'sidecar-lrc' ? 'LRC sidecar'
-    : lyrics.source === 'sidecar-text' ? 'Text sidecar'
-      : lyrics.source === 'embedded' ? 'Embedded'
-        : null
+  const activeLyricIndex = getActiveLyricIndex(lyrics, position)
+  const lyricsSource = formatLyricsSourceLabel(lyrics)
 
   useEffect(() => {
     if (activeLyricIndex < 0 || isLyricsPointerDown.current || Date.now() < userScrolledLyricsUntil.current) return
@@ -355,12 +352,24 @@ export function NowPlayingView() {
         <div className="now-playing-splitter" onPointerDown={beginResize} aria-label="Resize queue panel" />
 
 
-                <section className="now-playing-panel now-playing-lyrics-panel">
-          <div className="now-playing-lyrics-top">
+        <section className="now-playing-panel now-playing-lyrics-panel">
+          <div className="now-playing-lyrics-top" style={{ justifyContent: 'space-between', gap: 8 }}>
             <div>
               <div className="now-playing-queue-header" style={{ margin: 0, padding: 0 }}>Lyrics</div>
-              {lyricsSource && <span className="now-playing-lyrics-source">{lyricsSource}{lyrics.synchronized ? ' · synced' : ''}</span>}
+              {lyricsSource && <span className="now-playing-lyrics-source">{lyricsSource}</span>}
             </div>
+            {currentTrack && (
+              <button
+                type="button"
+                className="queue-action-btn"
+                onClick={reloadLyrics}
+                title="Search for lyrics again"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}
+              >
+                <RotateCcw size={12} />
+                Check Again
+              </button>
+            )}
           </div>
 
           <div
@@ -413,7 +422,23 @@ export function NowPlayingView() {
                 })
               ) : (
                 <div className="now-playing-lyrics-empty">
-                  {currentTrack ? 'No lyrics found. Add a matching .lrc or .txt file, or use embedded lyrics.' : 'Choose a track to see its lyrics.'}
+                  <div>
+                    {currentTrack
+                      ? 'No lyrics found. Add a matching .lrc, .lyricsfile.yaml, or .txt file, or use embedded lyrics.'
+                      : 'Choose a track to see its lyrics.'}
+                  </div>
+                  {currentTrack && (
+                    <button
+                      type="button"
+                      className="queue-action-btn"
+                      onClick={reloadLyrics}
+                      title="Search for lyrics file again"
+                      style={{ marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <RotateCcw size={12} />
+                      Check Again
+                    </button>
+                  )}
                 </div>
               )}
             </div>
