@@ -1,191 +1,175 @@
-# iotaPlayer
+# IotaPlayer
 
-A desktop music player built with Electron, React, TypeScript, SQLite, and MPV. It scans a local music library, indexes metadata, and offers a polished library browsing and playback experience with queue management, favorites, playlists, and Rich Presence integration.
+A local-first desktop music player built with **Electron**, **React 19**, **TypeScript**, **SQLite**, and **MPV**.
 
-## Overview
+IotaPlayer indexes your local audio library into a fast SQLite database and pairs high-compatibility native playback (via MPV with an automatic Web Audio fallback) with an intentional, cohesive desktop interface-complete with word- and line-synchronized lyrics, a 10-band parametric equalizer, drag-and-drop queue and playlist management, and Discord Rich Presence.
 
-This app is designed around a local-first music library workflow:
+---
 
-- scan a folder and index supported audio files into a SQLite database
-- browse artists, albums, tracks, and playlists from the indexed library
-- play files through MPV with a browser fallback for compatible formats
-- manage queue, repeat, shuffle, playback resume, and now-playing state
-- keep favorites, recently played tracks, playlist edits, and preferences persistent
+## Highlights
 
-## Current feature set
+- **Dual Playback Engine** - Uses **MPV** over IPC as the primary high-format-compatibility backend, with a seamless **Browser / Web Audio** fallback supporting a live frequency spectrum visualizer and a 10-band parametric equalizer.
+- **Race-Free Volume & Playback Persistence** - Restores persisted volume, repeat, shuffle, and per-track playback positions on launch, hydrating the active audio backend before playback becomes audible to prevent startup volume spikes.
+- **Word- & Line-Synchronized Lyrics Engine** - Supports **Lyricsfile 1.0** (`.lyricsfile.yaml` / `.lyricsfile.yml`), **Enhanced LRC** (`<mm:ss.xx>`), standard **LRC**, **embedded tags** (`SYLT`, `USLT`, Vorbis/FLAC `LYRICS`), and plain `.txt` sidecars with configurable source priority, word-by-word highlighting, click-to-word/line seeking, and animated instrumental break indicators.
+- **Immersive Now Playing Experiences** - Switch between the 3-pane resizable **Now Playing** workspace and the **Fullscreen Now Playing** overlay (`Split`, `Artwork`, and `Lyrics` focus modes over a dynamic blurred album-art backdrop).
+- **Fast SQLite Library & Playlists** - Indexes tracks, albums, artists, and embedded artwork with `music-metadata` and `better-sqlite3`. Includes multi-field search, in-view filtering/sorting, missing-file cleanup, favorites, playback history, and drag-and-drop playlists with custom cover art.
+- **Desktop & OS Integration** - Hardware media key support via OS Media Session, frameless custom window chrome, and Discord Rich Presence with native `"Listening to"` activity status.
 
-### Library & metadata
-- Local music library scanning from a chosen root directory
-- Recursive discovery of supported audio extensions
-- Metadata extraction with `music-metadata`
-- SQLite-backed storage for tracks, artists, albums, artwork, playlists, favorites, resume data, and playback history
-- Artist, album, track, and search indexing
-- Multi-field search across artist, album, track title, genre, and year
-- Live in-view filtering and sorting on library lists
-- Artwork caching and album art support
-- Library cleanup tool to remove missing or deleted tracks from the database
+---
 
-### Browsing views
-- Artists view
-- Albums view
-- Album detail view
-- Artist detail view
-- Tracks view
-- Search view
-- Favorites view
-- Recently played view
-- Settings view
-- Now playing view (sidebar panel with queue)
-- Fullscreen immersive Now Playing overlay
-- Playlist overview and playlist detail screens
-- Equalizer view
+## Quick Start
 
-### Playback
-- MPV as the primary playback backend
-- Browser fallback for browser-supported formats
-- Playback backend selection via settings
-- Live playback backend indicator in the UI
-- Play, pause, resume, seek, stop, and volume control
-- Previous/next track handling (restarts track if more than 3 seconds in, then goes to previous)
-- Repeat modes: off, all, and one
-- Shuffle mode
-- Resume-per-track position persistence
-- Playback state persistence for settings like volume, repeat mode, and shuffle mode
-- Graceful shutdown and media cleanup handling
-- Real-time browser spectrum visualizer
+### Prerequisites
 
-### Equalizer
-- 10-band parametric equalizer (31 Hz – 16 kHz)
-- Adjustable gain per band (−12 dB to +12 dB)
-- Built-in presets: Flat, Warm, Bright, Bass, Vocal, Club
-- Enable/disable toggle with persistent settings
+- **Node.js** 22+ and **npm**
+- **MPV** installed and available on your system `PATH` (optional but recommended for full codec support; IotaPlayer automatically falls back to the browser audio engine if MPV is unavailable)
 
-### Queue & now playing
-- Queue-based playback flow
-- Add tracks/albums to queue from library views
-- Clear queue
-- Remove items from queue
-- Move queue items up/down
-- Drag-and-drop queue reordering
-- Save current queue as a playlist
-- Now playing panel with track metadata, artwork, controls, and queue panel
-- Immersive fullscreen overlay with large artwork, synchronized lyrics, and queue
-
-### Playlists & library actions
-- Create playlists
-- Rename playlists
-- Delete playlists
-- Add tracks to playlists
-- Remove tracks from playlists
-- Reorder playlist tracks
-- Drag-and-drop playlist editing
-- Playlist metadata editing (name/description/cover support)
-- Album-to-playlist and track-to-playlist actions from context menus
-
-### Favorites & history
-- Favorite/unfavorite tracks
-- Favorites page with quick actions
-- Playback history tracking
-- Recently played list
-- Clear playback history
-- Favorite IDs and favorite state synchronization with the playback store
-
-### Lyrics & extras
-- Lyrics lookup and display in the now playing screen
-- Synchronized (LRC) and plain-text lyric display
-- Embedded/sidecar lyric support through the existing IPC layer
-- Discord Rich Presence integration with listening activity type
-- App settings persistence for Discord and playback options
-
-### Settings & configuration
-- Library scan configuration
-- Playback backend preference
-- Discord presence toggling and client configuration
-- Persistent app settings stored in user data
-
-### Hotkeys
-
-#### In-app keyboard shortcuts
-
-| Key | Action |
-|-----|--------|
-| `Space` | Play / Pause |
-| `F` | Toggle fullscreen Now Playing overlay |
-| `Escape` | Close fullscreen Now Playing overlay |
-
-> Keyboard shortcuts are suppressed when focus is inside an input, textarea, select, or contenteditable element.
-
-#### System media keys
-
-iotaPlayer registers with the OS media session API so hardware media keys and OS-level media controls work system-wide.
-
-| Media key | Action |
-|-----------|--------|
-| ▶ Play | Resume playback |
-| ⏸ Pause | Pause playback |
-| ⏮ Previous track | Restart current track (if > 3 s in), otherwise go to previous track |
-| ⏭ Next track | Skip to next track in queue |
-| ⏪ Seek backward | Seek back 15 seconds (or the amount requested by the OS) |
-| ⏩ Seek forward | Seek forward 15 seconds (or the amount requested by the OS) |
-| ⏹ Stop | Pause playback |
-
-The media session also pushes track metadata (title, artist, album, artwork) to the OS so lock screen and notification-area media controls display current track information.
-
-## Architecture
-
-- Electron main process manages app lifecycle, IPC exposure, database initialization, and MPV integration
-- Renderer uses React + TypeScript for the UI
-- Preload bridge exposes library and playback APIs to the renderer
-- SQLite stores metadata, playlists, favorites, playback history, and resume state
-- MPV is the default playback engine
-- Browser media fallback handles cases where the browser can play the file directly
-
-## Tech stack
-
-- Electron
-- React
-- TypeScript
-- Vite
-- SQLite (`better-sqlite3`)
-- MPV
-- `music-metadata`
-- `discord-rpc`
-
-## Discord RPC note
-
-The app currently relies on a small local compatibility patch in the installed `discord-rpc` dependency so the activity payload forwards the Discord activity `type` field instead of silently dropping it. Without that patch, the library sends the default activity type (`0`, or "Playing"), even when the app is trying to set a listening status.
-
-This is a dependency-level workaround rather than a normal app setting, so other source builds will need to apply the same change themselves if they install dependencies from scratch.
-
-This is especially relevant because the app intentionally sets Rich Presence as a listening activity for the currently playing track.
-
-## Current roadmap
-
-### Near-term ideas
-- Subsonic/OpenSubsonic source support
-- Better unsupported codec and failed-load handling
-- Library cleanup tools for missing or deleted tracks
-- Stronger DB migration tooling
-
-### Longer-term ideas
-- Mini-player mode
-- Auto-play when opening an album or playlist
-- Last.fm or other external metadata integrations
-- Smart recommendations and generated mixes
-
-## Running locally
+### Installation & Development
 
 ```bash
+# Install dependencies (also runs postinstall patch for discord-rpc listening activity support)
 npm install
+
+# Start Vite renderer + Electron in development mode
 npm run dev
 ```
 
-## Building
+### Build, Lint & Test
 
 ```bash
+# Compile Electron main/preload TypeScript and Vite renderer bundle
+npm run build
+
+# Run the Node unit test suite (lyrics, volume hydration, MPV IPC, settings, media controls)
+node --test tests/*.test.mjs
+
+# Run ESLint across renderer and Electron sources
+npm run lint
+```
+
+### Packaging
+
+```bash
+# Package a distributable desktop build via Electron Forge
 npm run package
 ```
 
-## Notes
+---
 
-The project is already fairly feature-complete as a local music player and is in a working desktop-app state. The next major extension is adding a remote media source model such as Subsonic/OpenSubsonic without disturbing the existing local-library workflow.
+## Feature Guide
+
+### 1. Playback & Audio Engine
+- **Backends**: Choose between **MPV** (primary native backend) and **Browser** (`HTMLAudioElement` + Web Audio API) in Settings, with a live backend badge in the player bar and Now Playing headers.
+- **Startup Volume Synchronization**: Persists normalized volume (`0..1`) in user settings and coordinates startup hydration with both MPV IPC socket readiness and `HTMLAudioElement` creation so audio never spikes to 100% on cold launch.
+- **Queue & Transport Controls**:
+  - Play, pause, seek, volume, mute toggle, shuffle, and repeat (`off`, `all`, `one`).
+  - Smart previous-track behavior (restarts current track if playback is past 3 seconds; otherwise jumps to the previous track).
+  - Resizable **Up Next** queue panel with drag-and-drop reordering, move up/down actions, per-track removal, queue clearing, and **Save Queue as Playlist**.
+- **10-Band Parametric Equalizer & Visualizer**:
+  - 10 frequency bands (`31 Hz` – `16 kHz`) with `−12 dB` to `+12 dB` gain range.
+  - Built-in presets (`Flat`, `Warm`, `Bright`, `Bass`, `Vocal`, `Club`) plus custom curve persistence.
+  - Real-time canvas spectrum visualizer in the bottom player bar (active on the Browser audio backend).
+
+### 2. Lyrics System
+- **Supported Formats & Sources**:
+  - **Sidecar files** next to the audio file: `.lyricsfile.yaml` / `.lyricsfile.yml` ([Lyricsfile 1.0 Specification](https://github.com/tranxuanthang/lyricsfile/blob/main/SPECIFICATION.md)), `.lrc` (standard and Enhanced LRC), and `.txt`.
+  - **Embedded metadata**: ID3v2 `SYLT` / `USLT` and Vorbis/FLAC `LYRICS` / `UNSYNCEDLYRICS` tags (automatically detecting embedded LRC or Lyricsfile YAML content).
+- **Resolution Modes** (configurable in **Settings → Lyrics**):
+  - `Embedded first` *(default)*: Embedded → `.lyricsfile.yaml` → `.lrc` → `.txt`
+  - `Best synchronized`: Ranks candidates by actual parsed sync quality (`word` > `line` > `none`), breaking ties by `Lyricsfile` → `LRC` → `Embedded` → `Plain`
+  - `Sidecar files first`: `.lyricsfile.yaml` → `.lrc` → `.txt` → Embedded
+- **Playback Synchronization**:
+  - **Word-level sync**: Highlights words as they are sung with sub-16ms `requestAnimationFrame` boundary detection and allows clicking any individual word to seek directly to its timestamp.
+  - **Line-level sync**: Auto-scrolls the active lyric line into center view (pausing auto-scroll temporarily when the user scrolls manually) and seeks on line click.
+  - **Instrumental gaps**: Renders an animated three-dot `LyricGapIndicator` for explicit empty timestamped lines, intro gaps (`≥ 6s`), and outro gaps (`≥ 8s`).
+
+### 3. Library, Playlists & Discovery
+- **Library Indexing**: Scans a configured root folder recursively, extracting track metadata, durations, and album artwork into SQLite.
+- **Library Maintenance**: Includes a **Clean Up Missing Files** tool in Settings to prune moved or deleted files and orphaned album/artist records, plus classification of unsupported codecs vs missing files.
+- **Views**:
+  - **Tracks**, **Albums**, **Album Detail**, **Artists**, **Artist Detail**, **Search**
+  - **Playlists** & **Playlist Detail** (create, rename, edit description, upload custom cover image, reorder tracks via drag-and-drop)
+  - **Favorites** & **Recently Played** (with one-click history clearing)
+  - **Now Playing**, **Fullscreen Now Playing**, **Equalizer**, and **Settings**
+
+### 4. Keyboard Shortcuts & OS Media Controls
+
+#### In-App Shortcuts
+
+| Shortcut | Action |
+| :--- | :--- |
+| `Space` | Play / Pause |
+| `F` | Toggle Fullscreen Now Playing overlay |
+| `Escape` | Exit Fullscreen Now Playing overlay |
+
+> Shortcuts are automatically ignored when focus is inside an `<input>`, `<textarea>`, `<select>`, or `contenteditable` element.
+
+#### System Media Keys (OS Media Session)
+
+| Media Key | Action |
+| :--- | :--- |
+| `Play` / `Pause` / `Stop` | Resume or pause playback |
+| `Previous Track` | Restart current track (if `> 3s` in) or go to previous track |
+| `Next Track` | Skip to next track in queue |
+| `Seek Backward` / `Forward` | Seek `±15s` (or OS-requested offset) |
+
+---
+
+## Architecture & Project Structure
+
+```text
+iotaplayer-rewrite/
+├── electron/                  # Electron main process & preload bridge (TypeScript → dist-electron/)
+│   ├── main.ts                # App lifecycle, BrowserWindow setup, protocol registration
+│   ├── ipc.ts                 # IPC handlers (library queries, playback, settings, playlists)
+│   ├── preload.ts             # Context-isolated window.library / window.player / window.settings APIs
+│   ├── db.ts                  # SQLite schema, migrations, and query helpers (better-sqlite3)
+│   ├── scanner.ts             # Recursive audio file discovery, metadata/artwork extraction
+│   ├── mpv.ts                 # MPV child process & JSON IPC socket controller
+│   ├── volume.ts              # Startup volume hydration & cross-backend volume state coordinator
+│   ├── lyrics.ts              # Lyricsfile 1.0, Enhanced LRC, standard LRC, and embedded parser/resolver
+│   ├── lyricsSync.ts          # Line- and word-level playback synchronization helpers
+│   ├── mediaControls.ts       # OS media control snapshot normalization
+│   ├── settings.ts            # JSON settings persistence in userData
+│   └── discord.ts             # Discord Rich Presence client integration
+├── src/                       # React 19 renderer application (Vite)
+│   ├── audio/
+│   │   └── browserPlayer.ts   # HTMLAudioElement fallback + Web Audio 10-band EQ & analyser
+│   ├── components/            # Shared UI components (Sidebar, PlayerBar, FullscreenNowPlaying, etc.)
+│   ├── hooks/                 # Data fetching, artwork cache, lyrics loading & 60fps word-sync hooks
+│   ├── store/                 # Zustand stores for navigation, playback, queue, playlists, and EQ
+│   ├── styles/                # Layered CSS architecture (tokens, base, layout, components, views)
+│   └── views/                 # Application views (NowPlaying, Tracks, Albums, Playlists, Settings, etc.)
+├── scripts/
+│   └── patch-discord-rpc.js   # Postinstall patch enabling Discord "Listening to" activity type
+└── tests/                     # Node test runner suites (tests/*.test.mjs)
+```
+
+### CSS Design System
+
+Styling is organized in explicit layers imported via `src/index.css` without external UI frameworks:
+1. **`tokens.css`** - Color palette (`#110d0d` obsidian surfaces, `#ffa7a7` coral-rose accent), typography (`Outfit`), spacing scale, radii, shadows, and motion curves.
+2. **`base.css`** & **`layout.css`** - Resets, custom scrollbars, window titlebar, sidebar, main viewport, and bottom player bar grid.
+3. **`components.css`** - Shared buttons, badges, cards, tables, form controls, and context menus.
+4. **View Stylesheets** - Scoped styles for `library.css`, `playlists.css`, `now-playing.css`, `fullscreen-now-playing.css`, `lyric-gap.css`, and `settings.css`.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+| :--- | :--- |
+| **Desktop Shell** | Electron 44 |
+| **Frontend UI** | React 19, TypeScript 6, Zustand 5, Lucide Icons |
+| **Build Tooling** | Vite 8, Electron Forge |
+| **Database & Metadata** | SQLite (`better-sqlite3`), `music-metadata` |
+| **Audio Backends** | MPV (JSON IPC) + HTML5 Audio / Web Audio API |
+| **Integrations** | `discord-rpc` (patched automatically via `postinstall` for listening presence) |
+
+---
+
+## Roadmap
+
+- **Remote Media Sources** - Subsonic / OpenSubsonic server integration alongside the local SQLite library.
+- **Mini-Player Mode** - Compact always-on-top desktop widget for quick transport and lyric display.
+- **Smart Mixes & Scrobbling** - Last.fm / ListenBrainz scrobbling and automatic genre/mood mix generation.
