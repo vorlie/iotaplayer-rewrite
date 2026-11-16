@@ -467,8 +467,11 @@ function parseYamlMapping(
 
     const kv = splitYamlKeyValue(line.trimmed)
     if (!kv) {
-      idx++
-      continue
+      throw new Error(`Invalid YAML mapping line: ${line.trimmed}`)
+    }
+
+    if (Object.prototype.hasOwnProperty.call(target, kv.key)) {
+      throw new Error(`Duplicate YAML key: ${kv.key}`)
     }
 
     const keyIndent = line.indent
@@ -589,16 +592,162 @@ function parseYamlSequence(
 function parseYamlDocument(text: string): Record<string, unknown> | null {
   try {
     const lines = prepareYamlLines(text)
+
+    // Reject multi-document YAML streams (more than one --- document start marker)
+    let docStartMarkers = 0
+    let contentSeen = false
+    for (const line of lines) {
+      if (line.trimmed === '---') {
+        docStartMarkers++
+        if (docStartMarkers > 1 || contentSeen) {
+          return null
+        }
+      } else if (line.trimmed && line.trimmed !== '...') {
+        contentSeen = true
+      }
+    }
+
     const firstIdx = nextMeaningfulYamlIndex(lines, 0)
     if (firstIdx >= lines.length) return null
     const firstLine = lines[firstIdx]
     if (!splitYamlKeyValue(firstLine.trimmed)) return null
 
     const parsed = parseYamlMapping(lines, firstIdx, firstLine.indent)
+    const trailingIdx = nextMeaningfulYamlIndex(lines, parsed.nextIndex)
+    if (trailingIdx < lines.length) {
+      return null
+    }
+
     return Object.keys(parsed.value).length > 0 ? parsed.value : null
   } catch {
     return null
   }
+}
+
+interface ValidatedLyricsfileDoc {
+  version: '1.0'
+  metadata: Record<string, unknown>
+  instrumental: boolean
+  lines?: Array<Record<string, unknown>>
+  plain?: string
+}
+
+const ALLOWED_TOP_LEVEL_KEYS = new Set(['version', 'metadata', 'lines', 'plain'])
+const ALLOWED_LINE_KEYS = new Set(['text', 'start_ms', 'end_ms', 'words'])
+const ALLOWED_WORD_KEYS = new Set(['text', 'start_ms', 'end_ms'])
+
+function isNonNegativeInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0
+}
+
+function validateLyricsfileDocument(doc: Record<string, unknown> | null): ValidatedLyricsfileDoc | null {
+  if (!doc) return null
+
+  for (const key of Object.keys(doc)) {
+    if (!ALLOWED_TOP_LEVEL_KEYS.has(key)) return null
+  }
+
+  // Section 8: version must be the exact string "1.0"
+  if (doc.version !== '1.0') return null
+
+  // Section 2 & 3: metadata is required and must be a mapping with title and artist strings
+  if (typeof doc.metadata !== 'object' || doc.metadata === null || Array.isArray(doc.metadata)) {
+    return null
+  }
+  const metadata = doc.metadata as Record<string, unknown>
+  if (typeof metadata.title !== 'string' || typeof metadata.artist !== 'string') {
+    return null
+  }
+  if (metadata.album != null && typeof metadata.album !== 'string') {
+    return null
+  }
+  if (metadata.language != null && typeof metadata.language !== 'string') {
+    return null
+  }
+  if (metadata.duration_ms != null && !isNonNegativeInteger(metadata.duration_ms)) {
+    return null
+  }
+  if (
+    metadata.offset_ms != null &&
+    (typeof metadata.offset_ms !== 'number' || !Number.isInteger(metadata.offset_ms))
+  ) {
+    return null
+  }
+  if (metadata.instrumental != null && typeof metadata.instrumental !== 'boolean') {
+    return null
+  }
+
+  const instrumental = metadata.instrumental === true
+
+  if (doc.lines != null && !Array.isArray(doc.lines)) {
+    return null
+  }
+  if (doc.plain != null && typeof doc.plain !== 'string') {
+    return null
+  }
+
+  // Section 3: When instrumental is true, lines and plain must be omitted or empty
+  if (instrumental) {
+    const hasNonEmptyLines = Array.isArray(doc.lines) && doc.lines.length > 0
+    const hasNonEmptyPlain = typeof doc.plain === 'string' && doc.plain.length > 0
+    if (hasNonEmptyLines || hasNonEmptyPlain) {
+      return null
+    }
+  }
+
+  const validatedLines: Array<Record<string, unknown>> = []
+  if (Array.isArray(doc.lines)) {
+    for (const rawItem of doc.lines) {
+      if (typeof rawItem !== 'object' || rawItem === null || Array.isArray(rawItem)) {
+        return null
+      }
+      const item = rawItem as Record<string, unknown>
+      for (const key of Object.keys(item)) {
+        if (!ALLOWED_LINE_KEYS.has(key)) return null
+      }
+      if (typeof item.text !== 'string') return null
+      if (!isNonNegativeInteger(item.start_ms)) return null
+      if (item.end_ms != null) {
+        if (!isNonNegativeInteger(item.end_ms) || item.end_ms < item.start_ms) {
+          return null
+        }
+      }
+      if (item.words != null) {
+        if (!Array.isArray(item.words)) return null
+        for (const rawWord of item.words) {
+          if (typeof rawWord !== 'object' || rawWord === null || Array.isArray(rawWord)) {
+            return null
+          }
+          const w = rawWord as Record<string, unknown>
+          for (const key of Object.keys(w)) {
+            if (!ALLOWED_WORD_KEYS.has(key)) return null
+          }
+          if (typeof w.text !== 'string' || w.text.length === 0) return null
+          if (!isNonNegativeInteger(w.start_ms)) return null
+          if (w.end_ms != null) {
+            if (!isNonNegativeInteger(w.end_ms) || w.end_ms < w.start_ms) {
+              return null
+            }
+          }
+        }
+      }
+      validatedLines.push(item)
+    }
+  }
+
+  return {
+    version: '1.0',
+    metadata,
+    instrumental,
+    ...(Array.isArray(doc.lines) ? { lines: validatedLines } : {}),
+    ...(typeof doc.plain === 'string' ? { plain: doc.plain } : {}),
+  }
+}
+
+function looksLikeYamlLyricsfileAttempt(text: string): boolean {
+  const trimmed = text.replace(/^\uFEFF/, '').trim()
+  if (!trimmed || trimmed.startsWith('[')) return false
+  return /^\s*version\s*:/m.test(trimmed) && /^\s*metadata\s*:/m.test(trimmed)
 }
 
 export function isLyricsfileYaml(text: string): boolean {
@@ -606,52 +755,12 @@ export function isLyricsfileYaml(text: string): boolean {
   if (!trimmed || trimmed.startsWith('[')) return false
 
   const doc = parseYamlDocument(trimmed)
-  if (!doc) return false
-
-  const hasValidLines =
-    Array.isArray(doc.lines) &&
-    (doc.lines.length === 0 ||
-      doc.lines.every(
-        (item) =>
-          typeof item === 'object' &&
-          item !== null &&
-          ('text' in item || 'start_ms' in item || 'timestamp' in item || 'words' in item),
-      ))
-
-  const hasPlain = typeof doc.plain === 'string'
-  const hasVersionOrMeta =
-    doc.version != null || (typeof doc.metadata === 'object' && doc.metadata !== null)
-
-  if (hasVersionOrMeta && (hasValidLines || hasPlain || doc.instrumental != null)) {
-    return true
-  }
-
-  if (
-    hasValidLines &&
-    Array.isArray(doc.lines) &&
-    doc.lines.length > 0 &&
-    doc.lines.some((item: unknown) => {
-      if (typeof item !== 'object' || item === null) return false
-      const record = item as Record<string, unknown>
-      return (
-        typeof record.start_ms === 'number' ||
-        Array.isArray(record.words) ||
-        'text' in record
-      )
-    })
-  ) {
-    return true
-  }
-
-  if (hasPlain && Object.keys(doc).every((k) => ['plain', 'version', 'metadata', 'lines'].includes(k))) {
-    return true
-  }
-
-  return false
+  return validateLyricsfileDocument(doc) !== null
 }
 
 export function parseLyricsfile(text: string): LyricLine[] {
-  const doc = parseYamlDocument(text)
+  const rawDoc = parseYamlDocument(text)
+  const doc = validateLyricsfileDocument(rawDoc)
   if (!doc) {
     return attachParsedArrayMeta([], {
       format: 'lyricsfile',
@@ -660,48 +769,21 @@ export function parseLyricsfile(text: string): LyricLine[] {
     })
   }
 
-  const metadata =
-    typeof doc.metadata === 'object' && doc.metadata !== null
-      ? (doc.metadata as Record<string, unknown>)
-      : undefined
-  const instrumental = Boolean(doc.instrumental ?? metadata?.instrumental ?? false)
-  const offsetMs = Number(doc.offset_ms ?? metadata?.offset_ms ?? 0) || 0
-  const offsetSec = offsetMs / 1000
+  const { metadata, instrumental } = doc
 
   if (Array.isArray(doc.lines) && doc.lines.length > 0) {
     const parsedLines: LyricLine[] = []
 
-    for (const rawItem of doc.lines) {
-      if (typeof rawItem !== 'object' || rawItem === null) continue
-      const item = rawItem as Record<string, unknown>
-
+    for (const item of doc.lines) {
       const words: LyricWord[] = []
       if (Array.isArray(item.words)) {
         for (const rawWord of item.words) {
-          if (typeof rawWord !== 'object' || rawWord === null) continue
           const w = rawWord as Record<string, unknown>
-          const wordStartMs =
-            typeof w.start_ms === 'number'
-              ? w.start_ms
-              : typeof w.timestamp === 'number'
-                ? w.timestamp * 1000
-                : null
-          if (wordStartMs == null || !Number.isFinite(wordStartMs)) continue
-
-          const wordText = w.text != null ? String(w.text).trim() : ''
-          if (!wordText) continue
-
-          const wordTimestamp = Math.max(0, wordStartMs / 1000 - offsetSec)
-          const wordEndMs =
-            typeof w.end_ms === 'number'
-              ? w.end_ms
-              : typeof w.endTimestamp === 'number'
-                ? w.endTimestamp * 1000
-                : null
+          const wordStartMs = w.start_ms as number
+          const wordText = w.text as string
+          const wordTimestamp = wordStartMs / 1000
           const wordEndTimestamp =
-            wordEndMs != null && Number.isFinite(wordEndMs)
-              ? Math.max(wordTimestamp, wordEndMs / 1000 - offsetSec)
-              : undefined
+            typeof w.end_ms === 'number' ? w.end_ms / 1000 : undefined
 
           words.push({
             text: wordText,
@@ -711,55 +793,23 @@ export function parseLyricsfile(text: string): LyricLine[] {
         }
       }
 
-      const lineText =
-        item.text != null
-          ? String(item.text).trim()
-          : words.length > 0
-            ? words.map((w) => w.text).join(' ').trim()
-            : ''
-
-      const startMs =
-        typeof item.start_ms === 'number'
-          ? item.start_ms
-          : typeof item.timestamp === 'number'
-            ? item.timestamp * 1000
-            : null
-      const timestamp =
-        startMs != null && Number.isFinite(startMs)
-          ? Math.max(0, startMs / 1000 - offsetSec)
-          : words.length > 0
-            ? words[0].timestamp
-            : undefined
-
-      const endMs =
-        typeof item.end_ms === 'number'
-          ? item.end_ms
-          : typeof item.endTimestamp === 'number'
-            ? item.endTimestamp * 1000
-            : null
+      const lineText = item.text as string
+      const startMs = item.start_ms as number
+      const timestamp = startMs / 1000
       const endTimestamp =
-        endMs != null && Number.isFinite(endMs)
-          ? Math.max(timestamp ?? 0, endMs / 1000 - offsetSec)
-          : words.length > 0 && words[words.length - 1].endTimestamp != null
-            ? words[words.length - 1].endTimestamp
-            : undefined
+        typeof item.end_ms === 'number' ? item.end_ms / 1000 : undefined
 
-      const isGap = !lineText && timestamp != null
-      if (!lineText && timestamp == null) continue
-
+      const isGap = !lineText.trim()
       parsedLines.push({
-        text: lineText,
-        ...(timestamp != null ? { timestamp } : {}),
+        text: isGap ? '' : lineText,
+        timestamp,
         ...(endTimestamp != null ? { endTimestamp } : {}),
         isGap,
         ...(words.length > 0 ? { words } : {}),
       })
     }
 
-    const hasTimestamps = parsedLines.some((l) => l.timestamp != null)
-    const ordered = hasTimestamps
-      ? [...parsedLines].sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))
-      : parsedLines
+    const ordered = [...parsedLines].sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))
     const deduped = collapseConsecutiveGaps(ordered)
 
     if (deduped.length > 0) {
@@ -805,6 +855,10 @@ export function detectLyricsFormat(text: string): LyricsFormat {
     }
   }
 
+  if (looksLikeYamlLyricsfileAttempt(raw)) {
+    return null
+  }
+
   const lrcLines = parseLrc(raw)
   if (lrcLines.length > 0) {
     const quality = determineSyncQuality(lrcLines)
@@ -824,17 +878,23 @@ export function parseLyricsContent(text: string, source: LyricsSource = null): L
   if (!raw) return { ...EMPTY_LYRICS }
 
   if (isLyricsfileYaml(raw)) {
-    const lines = parseLyricsfile(raw)
-    if (lines.length > 0) {
-      const syncQuality = determineSyncQuality(lines)
+    const lines = parseLyricsfile(raw) as LyricLine[] & { instrumental?: boolean }
+    const syncQuality = determineSyncQuality(lines)
+    if (lines.length > 0 || lines.instrumental) {
       return {
         source,
         format: 'lyricsfile',
         syncQuality,
         lines,
         synchronized: syncQuality !== 'none',
+        ...(lines.instrumental ? { instrumental: true } : {}),
       }
     }
+    return { ...EMPTY_LYRICS }
+  }
+
+  if (looksLikeYamlLyricsfileAttempt(raw)) {
+    return { ...EMPTY_LYRICS }
   }
 
   const lrcLines = parseLrc(raw)
