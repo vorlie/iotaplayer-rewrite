@@ -5,9 +5,13 @@ import {
   determineSyncQuality,
   formatLyricsSourceLabel,
   getActiveLyricIndex,
+  getActiveWordIndex,
+  getLineWordSyncStates,
   getLyricsSyncState,
   getSyncQualityRank,
   type LyricsSyncState,
+  type LyricWordSyncState,
+  type WordSyncStatus,
 } from './lyricsSync'
 import type {
   LyricLine,
@@ -23,9 +27,13 @@ export {
   determineSyncQuality,
   formatLyricsSourceLabel,
   getActiveLyricIndex,
+  getActiveWordIndex,
+  getLineWordSyncStates,
   getLyricsSyncState,
   getSyncQualityRank,
   type LyricsSyncState,
+  type LyricWordSyncState,
+  type WordSyncStatus,
 }
 
 const EMPTY_LYRICS: LyricsResult = {

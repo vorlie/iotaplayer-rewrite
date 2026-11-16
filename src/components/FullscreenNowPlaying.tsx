@@ -20,8 +20,17 @@ import {
   VolumeX,
   X,
 } from 'lucide-react'
-import { formatLyricsSourceLabel, getActiveLyricIndex } from '../../electron/lyricsSync'
-import { useArtwork, useFormatDuration, useLyrics } from '../hooks/useLibrary'
+import {
+  formatLyricsSourceLabel,
+  getActiveLyricIndex,
+  getLineWordSyncStates,
+} from '../../electron/lyricsSync'
+import {
+  useArtwork,
+  useFormatDuration,
+  useInterpolatedPosition,
+  useLyrics,
+} from '../hooks/useLibrary'
 import { useAppStore, usePlaybackStore } from '../store'
 import { LyricGapIndicator } from './LyricGapIndicator'
 import '../styles/fullscreen-now-playing.css'
@@ -73,8 +82,16 @@ export function FullscreenNowPlaying() {
   const isLyricsPointerDown = useRef(false)
   const prevVolume = useRef(volume || 0.8)
 
+  const syncPosition = useInterpolatedPosition(
+    position,
+    isPlaying,
+    lyrics,
+    isFullscreen,
+    duration,
+  )
+
   // Find active lyric line index based on current playback position
-  const activeLyricIndex = getActiveLyricIndex(lyrics, position)
+  const activeLyricIndex = getActiveLyricIndex(lyrics, syncPosition)
 
   // Auto-scroll active lyric into center view
   useEffect(() => {
@@ -455,13 +472,23 @@ export function FullscreenNowPlaying() {
                         }
 
                         const isClickable = line.timestamp != null && Boolean(line.text)
+                        const words = line.words && line.words.length > 0 ? line.words : null
+                        const nextLineTimestamp = lyrics.lines[index + 1]?.timestamp
+                        const wordStates =
+                          words && isActive
+                            ? getLineWordSyncStates(line, syncPosition, nextLineTimestamp)
+                            : null
+                        const hasEmbeddedSpaces = words
+                          ? words.some((w) => /\s/.test(w.text))
+                          : false
+                        const hasLineSpaces = words ? /\s/.test(line.text) : false
 
                         return (
                           <button
                             key={`${line.timestamp ?? 'text'}-${index}`}
                             type="button"
                             data-lyric-index={index}
-                            className={`fullscreen-lyric-line ${isActive ? 'is-active' : ''}`}
+                            className={`fullscreen-lyric-line ${isActive ? 'is-active' : ''} ${words ? 'is-word-synced' : ''}`}
                             disabled={!isClickable}
                             onClick={() => {
                               if (line.timestamp != null) {
@@ -470,7 +497,46 @@ export function FullscreenNowPlaying() {
                             }}
                             title={line.timestamp != null ? `Seek to ${fmt(line.timestamp)}` : undefined}
                           >
-                            {line.text}
+                            {words
+                              ? words.map((word, wIdx) => {
+                                  const wordState = wordStates?.[wIdx]
+                                  const status = wordState
+                                    ? wordState.status
+                                    : activeLyricIndex >= 0 && index < activeLyricIndex
+                                      ? 'past'
+                                      : 'upcoming'
+                                  const visibleText = word.text.trim() || word.text
+                                  const needsTrailingSpace =
+                                    /\s$/.test(word.text) ||
+                                    (!hasEmbeddedSpaces &&
+                                      hasLineSpaces &&
+                                      wIdx < words.length - 1)
+                                  const needsLeadingSpace =
+                                    /^\s/.test(word.text) &&
+                                    wIdx > 0 &&
+                                    !/\s$/.test(words[wIdx - 1].text)
+
+                                  return (
+                                    <span
+                                      key={`${word.timestamp}-${wIdx}`}
+                                      className="fullscreen-lyric-word-group"
+                                    >
+                                      {needsLeadingSpace ? ' ' : null}
+                                      <span
+                                        className={`fullscreen-lyric-word is-${status}`}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          seek(word.timestamp)
+                                        }}
+                                        title={`Seek to "${visibleText}" (${fmt(word.timestamp)})`}
+                                      >
+                                        {visibleText}
+                                      </span>
+                                      {needsTrailingSpace ? ' ' : null}
+                                    </span>
+                                  )
+                                })
+                              : line.text}
                           </button>
                         )
                       })}

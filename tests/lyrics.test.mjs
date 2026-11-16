@@ -14,6 +14,8 @@ const {
   getLyrics,
   formatLyricsSourceLabel,
   getActiveLyricIndex,
+  getActiveWordIndex,
+  getLineWordSyncStates,
   getLyricsSyncState,
 } = await import('../dist-electron/lyrics.js')
 
@@ -706,3 +708,105 @@ lines:
   `.trim()
   assert.equal(parseLyricsfile(invalidInstrumental).length, 0)
 })
+
+// ---------------------------------------------------------------------------
+// Word-Level Synchronization & Karaoke Progress Tests
+// ---------------------------------------------------------------------------
+
+test('word-level synchronization: computes upcoming, active (with fractional progress), and past word states', () => {
+  const wordSyncedYaml = `
+version: '1.0'
+metadata:
+  title: 'GIRLS'
+  artist: 'FIRESTARTER'
+lines:
+  - text: 'Stay until the morning'
+    start_ms: 4000
+    end_ms: 7000
+    words:
+      - text: 'Stay '
+        start_ms: 4000
+        end_ms: 4800
+      - text: 'until '
+        start_ms: 4800
+        end_ms: 5600
+      - text: 'the '
+        start_ms: 5600
+        end_ms: 6000
+      - text: 'morning'
+        start_ms: 6000
+        end_ms: 7000
+  - text: 'Next line starts here'
+    start_ms: 8000
+    end_ms: 10000
+  `.trim()
+
+  const parsed = parseLyricsContent(wordSyncedYaml, 'sidecar-lyricsfile')
+  assert.equal(parsed.syncQuality, 'word')
+  const line0 = parsed.lines[0]
+
+  // Before first word starts (e.g. 3.8s)
+  const beforeStates = getLineWordSyncStates(line0, 3.8, 8.0)
+  assert.equal(beforeStates.length, 4)
+  assert.ok(beforeStates.every((w) => w.status === 'upcoming' && w.progress === 0))
+  assert.equal(getActiveWordIndex(line0, 3.8, 8.0), -1)
+
+  // Halfway through word 0 ('Stay ', 4.0s -> 4.8s, at 4.4s => progress = 0.5)
+  const midWord0 = getLyricsSyncState(parsed, { backend: 'mpv', position: 4.4, isPlaying: true })
+  assert.equal(midWord0.activeIndex, 0)
+  assert.equal(midWord0.activeWordIndex, 0)
+  assert.equal(midWord0.activeWord?.text, 'Stay ')
+  assert.ok(Math.abs(midWord0.wordProgress - 0.5) < 1e-6)
+  assert.equal(midWord0.words[0].status, 'active')
+  assert.equal(midWord0.words[1].status, 'upcoming')
+  assert.equal(midWord0.words[2].status, 'upcoming')
+  assert.equal(midWord0.words[3].status, 'upcoming')
+
+  // Quarter-way through word 2 ('the ', 5.6s -> 6.0s, at 5.7s => progress = 0.25)
+  const midWord2 = getLyricsSyncState(parsed, { backend: 'browser', position: 5.7, isPlaying: true })
+  assert.equal(midWord2.activeIndex, 0)
+  assert.equal(midWord2.activeWordIndex, 2)
+  assert.equal(midWord2.activeWord?.text, 'the ')
+  assert.ok(Math.abs(midWord2.wordProgress - 0.25) < 1e-6)
+  assert.equal(midWord2.words[0].status, 'past')
+  assert.equal(midWord2.words[0].progress, 1)
+  assert.equal(midWord2.words[1].status, 'past')
+  assert.equal(midWord2.words[1].progress, 1)
+  assert.equal(midWord2.words[2].status, 'active')
+  assert.equal(midWord2.words[3].status, 'upcoming')
+  assert.equal(midWord2.words[3].progress, 0)
+
+  // After last word of line 0 finishes (at 7.5s, before line 1 at 8.0s)
+  const afterWords = getLyricsSyncState(parsed, { backend: 'mpv', position: 7.5, isPlaying: true })
+  assert.equal(afterWords.activeIndex, 0)
+  assert.equal(afterWords.activeWordIndex, -1)
+  assert.ok(afterWords.words.every((w) => w.status === 'past' && w.progress === 1))
+
+  // On line 1 (which has no word-level timestamps -> falls back to line-level sync)
+  const onLine1 = getLyricsSyncState(parsed, { backend: 'mpv', position: 8.5, isPlaying: true })
+  assert.equal(onLine1.activeIndex, 1)
+  assert.equal(onLine1.activeWordIndex, -1)
+  assert.equal(onLine1.activeWord, null)
+  assert.equal(onLine1.words.length, 0)
+})
+
+test('word-level synchronization: works with Enhanced LRC inline word timestamps without explicit endTimestamp', () => {
+  const enhancedLrc = `
+[00:10.00] <00:10.00> Never <00:10.50> gonna <00:11.00> give <00:11.50> you <00:12.00> up
+[00:14.00] Next line
+  `.trim()
+
+  const parsed = parseLyricsContent(enhancedLrc, 'sidecar-lrc')
+  assert.equal(parsed.syncQuality, 'word')
+
+  // At 10.75s: word 0 ('Never') is past, word 1 ('gonna', 10.50..11.00) is active at 50% progress
+  const state = getLyricsSyncState(parsed, { backend: 'mpv', position: 10.75, isPlaying: true })
+  assert.equal(state.activeIndex, 0)
+  assert.equal(state.activeWordIndex, 1)
+  assert.equal(state.activeWord?.text, 'gonna')
+  assert.ok(Math.abs(state.wordProgress - 0.5) < 1e-6)
+  assert.equal(state.words[0].status, 'past')
+  assert.equal(state.words[1].status, 'active')
+  assert.equal(state.words[2].status, 'upcoming')
+})
+

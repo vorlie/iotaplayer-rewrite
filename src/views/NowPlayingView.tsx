@@ -17,8 +17,17 @@ import {
   Volume2,
   X,
 } from 'lucide-react'
-import { formatLyricsSourceLabel, getActiveLyricIndex } from '../../electron/lyricsSync'
-import { useArtwork, useFormatDuration, useLyrics } from '../hooks/useLibrary'
+import {
+  formatLyricsSourceLabel,
+  getActiveLyricIndex,
+  getLineWordSyncStates,
+} from '../../electron/lyricsSync'
+import {
+  useArtwork,
+  useFormatDuration,
+  useInterpolatedPosition,
+  useLyrics,
+} from '../hooks/useLibrary'
 import { useAppStore, usePlaybackStore } from '../store'
 import { LyricGapIndicator } from '../components/LyricGapIndicator'
 import '../styles/now-playing.css'
@@ -92,7 +101,14 @@ export function NowPlayingView() {
     }
   }, [])
 
-  const activeLyricIndex = getActiveLyricIndex(lyrics, position)
+  const syncPosition = useInterpolatedPosition(
+    position,
+    isPlaying,
+    lyrics,
+    true,
+    duration,
+  )
+  const activeLyricIndex = getActiveLyricIndex(lyrics, syncPosition)
   const lyricsSource = formatLyricsSourceLabel(lyrics)
 
   useEffect(() => {
@@ -406,17 +422,60 @@ export function NowPlayingView() {
                     )
                   }
 
+                  const words = line.words && line.words.length > 0 ? line.words : null
+                  const nextLineTimestamp = lyrics.lines[index + 1]?.timestamp
+                  const wordStates =
+                    words && isActive
+                      ? getLineWordSyncStates(line, syncPosition, nextLineTimestamp)
+                      : null
+                  const hasEmbeddedSpaces = words ? words.some((w) => /\s/.test(w.text)) : false
+                  const hasLineSpaces = words ? /\s/.test(line.text) : false
+
                   return (
                     <button
                       key={`${line.timestamp ?? 'text'}-${index}`}
                       type="button"
                       data-lyric-index={index}
-                      className={`lyric-line ${isActive ? 'is-active' : ''}`}
+                      className={`lyric-line ${isActive ? 'is-active' : ''} ${words ? 'is-word-synced' : ''}`}
                       disabled={line.timestamp == null || !line.text}
                       onClick={() => line.timestamp != null && seek(line.timestamp)}
                       title={line.timestamp != null ? `Seek to ${fmt(line.timestamp)}` : undefined}
                     >
-                      {line.text}
+                      {words
+                        ? words.map((word, wIdx) => {
+                            const wordState = wordStates?.[wIdx]
+                            const status = wordState
+                              ? wordState.status
+                              : activeLyricIndex >= 0 && index < activeLyricIndex
+                                ? 'past'
+                                : 'upcoming'
+                            const visibleText = word.text.trim() || word.text
+                            const needsTrailingSpace =
+                              /\s$/.test(word.text) ||
+                              (!hasEmbeddedSpaces && hasLineSpaces && wIdx < words.length - 1)
+                            const needsLeadingSpace =
+                              /^\s/.test(word.text) &&
+                              wIdx > 0 &&
+                              !/\s$/.test(words[wIdx - 1].text)
+
+                            return (
+                              <span key={`${word.timestamp}-${wIdx}`} className="lyric-word-group">
+                                {needsLeadingSpace ? ' ' : null}
+                                <span
+                                  className={`lyric-word is-${status}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    seek(word.timestamp)
+                                  }}
+                                  title={`Seek to "${visibleText}" (${fmt(word.timestamp)})`}
+                                >
+                                  {visibleText}
+                                </span>
+                                {needsTrailingSpace ? ' ' : null}
+                              </span>
+                            )
+                          })
+                        : line.text}
                     </button>
                   )
                 })

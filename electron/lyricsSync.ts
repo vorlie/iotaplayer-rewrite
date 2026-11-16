@@ -1,13 +1,30 @@
 import type {
   LyricLine,
   LyricsResult,
+  LyricWord,
   PlaybackStateEvent,
   SyncQuality,
 } from './types'
 
+export type WordSyncStatus = 'past' | 'active' | 'upcoming'
+
+export interface LyricWordSyncState {
+  index: number
+  word: LyricWord
+  status: WordSyncStatus
+  /** Fractional progress (0 to 1) across the word's time span. */
+  progress: number
+  /** Resolved end timestamp in seconds used for progress calculation. */
+  resolvedEndTimestamp: number
+}
+
 export interface LyricsSyncState {
   activeIndex: number
   activeLine: LyricLine | null
+  activeWordIndex: number
+  activeWord: LyricWord | null
+  wordProgress: number
+  words: LyricWordSyncState[]
   isWithinLineBounds: boolean
   synchronized: boolean
   syncQuality: SyncQuality
@@ -125,6 +142,78 @@ export function getActiveLyricIndex(
   return active
 }
 
+export function getLineWordSyncStates(
+  line: LyricLine | null | undefined,
+  position: number,
+  nextLineTimestamp?: number,
+): LyricWordSyncState[] {
+  if (!line || !Array.isArray(line.words) || line.words.length === 0) {
+    return []
+  }
+
+  const validPos = typeof position === 'number' && Number.isFinite(position) ? position : -1
+  const words = line.words
+
+  return words.map((word, index) => {
+    const start = word.timestamp
+    const nextWordStart = index + 1 < words.length ? words[index + 1].timestamp : undefined
+    const rawEnd =
+      word.endTimestamp != null && Number.isFinite(word.endTimestamp)
+        ? word.endTimestamp
+        : nextWordStart != null && Number.isFinite(nextWordStart)
+          ? nextWordStart
+          : line.endTimestamp != null && Number.isFinite(line.endTimestamp)
+            ? line.endTimestamp
+            : nextLineTimestamp != null && Number.isFinite(nextLineTimestamp)
+              ? nextLineTimestamp
+              : start + 0.5
+    const end = Math.max(start, rawEnd)
+
+    if (validPos < start) {
+      return {
+        index,
+        word,
+        status: 'upcoming',
+        progress: 0,
+        resolvedEndTimestamp: end,
+      }
+    }
+
+    if (validPos >= end && (end > start || validPos > start)) {
+      return {
+        index,
+        word,
+        status: 'past',
+        progress: 1,
+        resolvedEndTimestamp: end,
+      }
+    }
+
+    const span = end - start
+    const progress = span > 0 ? Math.max(0, Math.min(1, (validPos - start) / span)) : 1
+
+    return {
+      index,
+      word,
+      status: 'active',
+      progress,
+      resolvedEndTimestamp: end,
+    }
+  })
+}
+
+export function getActiveWordIndex(
+  line: LyricLine | null | undefined,
+  position: number,
+  nextLineTimestamp?: number,
+): number {
+  const states = getLineWordSyncStates(line, position, nextLineTimestamp)
+  if (states.length === 0) return -1
+
+  const active = states.find((s) => s.status === 'active')
+  return active ? active.index : -1
+}
+
 export function getLyricsSyncState(
   lyrics: LyricsResult | null | undefined,
   playback: PlaybackStateEvent | number,
@@ -143,6 +232,10 @@ export function getLyricsSyncState(
     return {
       activeIndex: -1,
       activeLine: null,
+      activeWordIndex: -1,
+      activeWord: null,
+      wordProgress: 0,
+      words: [],
       isWithinLineBounds: false,
       synchronized: false,
       syncQuality: 'none',
@@ -155,6 +248,28 @@ export function getLyricsSyncState(
   const synchronized = Boolean(lyrics.synchronized && syncQuality !== 'none')
   const activeIndex = synchronized ? getActiveLyricIndex(lyrics, position) : -1
   const activeLine = activeIndex >= 0 ? lyrics.lines[activeIndex] ?? null : null
+  const nextLine =
+    activeIndex >= 0 && activeIndex + 1 < lyrics.lines.length
+      ? lyrics.lines[activeIndex + 1]
+      : undefined
+
+  const words =
+    activeLine && Array.isArray(activeLine.words) && activeLine.words.length > 0
+      ? getLineWordSyncStates(activeLine, position, nextLine?.timestamp)
+      : []
+
+  const activeWordState = words.find((w) => w.status === 'active') ?? null
+  const activeWordIndex = activeWordState
+    ? activeWordState.index
+    : getActiveWordIndex(activeLine, position, nextLine?.timestamp)
+  const activeWord =
+    activeWordIndex >= 0 && activeLine?.words ? activeLine.words[activeWordIndex] ?? null : null
+  const wordProgress = activeWordState
+    ? activeWordState.progress
+    : activeWordIndex >= 0
+      ? 1
+      : 0
+
   const isWithinLineBounds = Boolean(
     activeLine &&
       activeLine.timestamp != null &&
@@ -165,6 +280,10 @@ export function getLyricsSyncState(
   return {
     activeIndex,
     activeLine,
+    activeWordIndex,
+    activeWord,
+    wordProgress,
+    words,
     isWithinLineBounds,
     synchronized,
     syncQuality,

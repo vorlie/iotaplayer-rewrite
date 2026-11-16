@@ -366,12 +366,43 @@
 .lyric-line.is-active {
   color: var(--color-accent);
   opacity: 1;
-  filter: blur(0);
+  filter: none;
   transform: scale(1.08);
   letter-spacing: 0.015em;
   text-shadow:
     0 0 14px rgba(255, 255, 255, 0.16),
     0 0 26px color-mix(in srgb, var(--color-accent) 42%, transparent);
+}
+
+.lyric-line.is-active.is-word-synced {
+  color: rgba(237, 228, 228, 0.38);
+  text-shadow: none;
+  will-change: transform, opacity;
+}
+
+.lyric-word-group {
+  display: inline;
+}
+
+.lyric-word {
+  display: inline;
+  border-radius: 3px;
+  transition: color 90ms ease;
+}
+
+.now-playing-lyrics.is-synced .lyric-line:not(:disabled) .lyric-word:hover {
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--color-accent) 60%, transparent);
+  text-underline-offset: 4px;
+}
+
+.lyric-line.is-active.is-word-synced .lyric-word.is-past,
+.lyric-line.is-active.is-word-synced .lyric-word.is-active {
+  color: var(--color-accent);
+}
+
+.lyric-line.is-active.is-word-synced .lyric-word.is-upcoming {
+  color: rgba(237, 228, 228, 0.38);
 }
 
 .lyric-line.is-gap {
@@ -388,7 +419,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lyric-line {
+  .lyric-line,
+  .lyric-word {
     transition: none;
   }
 }
