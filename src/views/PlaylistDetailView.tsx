@@ -69,7 +69,7 @@ export function PlaylistDetailView() {
 
   return (
     <div className="page">
-      <div className="detail-hero">
+      <div className="detail-hero playlist-detail-hero">
         <button
           className="sidebar__item"
           style={{ marginBottom: 'auto', alignSelf: 'flex-start' }}
@@ -98,14 +98,14 @@ export function PlaylistDetailView() {
                 <textarea
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
-                  rows={4}
+                  rows={2}
                   placeholder="Add a short description..."
                 />
               </label>
 
               <div className="playlist-editor-actions">
-                <button className="detail-play-btn" onClick={saveDetails}>Save changes</button>
-                <button className="secondary-btn" onClick={() => setIsEditing(false)}>Cancel</button>
+                <button className="detail-play-btn playlist-toolbar-btn" onClick={saveDetails}>Save changes</button>
+                <button className="secondary-btn playlist-toolbar-btn" onClick={() => setIsEditing(false)}>Cancel</button>
               </div>
             </div>
           ) : (
@@ -124,31 +124,27 @@ export function PlaylistDetailView() {
                   <p className="playlist-description-empty">No description yet. Add one to give this playlist a little personality.</p>
                 )}
               </div>
-            </>
-          )}
 
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            {!isEditing && (
-              <>
-                <button className="detail-play-btn" onClick={() => playPlaylist(playlist.id)}>
-                  <Play size={14} fill="currentColor" />
+              <div className="playlist-detail-actions">
+                <button className="detail-play-btn playlist-toolbar-btn" onClick={() => playPlaylist(playlist.id)}>
+                  <Play size={13} fill="currentColor" />
                   Play
                 </button>
 
-                <button className="player-btn" title="Edit playlist details" onClick={beginEditing}>
-                  <Pencil size={14} />
+                <button className="player-btn playlist-icon-btn" title="Edit playlist details" onClick={beginEditing}>
+                  <Pencil size={13} />
                 </button>
 
                 <button
-                  className="player-btn"
+                  className="player-btn playlist-icon-btn"
                   title="Change cover art"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <ImagePlus size={14} />
+                  <ImagePlus size={13} />
                 </button>
 
                 <button
-                  className="player-btn"
+                  className="player-btn playlist-icon-btn"
                   title="Delete playlist"
                   onClick={() => {
                     if (window.confirm(`Delete playlist "${playlist.name}"?`)) {
@@ -157,11 +153,11 @@ export function PlaylistDetailView() {
                     }
                   }}
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={13} />
                 </button>
-              </>
-            )}
-          </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
