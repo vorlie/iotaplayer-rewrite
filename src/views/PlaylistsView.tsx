@@ -23,28 +23,32 @@ export function PlaylistsView() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1 className="page-title">Playlists</h1>
-        <p className="page-subtitle">Saved queues and listening sessions</p>
+        <div className="playlist-header-row">
+          <div>
+            <h1 className="page-title">Playlists</h1>
+            <p className="page-subtitle">Saved queues and listening sessions</p>
+          </div>
+
+          <div className="playlist-header-actions">
+            <button className="detail-play-btn playlist-toolbar-btn" onClick={handleCreateDefault}>
+              <Plus size={14} />
+              New playlist
+            </button>
+
+            <button
+              className="secondary-btn playlist-toolbar-btn"
+              onClick={() => saveCurrentQueueAsPlaylist()}
+              disabled={queue.length === 0}
+              style={{ opacity: queue.length === 0 ? 0.5 : 1 }}
+            >
+              <ListMusic size={14} />
+              Save current queue
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="page-body">
-        <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-          <button className="detail-play-btn" onClick={handleCreateDefault}>
-            <Plus size={14} />
-            New playlist
-          </button>
-
-          <button
-            className="secondary-btn"
-            onClick={() => saveCurrentQueueAsPlaylist()}
-            disabled={queue.length === 0}
-            style={{ opacity: queue.length === 0 ? 0.5 : 1 }}
-          >
-            <ListMusic size={14} />
-            Save current queue
-          </button>
-        </div>
-
         {playlists.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-title">No playlists yet</div>
@@ -68,7 +72,7 @@ export function PlaylistsView() {
                       <img src={coverUrl} alt={playlist.name} />
                     ) : (
                       <div className="playlist-cover-placeholder">
-                        <Music2 size={28} />
+                        <Music2 size={22} />
                       </div>
                     )}
                   </div>
