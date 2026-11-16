@@ -1,9 +1,10 @@
-import { Heart, Music2, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Volume2 } from 'lucide-react'
-import { usePlaybackStore } from '../store'
+import { Heart, Maximize2, Music2, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Volume2 } from 'lucide-react'
+import { useAppStore, usePlaybackStore } from '../store'
 import { useArtwork, useFormatDuration } from '../hooks/useLibrary'
 import '../styles/layout.css'
 
 export function PlayerBar() {
+  const toggleFullscreen = useAppStore((s) => s.toggleFullscreenNowPlaying)
   const {
     currentTrack,
     isPlaying,
@@ -45,7 +46,12 @@ export function PlayerBar() {
     <div className="player-bar">
       {/* Track info */}
       <div className="player-track">
-        <div className="player-artwork">
+        <div
+          className="player-artwork"
+          onClick={currentTrack ? toggleFullscreen : undefined}
+          title={currentTrack ? 'Open Fullscreen Now Playing (F)' : undefined}
+          style={{ cursor: currentTrack ? 'pointer' : 'default' }}
+        >
           {artworkSrc ? (
             <img src={artworkSrc} alt="" />
           ) : (
@@ -54,7 +60,12 @@ export function PlayerBar() {
         </div>
         {currentTrack ? (
           <>
-            <div className="player-track-info">
+            <div
+              className="player-track-info"
+              onClick={toggleFullscreen}
+              title="Open Fullscreen Now Playing (F)"
+              style={{ cursor: 'pointer' }}
+            >
               <div className="player-track-title">{currentTrack.title}</div>
               <div className="player-track-artist">
                 {currentTrack.artist ?? currentTrack.album_artist ?? '—'}
@@ -120,22 +131,19 @@ export function PlayerBar() {
         </span>
         <div className="player-volume">
           <Volume2 size={14} color="var(--color-text-3)" />
-          <div
-            className="volume-track"
-            onClick={handleVolumeClick}
-            style={{ background: 'var(--color-surface-3)' }}
-          >
-            <div
-              className="volume-fill"
-              style={{
-                width: `${volume * 100}%`,
-                height: '100%',
-                background: 'var(--color-accent)',
-                borderRadius: 2,
-              }}
-            />
+          <div className="volume-track" onClick={handleVolumeClick}>
+            <div className="volume-fill" style={{ width: `${volume * 100}%` }} />
           </div>
         </div>
+        <button
+          type="button"
+          className="player-btn"
+          onClick={toggleFullscreen}
+          title="Fullscreen Now Playing (F)"
+          style={{ width: 30, height: 30 }}
+        >
+          <Maximize2 size={15} />
+        </button>
       </div>
     </div>
   )

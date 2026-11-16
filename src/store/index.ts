@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { normalizeMediaControlSnapshot } from '../../electron/mediaControls'
 import type { Album, Artist, Playlist, ScanProgress, ScanResult, Track } from '../types/electron'
 
 // ---------------------------------------------------------------------------
@@ -54,6 +55,11 @@ interface AppStore {
   // Navigation
   nav: NavState
 
+  // Immersive Fullscreen Now Playing overlay
+  isFullscreenNowPlaying: boolean
+  setFullscreenNowPlaying: (open: boolean) => void
+  toggleFullscreenNowPlaying: () => void
+
   // Library
   library: LibraryState
 
@@ -83,6 +89,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
     playlistId: null,
     searchQuery: '',
   },
+
+  isFullscreenNowPlaying: false,
+  setFullscreenNowPlaying: (open) => set({ isFullscreenNowPlaying: open }),
+  toggleFullscreenNowPlaying: () => set((s) => ({ isFullscreenNowPlaying: !s.isFullscreenNowPlaying })),
 
   library: {
     stats: null,
@@ -232,6 +242,101 @@ interface PlaybackStore extends PlaybackState {
 
 export const usePlaybackStore = create<PlaybackStore>((set, get) => {
   let lastResumeSaveTime = 0
+  let cachedArtworkUrl: string | null = null
+
+  const syncSystemMediaSession = async () => {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined' || !('mediaSession' in navigator)) {
+      return
+    }
+
+    const { currentTrack, position, isPlaying } = get()
+    if (currentTrack && currentTrack.artwork_id != null && 'library' in window) {
+      const artwork = await window.library.artwork(currentTrack.artwork_id)
+      if (artwork) {
+        cachedArtworkUrl = `data:${artwork.mime_type};base64,${artwork.data}`
+      }
+    } else {
+      cachedArtworkUrl = null
+    }
+
+    const snapshot = normalizeMediaControlSnapshot({
+      title: currentTrack?.title ?? 'Unknown title',
+      artist: currentTrack?.artist ?? currentTrack?.album_artist ?? 'Unknown artist',
+      album: currentTrack?.album ?? 'Unknown album',
+      artworkUrl: cachedArtworkUrl,
+      duration: currentTrack?.duration ?? 0,
+      position,
+      isPlaying,
+    })
+
+    const mediaSession = navigator.mediaSession
+
+    if (typeof MediaMetadata !== 'undefined') {
+      mediaSession.metadata = new MediaMetadata({
+        title: snapshot.title,
+        artist: snapshot.artist,
+        album: snapshot.album,
+        artwork: snapshot.artworkUrl
+          ? [{ src: snapshot.artworkUrl, sizes: '512x512', type: 'image/jpeg' }]
+          : [],
+      })
+    }
+
+    mediaSession.playbackState = snapshot.isPlaying ? 'playing' : 'paused'
+
+    if ('setPositionState' in mediaSession) {
+      mediaSession.setPositionState({
+        duration: snapshot.duration,
+        position: snapshot.position,
+      })
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    window.__iotaplayerMediaControls = {
+      sync: () => {
+        void syncSystemMediaSession()
+      },
+      getSnapshot: () => {
+        const { currentTrack, position, isPlaying } = get()
+        return normalizeMediaControlSnapshot({
+          title: currentTrack?.title ?? 'Unknown title',
+          artist: currentTrack?.artist ?? currentTrack?.album_artist ?? 'Unknown artist',
+          album: currentTrack?.album ?? 'Unknown album',
+          artworkUrl: cachedArtworkUrl,
+          duration: currentTrack?.duration ?? 0,
+          position,
+          isPlaying,
+        })
+      },
+    }
+  }
+
+  if (typeof navigator !== 'undefined' && 'mediaSession' in navigator) {
+    navigator.mediaSession.setActionHandler('play', () => {
+      get().resume()
+    })
+    navigator.mediaSession.setActionHandler('pause', () => {
+      get().pause()
+    })
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      get().previous()
+    })
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      get().next()
+    })
+    navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+      const seconds = typeof details?.seekTime === 'number' ? details.seekTime : 15
+      get().seek(Math.max(0, get().position - seconds))
+    })
+    navigator.mediaSession.setActionHandler('seekforward', (details) => {
+      const seconds = typeof details?.seekTime === 'number' ? details.seekTime : 15
+      get().seek(get().position + seconds)
+    })
+    navigator.mediaSession.setActionHandler('stop', () => {
+      get().pause()
+    })
+  }
 
   if (typeof window !== 'undefined' && 'playback' in window) {
     window.playback.onStateChange((state) => {
@@ -243,6 +348,8 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
         ...(state.volume !== undefined ? { volume: state.volume } : {}),
         ...(state.backend !== undefined ? { activeBackend: state.backend } : {}),
       }))
+
+      void syncSystemMediaSession()
 
       // Throttle resume saving: every 5 seconds if position > 5s
       const current = get().currentTrack
@@ -330,6 +437,7 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
       playlistName,
     })
 
+    void syncSystemMediaSession()
     updateDiscordPresence(track, true)
 
     console.log(`[Playback] Playing: ${track.title}`)
@@ -594,6 +702,7 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
       set({ isPlaying: false })
       const { currentTrack } = get()
       updateDiscordPresence(currentTrack, false)
+      void syncSystemMediaSession()
       if (typeof window !== 'undefined' && 'playback' in window) {
         void window.playback.pause()
       }
@@ -603,6 +712,7 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
       set({ isPlaying: true })
       const { currentTrack } = get()
       updateDiscordPresence(currentTrack, true)
+      void syncSystemMediaSession()
       if (typeof window !== 'undefined' && 'playback' in window) {
         void window.playback.resume()
       }
@@ -651,6 +761,7 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
 
       const track = queue[nextIndex]
       set({ currentTrack: track, queueIndex: nextIndex, position: 0, duration: track.duration, isPlaying: true })
+      void syncSystemMediaSession()
       updateDiscordPresence(track, true)
       if (typeof window !== 'undefined' && 'playback' in window) {
         void window.playback.play(track.path)
@@ -692,6 +803,7 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
 
       const track = queue[prevIndex]
       set({ currentTrack: track, queueIndex: prevIndex, position: 0, duration: track.duration, isPlaying: true })
+      void syncSystemMediaSession()
       updateDiscordPresence(track, true)
       if (typeof window !== 'undefined' && 'playback' in window) {
         void window.playback.play(track.path)
@@ -704,6 +816,7 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
     seek: (position) => {
       const clamped = Math.max(0, position)
       set({ position: clamped })
+      void syncSystemMediaSession()
       if (typeof window !== 'undefined' && 'playback' in window) {
         void window.playback.seek(clamped)
       }

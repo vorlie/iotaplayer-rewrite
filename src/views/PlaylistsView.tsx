@@ -1,5 +1,6 @@
 import { ListMusic, Music2, Pencil, Play, Plus, Trash2 } from 'lucide-react'
 import { useAppStore, usePlaybackStore } from '../store'
+import '../styles/playlists.css'
 
 export function PlaylistsView() {
   const {
@@ -34,7 +35,7 @@ export function PlaylistsView() {
           </button>
 
           <button
-            className="sidebar__item"
+            className="secondary-btn"
             onClick={() => saveCurrentQueueAsPlaylist()}
             disabled={queue.length === 0}
             style={{ opacity: queue.length === 0 ? 0.5 : 1 }}

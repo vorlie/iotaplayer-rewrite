@@ -59,16 +59,52 @@ export interface LibraryStats {
   total_duration: number // seconds
 }
 
+export type LyricsSourcePreference = 'embedded' | 'synchronized' | 'sidecar'
+
+export type SyncQuality = 'none' | 'line' | 'word'
+
+export type LyricsFormat =
+  | 'embedded'
+  | 'lrc'
+  | 'enhanced-lrc'
+  | 'lyricsfile'
+  | 'plain'
+  | null
+
+export type LyricsSource =
+  | 'sidecar-lrc'
+  | 'sidecar-text'
+  | 'sidecar-lyricsfile'
+  | 'embedded'
+  | null
+
+export interface LyricWord {
+  text: string
+  /** Start position in seconds. */
+  timestamp: number
+  /** Optional end position in seconds when available from the source format. */
+  endTimestamp?: number
+}
+
 export interface LyricLine {
   text: string
   /** Position in seconds when this is a time-synchronised lyric line. */
   timestamp?: number
+  /** Optional end position in seconds when available from the source format. */
+  endTimestamp?: number
+  /** Optional word-level timing tokens when present in the source format. */
+  words?: LyricWord[]
+  /** True when this entry represents an explicit empty timestamped gap. */
+  isGap?: boolean
 }
 
 export interface LyricsResult {
-  source: 'sidecar-lrc' | 'sidecar-text' | 'embedded' | null
+  source: LyricsSource
+  format?: LyricsFormat
+  syncQuality?: SyncQuality
   lines: LyricLine[]
   synchronized: boolean
+  instrumental?: boolean
 }
 
 export interface ScanResult {
