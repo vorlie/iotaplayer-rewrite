@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { determineSyncQuality } from '../../electron/lyricsSync'
+import {
+  determineSyncQuality,
+  getActiveLyricIndex,
+  getActiveWordIndex,
+} from '../../electron/lyricsSync'
 import type { Album, Artist, LyricLine, LyricsResult, Track } from '../types/electron'
 
 // Convenience hook for loading data from the IPC bridge
@@ -260,37 +264,79 @@ export function useLyrics(trackId: number | null | undefined) {
 }
 
 /**
- * Smoothly interpolates playback position at 60fps via requestAnimationFrame
- * when word-synchronized lyrics are active and audio is playing.
+ * Checks word-level lyric boundaries at 60fps via requestAnimationFrame while audio
+ * is playing, but only triggers a React state update when the active lyric line or
+ * active word index actually changes. This provides sub-16ms word sync accuracy
+ * without 60fps React re-renders or paint thrashing.
  */
 export function useInterpolatedPosition(
   position: number,
   isPlaying: boolean,
-  enabled: boolean,
+  lyrics: LyricsResult,
+  enabled = true,
   duration = 0,
 ): number {
-  const [interpolated, setInterpolated] = useState(position)
-  const anchorRef = useRef<{ position: number; timestamp: number }>({
+  const isWordSynced = enabled && lyrics.synchronized && lyrics.syncQuality === 'word'
+  const [syncPosition, setSyncPosition] = useState(position)
+  const anchorRef = useRef<{
+    position: number
+    timestamp: number
+    highWaterMark: number
+    lastLineIdx: number
+    lastWordIdx: number
+  }>({
     position,
     timestamp: 0,
+    highWaterMark: position,
+    lastLineIdx: -1,
+    lastWordIdx: -1,
   })
 
   useEffect(() => {
+    const now = performance.now()
+    const prev = anchorRef.current
+    const isBackwardSeek = position < prev.position - 0.25 || position < prev.highWaterMark - 0.6
+    const isForwardSeek = position > prev.highWaterMark + 0.6
+    const nextHighWater =
+      isBackwardSeek || isForwardSeek ? position : Math.max(prev.highWaterMark, position)
+
+    const lineIdx = isWordSynced ? getActiveLyricIndex(lyrics, nextHighWater) : -1
+    const line = lineIdx >= 0 ? lyrics.lines[lineIdx] : null
+    const nextLineTs = lineIdx >= 0 ? lyrics.lines[lineIdx + 1]?.timestamp : undefined
+    const wordIdx = line ? getActiveWordIndex(line, nextHighWater, nextLineTs) : -1
+
     anchorRef.current = {
       position,
-      timestamp: performance.now(),
+      timestamp: now,
+      highWaterMark: nextHighWater,
+      lastLineIdx: lineIdx,
+      lastWordIdx: wordIdx,
     }
-  }, [position, isPlaying])
+  }, [position, isPlaying, isWordSynced, lyrics])
 
   useEffect(() => {
-    if (!enabled || !isPlaying) return
+    if (!isWordSynced || !isPlaying) return
 
     let frameId = 0
     const tick = (now: number) => {
-      const elapsedSeconds = Math.max(0, (now - anchorRef.current.timestamp) / 1000)
-      const rawNext = anchorRef.current.position + elapsedSeconds
-      const clampedNext = duration > 0 ? Math.min(duration, rawNext) : rawNext
-      setInterpolated(clampedNext)
+      const anchor = anchorRef.current
+      const elapsedSeconds = Math.max(0, (now - anchor.timestamp) / 1000)
+      const rawNext = anchor.position + Math.min(0.5, elapsedSeconds)
+      const monotonicNext = Math.max(anchor.highWaterMark, rawNext)
+      const clampedNext = duration > 0 ? Math.min(duration, monotonicNext) : monotonicNext
+      anchor.highWaterMark = clampedNext
+
+      const lineIdx = getActiveLyricIndex(lyrics, clampedNext)
+      const line = lineIdx >= 0 ? lyrics.lines[lineIdx] : null
+      const nextLineTs = lineIdx >= 0 ? lyrics.lines[lineIdx + 1]?.timestamp : undefined
+      const wordIdx = line ? getActiveWordIndex(line, clampedNext, nextLineTs) : -1
+
+      if (lineIdx !== anchor.lastLineIdx || wordIdx !== anchor.lastWordIdx) {
+        anchor.lastLineIdx = lineIdx
+        anchor.lastWordIdx = wordIdx
+        setSyncPosition(clampedNext)
+      }
+
       frameId = window.requestAnimationFrame(tick)
     }
 
@@ -298,18 +344,18 @@ export function useInterpolatedPosition(
     return () => {
       window.cancelAnimationFrame(frameId)
     }
-  }, [enabled, isPlaying, duration])
+  }, [isWordSynced, isPlaying, lyrics, duration])
 
-  if (!enabled || !isPlaying) {
+  if (!isWordSynced || !isPlaying) {
     return position
   }
 
-  // Guard against stale interpolation right after a manual seek or track change
-  if (Math.abs(interpolated - position) > 0.6) {
+  // Only snap backward if the user explicitly sought backward or changed tracks
+  if (position < syncPosition - 0.6 || position > syncPosition + 1.0) {
     return position
   }
 
-  return Math.max(position, interpolated)
+  return Math.max(position, syncPosition)
 }
 
 

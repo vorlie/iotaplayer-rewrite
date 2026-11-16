@@ -104,7 +104,8 @@ export function NowPlayingView() {
   const syncPosition = useInterpolatedPosition(
     position,
     isPlaying,
-    lyrics.syncQuality === 'word',
+    lyrics,
+    true,
     duration,
   )
   const activeLyricIndex = getActiveLyricIndex(lyrics, syncPosition)
@@ -448,11 +449,6 @@ export function NowPlayingView() {
                               : activeLyricIndex >= 0 && index < activeLyricIndex
                                 ? 'past'
                                 : 'upcoming'
-                            const progressPct = wordState
-                              ? Math.round(wordState.progress * 100)
-                              : status === 'past'
-                                ? 100
-                                : 0
                             const visibleText = word.text.trim() || word.text
                             const needsTrailingSpace =
                               /\s$/.test(word.text) ||
@@ -467,11 +463,6 @@ export function NowPlayingView() {
                                 {needsLeadingSpace ? ' ' : null}
                                 <span
                                   className={`lyric-word is-${status}`}
-                                  style={
-                                    status === 'active'
-                                      ? ({ '--word-progress': `${progressPct}%` } as CSSProperties)
-                                      : undefined
-                                  }
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     seek(word.timestamp)

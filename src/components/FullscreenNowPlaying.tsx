@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ChevronDown,
   ChevronUp,
@@ -85,7 +85,8 @@ export function FullscreenNowPlaying() {
   const syncPosition = useInterpolatedPosition(
     position,
     isPlaying,
-    isFullscreen && lyrics.syncQuality === 'word',
+    lyrics,
+    isFullscreen,
     duration,
   )
 
@@ -504,11 +505,6 @@ export function FullscreenNowPlaying() {
                                     : activeLyricIndex >= 0 && index < activeLyricIndex
                                       ? 'past'
                                       : 'upcoming'
-                                  const progressPct = wordState
-                                    ? Math.round(wordState.progress * 100)
-                                    : status === 'past'
-                                      ? 100
-                                      : 0
                                   const visibleText = word.text.trim() || word.text
                                   const needsTrailingSpace =
                                     /\s$/.test(word.text) ||
@@ -528,13 +524,6 @@ export function FullscreenNowPlaying() {
                                       {needsLeadingSpace ? ' ' : null}
                                       <span
                                         className={`fullscreen-lyric-word is-${status}`}
-                                        style={
-                                          status === 'active'
-                                            ? ({
-                                                '--word-progress': `${progressPct}%`,
-                                              } as CSSProperties)
-                                            : undefined
-                                        }
                                         onClick={(e) => {
                                           e.stopPropagation()
                                           seek(word.timestamp)
