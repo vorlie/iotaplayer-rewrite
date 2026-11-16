@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { determineSyncQuality } from '../../electron/lyricsSync'
 import type { Album, Artist, LyricLine, LyricsResult, Track } from '../types/electron'
 
@@ -258,4 +258,58 @@ export function useLyrics(trackId: number | null | undefined) {
 
   return { lyrics, loading, reload }
 }
+
+/**
+ * Smoothly interpolates playback position at 60fps via requestAnimationFrame
+ * when word-synchronized lyrics are active and audio is playing.
+ */
+export function useInterpolatedPosition(
+  position: number,
+  isPlaying: boolean,
+  enabled: boolean,
+  duration = 0,
+): number {
+  const [interpolated, setInterpolated] = useState(position)
+  const anchorRef = useRef<{ position: number; timestamp: number }>({
+    position,
+    timestamp: 0,
+  })
+
+  useEffect(() => {
+    anchorRef.current = {
+      position,
+      timestamp: performance.now(),
+    }
+  }, [position, isPlaying])
+
+  useEffect(() => {
+    if (!enabled || !isPlaying) return
+
+    let frameId = 0
+    const tick = (now: number) => {
+      const elapsedSeconds = Math.max(0, (now - anchorRef.current.timestamp) / 1000)
+      const rawNext = anchorRef.current.position + elapsedSeconds
+      const clampedNext = duration > 0 ? Math.min(duration, rawNext) : rawNext
+      setInterpolated(clampedNext)
+      frameId = window.requestAnimationFrame(tick)
+    }
+
+    frameId = window.requestAnimationFrame(tick)
+    return () => {
+      window.cancelAnimationFrame(frameId)
+    }
+  }, [enabled, isPlaying, duration])
+
+  if (!enabled || !isPlaying) {
+    return position
+  }
+
+  // Guard against stale interpolation right after a manual seek or track change
+  if (Math.abs(interpolated - position) > 0.6) {
+    return position
+  }
+
+  return Math.max(position, interpolated)
+}
+
 
