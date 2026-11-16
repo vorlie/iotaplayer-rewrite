@@ -559,3 +559,150 @@ test('playback synchronization resolves identically across MPV and browser backe
   assert.equal(getLyricsSyncState(plainLyrics, { backend: 'mpv', position: 10 }).activeIndex, -1)
   assert.equal(getLyricsSyncState(plainLyrics, { backend: 'browser', position: 10 }).activeIndex, -1)
 })
+
+// ---------------------------------------------------------------------------
+// Lyricsfile 1.0 Specification Compliance Tests
+// ---------------------------------------------------------------------------
+
+test('Lyricsfile 1.0 spec: preserves word whitespace so joining word.text reconstructs line.text', () => {
+  const wordSyncedSpecExample = `
+version: '1.0'
+
+metadata:
+  title: 'Small Hours'
+  artist: 'Example Artist'
+  language: 'en'
+
+lines:
+  - text: 'Stay until the morning'
+    start_ms: 4200
+    end_ms: 6800
+    words:
+      - text: 'Stay '
+        start_ms: 4200
+        end_ms: 4800
+      - text: 'until '
+        start_ms: 4800
+        end_ms: 5400
+      - text: 'the '
+        start_ms: 5400
+        end_ms: 5750
+      - text: 'morning'
+        start_ms: 5750
+        end_ms: 6800
+
+plain: |
+  Stay until the morning
+  `.trim()
+
+  const result = parseLyricsContent(wordSyncedSpecExample, 'sidecar-lyricsfile')
+  assert.equal(result.format, 'lyricsfile')
+  assert.equal(result.syncQuality, 'word')
+  assert.equal(result.lines.length, 1)
+  const line = result.lines[0]
+  assert.equal(line.text, 'Stay until the morning')
+  assert.equal(line.words.map((w) => w.text).join(''), line.text)
+  assert.equal(line.words[0].text, 'Stay ')
+  assert.equal(line.words[3].text, 'morning')
+})
+
+test('Lyricsfile 1.0 spec: handles instrumental.lyricsfile.yaml without falling back to raw YAML lines', () => {
+  const instrumentalExample = `
+version: '1.0'
+
+metadata:
+  title: 'Quiet Transit'
+  artist: 'Example Ensemble'
+  duration_ms: 240000
+  instrumental: true
+  `.trim()
+
+  assert.equal(detectLyricsFormat(instrumentalExample), 'lyricsfile')
+  const parsed = parseLyricsfile(instrumentalExample)
+  assert.equal(parsed.length, 0)
+  assert.equal(parsed.instrumental, true)
+
+  const content = parseLyricsContent(instrumentalExample, 'sidecar-lyricsfile')
+  assert.equal(content.format, 'lyricsfile')
+  assert.equal(content.instrumental, true)
+  assert.equal(content.lines.length, 0)
+  assert.equal(content.synchronized, false)
+})
+
+test('Lyricsfile 1.0 spec: rejects unknown versions, duplicate keys, negative timestamps, and invalid end_ms', () => {
+  // Unknown version '2.0' must be rejected and not fall back to plain YAML text
+  const unknownVersion = `
+version: '2.0'
+metadata:
+  title: 'Future Song'
+  artist: 'Future Artist'
+plain: |
+  Hello from 2.0
+  `.trim()
+  assert.equal(detectLyricsFormat(unknownVersion), null)
+  assert.equal(parseLyricsfile(unknownVersion).length, 0)
+  assert.equal(parseLyricsContent(unknownVersion, 'sidecar-lyricsfile').lines.length, 0)
+
+  // Unquoted numeric version 1.0 (not string '1.0') must be rejected
+  const numericVersion = `
+version: 1.0
+metadata:
+  title: 'Numeric Version'
+  artist: 'Artist'
+plain: |
+  Hello
+  `.trim()
+  assert.equal(detectLyricsFormat(numericVersion), null)
+  assert.equal(parseLyricsfile(numericVersion).length, 0)
+
+  // Duplicate keys in mapping must be rejected
+  const duplicateKeyYaml = `
+version: '1.0'
+metadata:
+  title: 'First Title'
+  title: 'Duplicate Title'
+  artist: 'Artist'
+plain: |
+  Some lyrics
+  `.trim()
+  assert.equal(detectLyricsFormat(duplicateKeyYaml), null)
+  assert.equal(parseLyricsfile(duplicateKeyYaml).length, 0)
+  assert.equal(parseLyricsContent(duplicateKeyYaml, 'sidecar-lyricsfile').lines.length, 0)
+
+  // Negative start_ms or end_ms < start_ms must be rejected
+  const negativeStartYaml = `
+version: '1.0'
+metadata:
+  title: 'Negative Start'
+  artist: 'Artist'
+lines:
+  - text: 'Invalid line'
+    start_ms: -500
+  `.trim()
+  assert.equal(parseLyricsfile(negativeStartYaml).length, 0)
+
+  const invalidEndYaml = `
+version: '1.0'
+metadata:
+  title: 'Invalid End'
+  artist: 'Artist'
+lines:
+  - text: 'Ends before start'
+    start_ms: 5000
+    end_ms: 3000
+  `.trim()
+  assert.equal(parseLyricsfile(invalidEndYaml).length, 0)
+
+  // Instrumental with non-empty lines must be rejected per Section 3
+  const invalidInstrumental = `
+version: '1.0'
+metadata:
+  title: 'Invalid Instrumental'
+  artist: 'Artist'
+  instrumental: true
+lines:
+  - text: 'Should not have lines'
+    start_ms: 1000
+  `.trim()
+  assert.equal(parseLyricsfile(invalidInstrumental).length, 0)
+})
