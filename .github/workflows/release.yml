@@ -197,10 +197,12 @@ jobs:
           path: release-artifacts
           merge-multiple: true
 
-      - name: Generate SHA256SUMS.txt
+      - name: Flatten artifacts & generate SHA256SUMS.txt
         shell: bash
         run: |
           cd release-artifacts
+          find . -mindepth 2 -type f -exec mv -f {} . \;
+          find . -mindepth 1 -type d -delete
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
