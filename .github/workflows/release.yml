@@ -121,6 +121,8 @@ jobs:
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
         run: |
           if [[ -z "${CSC_LINK}" ]]; then
+            unset CSC_LINK
+            unset CSC_KEY_PASSWORD
             export CSC_IDENTITY_AUTO_DISCOVERY=false
           fi
           npm run dist:mac
