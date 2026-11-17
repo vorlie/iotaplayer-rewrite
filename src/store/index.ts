@@ -1,5 +1,16 @@
 import { create } from 'zustand'
 import { normalizeMediaControlSnapshot } from '../../electron/mediaControls'
+import {
+  advanceShuffleNext,
+  createEmptyShuffleState,
+  createQueueEntryId,
+  createQueueEntryIds,
+  initShuffleState,
+  insertShuffleEntry,
+  removeShuffleEntry,
+  stepShufflePrevious,
+  type ShuffleState,
+} from '../../electron/shuffle'
 import { DEFAULT_VOLUME, normalizeVolume } from '../../electron/volume'
 import type { Album, Artist, Playlist, ScanProgress, ScanResult, Track } from '../types/electron'
 
@@ -194,10 +205,12 @@ export interface PlaybackState {
   duration: number   // seconds
   volume: number     // 0–1
   queue: Track[]
+  queueEntryIds: string[]
   queueIndex: number
   playlistName: string
   repeatMode: PlaybackRepeatMode
   shuffle: boolean
+  shuffleState: ShuffleState
   playlists: Playlist[]
   activeBackend: 'mpv' | 'browser' | 'idle'
   favoriteIds: number[]
@@ -223,6 +236,7 @@ interface PlaybackStore extends PlaybackState {
   removeTrackFromPlaylist: (playlistId: string, position: number) => void
   reorderPlaylist: (playlistId: string, fromIndex: number, toIndex: number) => void
   playPlaylist: (playlistId: string, startTrackId?: number) => void
+  addToQueue: (tracks: Track | Track[]) => void
   removeFromQueue: (index: number) => void
   clearQueue: () => void
   moveQueueItem: (fromIndex: number, toIndex: number) => void
@@ -385,7 +399,15 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
         set({ repeatMode: saved.repeatMode as PlaybackRepeatMode })
       }
       if (!hasUserChangedShuffle && saved.shuffle !== undefined) {
-        set({ shuffle: saved.shuffle === 'true' })
+        const nextShuffle = saved.shuffle === 'true'
+        const { queueEntryIds, queueIndex } = get()
+        const currentEntryId = queueEntryIds[queueIndex] ?? null
+        set({
+          shuffle: nextShuffle,
+          shuffleState: nextShuffle
+            ? initShuffleState(queueEntryIds, currentEntryId)
+            : createEmptyShuffleState(),
+        })
       }
     })
   }
@@ -432,10 +454,18 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
   }
 
   const playTrack = (track: Track, queue: Track[], queueIndex: number, playlistName: string): void => {
+    const queueEntryIds = createQueueEntryIds(queue.length)
+    const currentEntryId = queueEntryIds[queueIndex] ?? null
+    const shuffleState = get().shuffle
+      ? initShuffleState(queueEntryIds, currentEntryId)
+      : createEmptyShuffleState()
+
     set({
       currentTrack: track,
       queue,
+      queueEntryIds,
       queueIndex,
+      shuffleState,
       position: 0,
       duration: track.duration,
       isPlaying: true,
@@ -473,10 +503,12 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
     duration: 0,
     volume: DEFAULT_VOLUME,
     queue: [],
+    queueEntryIds: [],
     queueIndex: -1,
     playlistName: 'Queue',
     repeatMode: 'off',
     shuffle: false,
+    shuffleState: createEmptyShuffleState(),
     activeBackend: 'mpv',
     favoriteIds: [],
     playlists: [
@@ -531,45 +563,113 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
       playTrack(nextTrack, tracks, safeIndex, opts?.name ?? 'Queue')
     },
 
+    addToQueue: (tracks: Track | Track[]) => {
+      const toAdd = Array.isArray(tracks) ? tracks : [tracks]
+      if (toAdd.length === 0) return
+
+      const { queue, queueEntryIds, shuffle, shuffleState } = get()
+      const newEntryIds = createQueueEntryIds(toAdd.length)
+      const nextQueue = [...queue, ...toAdd]
+      const nextEntryIds = [...queueEntryIds, ...newEntryIds]
+
+      let nextShuffleState = shuffleState
+      if (shuffle) {
+        for (const id of newEntryIds) {
+          nextShuffleState = insertShuffleEntry(nextShuffleState, id)
+        }
+      }
+
+      set({
+        queue: nextQueue,
+        queueEntryIds: nextEntryIds,
+        shuffleState: nextShuffleState,
+      })
+    },
+
     removeFromQueue: (index: number) => {
-      const { queue, queueIndex, isPlaying } = get()
+      const { queue, queueEntryIds, queueIndex, isPlaying, shuffle, shuffleState } = get()
       if (index < 0 || index >= queue.length) return
 
+      const removedEntryId = queueEntryIds[index]
       const nextQueue = [...queue]
+      const nextEntryIds = [...queueEntryIds]
       nextQueue.splice(index, 1)
+      nextEntryIds.splice(index, 1)
 
       if (nextQueue.length === 0) {
         get().pause()
-        set({ queue: [], queueIndex: -1, currentTrack: null, position: 0 })
+        set({
+          queue: [],
+          queueEntryIds: [],
+          queueIndex: -1,
+          currentTrack: null,
+          position: 0,
+          shuffleState: createEmptyShuffleState(),
+        })
         return
       }
 
       if (index === queueIndex) {
         const nextIndex = Math.min(queueIndex, nextQueue.length - 1)
         const nextTrack = nextQueue[nextIndex]
-        set({ queue: nextQueue, queueIndex: nextIndex, currentTrack: nextTrack })
+        const replacementEntryId = nextEntryIds[nextIndex] ?? null
+        const nextShuffleState =
+          shuffle && removedEntryId
+            ? removeShuffleEntry(shuffleState, removedEntryId, replacementEntryId)
+            : shuffleState
+
+        set({
+          queue: nextQueue,
+          queueEntryIds: nextEntryIds,
+          queueIndex: nextIndex,
+          currentTrack: nextTrack,
+          shuffleState: nextShuffleState,
+        })
         if (isPlaying && typeof window !== 'undefined' && 'playback' in window) {
           void window.playback.play(nextTrack.path)
         }
-      } else if (index < queueIndex) {
-        set({ queue: nextQueue, queueIndex: queueIndex - 1 })
       } else {
-        set({ queue: nextQueue })
+        const nextQueueIndex = index < queueIndex ? queueIndex - 1 : queueIndex
+        const nextShuffleState =
+          shuffle && removedEntryId
+            ? removeShuffleEntry(shuffleState, removedEntryId)
+            : shuffleState
+
+        set({
+          queue: nextQueue,
+          queueEntryIds: nextEntryIds,
+          queueIndex: nextQueueIndex,
+          shuffleState: nextShuffleState,
+        })
       }
     },
 
     clearQueue: () => {
-      const { currentTrack } = get()
+      const { currentTrack, queueEntryIds, queueIndex, shuffle } = get()
       // Retain only current track in queue if playing, or clear completely
       if (currentTrack) {
-        set({ queue: [currentTrack], queueIndex: 0 })
+        const currentEntryId = queueEntryIds[queueIndex] ?? createQueueEntryId()
+        const nextShuffleState = shuffle
+          ? initShuffleState([currentEntryId], currentEntryId)
+          : createEmptyShuffleState()
+        set({
+          queue: [currentTrack],
+          queueEntryIds: [currentEntryId],
+          queueIndex: 0,
+          shuffleState: nextShuffleState,
+        })
       } else {
-        set({ queue: [], queueIndex: -1 })
+        set({
+          queue: [],
+          queueEntryIds: [],
+          queueIndex: -1,
+          shuffleState: createEmptyShuffleState(),
+        })
       }
     },
 
     moveQueueItem: (fromIndex: number, toIndex: number) => {
-      const { queue, queueIndex } = get()
+      const { queue, queueEntryIds, queueIndex } = get()
       if (
         fromIndex < 0 ||
         fromIndex >= queue.length ||
@@ -584,6 +684,12 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
       const [item] = nextQueue.splice(fromIndex, 1)
       nextQueue.splice(toIndex, 0, item)
 
+      const nextEntryIds = [...queueEntryIds]
+      if (nextEntryIds.length === queue.length) {
+        const [entryId] = nextEntryIds.splice(fromIndex, 1)
+        nextEntryIds.splice(toIndex, 0, entryId)
+      }
+
       let nextQueueIndex = queueIndex
       if (queueIndex === fromIndex) {
         nextQueueIndex = toIndex
@@ -593,7 +699,7 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
         nextQueueIndex = queueIndex + 1
       }
 
-      set({ queue: nextQueue, queueIndex: nextQueueIndex })
+      set({ queue: nextQueue, queueEntryIds: nextEntryIds, queueIndex: nextQueueIndex })
     },
 
     createPlaylist: (name, tracks = []) => {
@@ -733,25 +839,37 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
     },
 
     next: () => {
-      const { queue, queueIndex, repeatMode, shuffle } = get()
+      const { queue, queueEntryIds, queueIndex, repeatMode, shuffle, shuffleState, currentTrack } = get()
       if (queue.length === 0) return
 
       if (repeatMode === 'one') {
-        set({ position: 0 })
+        const track = currentTrack ?? queue[queueIndex]
+        set({ position: 0, isPlaying: true })
+        void syncSystemMediaSession()
+        if (track) {
+          updateDiscordPresence(track, true)
+        }
         if (typeof window !== 'undefined' && 'playback' in window) {
-          void window.playback.seek(0)
+          void window.playback.seek(0).then(() => window.playback.resume())
         }
         return
       }
 
       let nextIndex: number
+      let nextShuffleState = shuffleState
 
       if (shuffle) {
-        let randomIndex = queueIndex
-        while (randomIndex === queueIndex && queue.length > 1) {
-          randomIndex = Math.floor(Math.random() * queue.length)
+        const result = advanceShuffleNext(shuffleState, queueEntryIds, repeatMode)
+        nextShuffleState = result.shuffleState
+        if (result.ended || !result.entryId) {
+          set({ isPlaying: false, position: 0, shuffleState: nextShuffleState })
+          return
         }
-        nextIndex = randomIndex
+        nextIndex = queueEntryIds.indexOf(result.entryId)
+        if (nextIndex < 0) {
+          set({ isPlaying: false, position: 0, shuffleState: nextShuffleState })
+          return
+        }
       } else {
         nextIndex = queueIndex + 1
         if (nextIndex >= queue.length) {
@@ -765,7 +883,14 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
       }
 
       const track = queue[nextIndex]
-      set({ currentTrack: track, queueIndex: nextIndex, position: 0, duration: track.duration, isPlaying: true })
+      set({
+        currentTrack: track,
+        queueIndex: nextIndex,
+        position: 0,
+        duration: track.duration,
+        isPlaying: true,
+        shuffleState: nextShuffleState,
+      })
       void syncSystemMediaSession()
       updateDiscordPresence(track, true)
       if (typeof window !== 'undefined' && 'playback' in window) {
@@ -777,7 +902,7 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
     },
 
     previous: () => {
-      const { queue, queueIndex, position, repeatMode, shuffle } = get()
+      const { queue, queueEntryIds, queueIndex, position, repeatMode, shuffle, shuffleState } = get()
       if (queue.length === 0) return
 
       if (position > 3) {
@@ -789,12 +914,18 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
       }
 
       let prevIndex: number
-      if (shuffle && queue.length > 1) {
-        let randomIndex = queueIndex
-        while (randomIndex === queueIndex && queue.length > 1) {
-          randomIndex = Math.floor(Math.random() * queue.length)
+      let nextShuffleState = shuffleState
+
+      if (shuffle) {
+        const result = stepShufflePrevious(shuffleState)
+        nextShuffleState = result.shuffleState
+        if (!result.entryId) {
+          return
         }
-        prevIndex = randomIndex
+        prevIndex = queueEntryIds.indexOf(result.entryId)
+        if (prevIndex < 0) {
+          return
+        }
       } else {
         prevIndex = queueIndex - 1
         if (prevIndex < 0) {
@@ -807,7 +938,14 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
       }
 
       const track = queue[prevIndex]
-      set({ currentTrack: track, queueIndex: prevIndex, position: 0, duration: track.duration, isPlaying: true })
+      set({
+        currentTrack: track,
+        queueIndex: prevIndex,
+        position: 0,
+        duration: track.duration,
+        isPlaying: true,
+        shuffleState: nextShuffleState,
+      })
       void syncSystemMediaSession()
       updateDiscordPresence(track, true)
       if (typeof window !== 'undefined' && 'playback' in window) {
@@ -853,7 +991,16 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
 
     toggleShuffle: () => {
       hasUserChangedShuffle = true
-      set((s) => ({ shuffle: !s.shuffle }))
+      set((s) => {
+        const nextShuffle = !s.shuffle
+        const currentEntryId = s.queueEntryIds[s.queueIndex] ?? null
+        return {
+          shuffle: nextShuffle,
+          shuffleState: nextShuffle
+            ? initShuffleState(s.queueEntryIds, currentEntryId)
+            : createEmptyShuffleState(),
+        }
+      })
       persistSettings()
     },
   }
