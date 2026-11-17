@@ -15,6 +15,16 @@ const isDev = !app.isPackaged
 // Window creation
 // ---------------------------------------------------------------------------
 
+function getWindowIconPath(): string | undefined {
+  if (process.platform === 'win32') {
+    return path.join(__dirname, '../assets/icons/win/icon.ico')
+  }
+  if (process.platform === 'linux') {
+    return path.join(__dirname, '../assets/icons/linux/256x256.png')
+  }
+  return undefined
+}
+
 function createWindow(): BrowserWindow {
   const preloadPath = path.join(__dirname, 'preload.js')
 
@@ -24,6 +34,7 @@ function createWindow(): BrowserWindow {
     minWidth: 800,
     minHeight: 600,
     backgroundColor: '#110d0d',
+    icon: getWindowIconPath(),
     titleBarStyle: 'hidden',
     // On Windows, use a custom overlay so we can still have traffic lights
     titleBarOverlay: {
