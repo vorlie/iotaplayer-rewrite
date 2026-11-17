@@ -38,11 +38,13 @@
     "icon": "assets/icons/linux",
     "maintainer": "vorlie <https://vorlie.pl>",
     "desktop": {
-      "Name": "IotaPlayer",
-      "GenericName": "Music Player",
-      "Comment": "A modern desktop music player focused on local music libraries, seamless playback and a native-feeling interface.",
-      "Categories": "AudioVideo;Audio;Music;Player;",
-      "StartupWMClass": "IotaPlayer"
+      "entry": {
+        "Name": "IotaPlayer",
+        "GenericName": "Music Player",
+        "Comment": "A modern desktop music player focused on local music libraries, seamless playback and a native-feeling interface.",
+        "Categories": "AudioVideo;Audio;Music;Player;",
+        "StartupWMClass": "IotaPlayer"
+      }
     },
     "target": [
       {

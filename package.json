@@ -19,8 +19,8 @@
     "build": "npm run build:electron && npm run build:renderer",
     "package": "npm run build && electron-forge package --arch=x64",
     "make": "npm run build && electron-forge make --arch=x64",
-    "dist:mac": "npm run build && electron-builder --mac --x64 --arm64",
-    "dist:linux": "npm run build && electron-builder --linux AppImage deb --x64",
+    "dist:mac": "npm run build && electron-builder --mac --x64 --arm64 --publish never",
+    "dist:linux": "npm run build && electron-builder --linux AppImage deb --x64 --publish never",
     "lint": "eslint .",
     "preview": "vite preview",
     "postinstall": "node scripts/patch-discord-rpc.js"
