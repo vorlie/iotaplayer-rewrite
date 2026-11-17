@@ -142,12 +142,25 @@ interface SystemMediaSessionSnapshot {
   isPlaying: boolean
 }
 
+interface AppInfo {
+  name: string
+  version: string
+  publisher: string
+  websiteUrl: string
+  projectUrl: string
+}
+
+interface AppInfoAPI {
+  getInfo: () => Promise<AppInfo>
+}
+
 declare global {
   interface Window {
     library: LibraryAPI
     settings: SettingsAPI
     discord: DiscordAPI
     playback: PlaybackAPI
+    appInfo?: AppInfoAPI
     __iotaplayerMediaControls?: {
       sync?: () => void
       getSnapshot?: () => SystemMediaSessionSnapshot
@@ -157,6 +170,8 @@ declare global {
 
 export type {
   Album,
+  AppInfo,
+  AppInfoAPI,
   AppSettings,
   Artist,
   ArtworkResponse,

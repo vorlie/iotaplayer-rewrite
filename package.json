@@ -1,7 +1,14 @@
 {
-  "name": "iotaplayer-rewrite",
+  "name": "iotaplayer",
+  "productName": "IotaPlayer",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "A modern desktop music player focused on local music libraries, seamless playback and a native-feeling interface.",
+  "author": {
+    "name": "vorlie",
+    "url": "https://vorlie.pl"
+  },
+  "homepage": "https://vorlie.pl/projects/iotaplayer",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -10,7 +17,10 @@
     "build:electron": "tsc -p tsconfig.electron.json && node -e \"require('fs').writeFileSync('dist-electron/package.json', '{\\\"type\\\":\\\"commonjs\\\"}')\"",
     "build:renderer": "vite build",
     "build": "npm run build:electron && npm run build:renderer",
-    "package": "npm run build && electron-forge package",
+    "package": "npm run build && electron-forge package --arch=x64",
+    "make": "npm run build && electron-forge make --arch=x64",
+    "dist:mac": "npm run build && electron-builder --mac --x64 --arm64",
+    "dist:linux": "npm run build && electron-builder --linux AppImage deb --x64",
     "lint": "eslint .",
     "preview": "vite preview",
     "postinstall": "node scripts/patch-discord-rpc.js"

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, session, shell } from 'electron'
 import path from 'path'
 import { closeDatabase, initDatabase } from './database'
 import { discordPresence } from './discord'
@@ -6,14 +6,18 @@ import { registerIpcHandlers } from './ipc'
 import { getMpv } from './mpv'
 
 // ---------------------------------------------------------------------------
-// Dev / prod detection
+// Identity & Dev/Prod detection
 // ---------------------------------------------------------------------------
 
+export const APP_ID = 'pl.vorlie.iotaplayer'
 const isDev = !app.isPackaged
 
-// ---------------------------------------------------------------------------
-// Window creation
-// ---------------------------------------------------------------------------
+if (process.platform === 'win32') {
+  app.setAppUserModelId(APP_ID)
+}
+
+let mainWindow: BrowserWindow | null = null
+let isShuttingDown = false
 
 function getWindowIconPath(): string | undefined {
   if (process.platform === 'win32') {
@@ -24,6 +28,40 @@ function getWindowIconPath(): string | undefined {
   }
   return undefined
 }
+
+function isAllowedExternalUrl(rawUrl: string): boolean {
+  try {
+    const parsed = new URL(rawUrl)
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:'
+  } catch {
+    return false
+  }
+}
+
+function cleanupResources(): void {
+  if (isShuttingDown) return
+  isShuttingDown = true
+  try {
+    void discordPresence.stop()
+  } catch {
+    // ignore shutdown errors
+  }
+  try {
+    getMpv().stop()
+    getMpv().destroy()
+  } catch {
+    // ignore mpv cleanup errors
+  }
+  try {
+    closeDatabase()
+  } catch {
+    // ignore database close errors
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Window creation
+// ---------------------------------------------------------------------------
 
 function createWindow(): BrowserWindow {
   const preloadPath = path.join(__dirname, 'preload.js')
@@ -46,7 +84,7 @@ function createWindow(): BrowserWindow {
       preload: preloadPath,
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false, // needed for better-sqlite3 in preload (but preload uses ipcRenderer only)
+      sandbox: false,
       webSecurity: true,
     },
     show: false, // show only after ready-to-show
@@ -63,52 +101,103 @@ function createWindow(): BrowserWindow {
   // Graceful show — avoid white flash
   win.once('ready-to-show', () => win.show())
 
-  // Open external links in the system browser
+  // Open external links in the system browser and block untrusted navigation
   win.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
+    if (isAllowedExternalUrl(url)) {
+      void shell.openExternal(url)
+    }
     return { action: 'deny' }
   })
 
+  win.webContents.on('will-navigate', (event, targetUrl) => {
+    const currentUrl = win.webContents.getURL()
+    const isSameOrigin = isDev
+      ? targetUrl.startsWith('http://localhost:5173')
+      : targetUrl.startsWith('file://') && targetUrl === currentUrl
+    if (!isSameOrigin) {
+      event.preventDefault()
+      if (isAllowedExternalUrl(targetUrl)) {
+        void shell.openExternal(targetUrl)
+      }
+    }
+  })
+
+  win.on('closed', () => {
+    if (mainWindow === win) {
+      mainWindow = null
+    }
+  })
+
+  mainWindow = win
   return win
 }
 
 // ---------------------------------------------------------------------------
-// App lifecycle
+// Single-instance lock & App lifecycle
 // ---------------------------------------------------------------------------
 
-app.whenReady().then(() => {
-  // Initialize database first
-  initDatabase()
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
 
-  // Start Discord presence if configured
-  void discordPresence.start()
-
-  // Register all IPC handlers
-  registerIpcHandlers()
-
-  // Create the window
-  createWindow()
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
+if (!gotSingleInstanceLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore()
+      }
+      mainWindow.show()
+      mainWindow.focus()
+    } else if (app.isReady()) {
       createWindow()
     }
   })
-})
+
+  app.whenReady().then(() => {
+    if (!isDev) {
+      session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+        callback({
+          responseHeaders: {
+            ...details.responseHeaders,
+            'Content-Security-Policy': [
+              "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' file: data: blob:; font-src 'self' data:; connect-src 'self'",
+            ],
+          },
+        })
+      })
+    }
+
+    // Initialize database first
+    initDatabase()
+
+    // Start Discord presence if configured
+    void discordPresence.start()
+
+    // Register all IPC handlers
+    registerIpcHandlers()
+
+    // Create the window
+    createWindow()
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow()
+      }
+    })
+  })
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
-    void discordPresence.stop()
-    getMpv().stop()
-    getMpv().destroy()
-    closeDatabase()
+    cleanupResources()
     app.quit()
   }
 })
 
 app.on('before-quit', () => {
-  void discordPresence.stop()
-  getMpv().stop()
-  getMpv().destroy()
-  closeDatabase()
+  cleanupResources()
+})
+
+app.on('will-quit', () => {
+  cleanupResources()
 })

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "pl.vorlie.iotaplayer",
+  "productName": "IotaPlayer",
+  "copyright": "Copyright © 2026 vorlie (https://vorlie.pl)",
+  "asar": true,
+  "directories": {
+    "output": "out/dist"
+  },
+  "files": [
+    "dist/**/*",
+    "dist-electron/**/*",
+    "assets/icons/**/*",
+    "package.json"
+  ],
+  "mac": {
+    "category": "public.app-category.music",
+    "icon": "assets/icons/mac/icon.icns",
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["arm64", "x64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["arm64", "x64"]
+      }
+    ],
+    "artifactName": "IotaPlayer-${version}-mac-${arch}.${ext}"
+  },
+  "dmg": {
+    "title": "IotaPlayer ${version}",
+    "icon": "assets/icons/mac/icon.icns"
+  },
+  "linux": {
+    "executableName": "iotaplayer",
+    "category": "AudioVideo;Audio;Player;",
+    "icon": "assets/icons/linux",
+    "maintainer": "vorlie <https://vorlie.pl>",
+    "desktop": {
+      "Name": "IotaPlayer",
+      "GenericName": "Music Player",
+      "Comment": "A modern desktop music player focused on local music libraries, seamless playback and a native-feeling interface.",
+      "Categories": "AudioVideo;Audio;Music;Player;",
+      "StartupWMClass": "IotaPlayer"
+    },
+    "target": [
+      {
+        "target": "AppImage",
+        "arch": ["x64"]
+      },
+      {
+        "target": "deb",
+        "arch": ["x64"]
+      }
+    ],
+    "artifactName": "IotaPlayer-${version}-linux-${arch}.${ext}"
+  },
+  "deb": {
+    "packageName": "iotaplayer"
+  }
+}

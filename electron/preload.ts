@@ -193,9 +193,7 @@ interface AudioContextLike {
   destination: AudioNodeLike
   createAnalyser(): AnalyserNodeLike
   createBiquadFilter(): BiquadFilterNodeLike
-  createMediaElementSource(element: any): {
-    connect(destination: AudioNodeLike): void
-  }
+  createMediaElementSource(element: unknown): AudioNodeLike
   resume(): Promise<void>
 }
 
@@ -220,7 +218,7 @@ interface BiquadFilterNodeLike extends AudioNodeLike {
 let audioContext: AudioContextLike | null = null
 let analyser: AnalyserNodeLike | null = null
 let analyserData: Uint8Array | null = null
-let browserAudioSource: any = null
+let browserAudioSource: AudioNodeLike | null = null
 let browserEqualizerNodes: BiquadFilterNodeLike[] = []
 let browserEqualizerBands = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 const browserEqualizerFrequencies = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
@@ -257,10 +255,10 @@ function initializeAnalyser(): void {
   nextAnalyser.smoothingTimeConstant = 0.4
 
   if (!browserAudioSource) {
-    browserAudioSource = context.createMediaElementSource(browserAudio as any)
+    browserAudioSource = context.createMediaElementSource(browserAudio)
   }
 
-  let previousNode: any = browserAudioSource
+  let previousNode: AudioNodeLike = browserAudioSource
   browserEqualizerNodes = browserEqualizerFrequencies.map((frequency) => {
     const filter = context.createBiquadFilter()
     filter.type = 'peaking'
@@ -654,11 +652,23 @@ const playbackAPI = {
   },
 }
 
+const appInfoAPI = {
+  getInfo: (): Promise<{
+    name: string
+    version: string
+    publisher: string
+    websiteUrl: string
+    projectUrl: string
+  }> => ipcRenderer.invoke('app:info'),
+}
+
 contextBridge.exposeInMainWorld('library', libraryAPI)
 contextBridge.exposeInMainWorld('settings', settingsAPI)
 contextBridge.exposeInMainWorld('discord', discordAPI)
 contextBridge.exposeInMainWorld('playback', playbackAPI)
+contextBridge.exposeInMainWorld('appInfo', appInfoAPI)
 
+export type AppInfoAPI = typeof appInfoAPI
 export type LibraryAPI = typeof libraryAPI
 export type SettingsAPI = typeof settingsAPI
 export type DiscordAPI = typeof discordAPI

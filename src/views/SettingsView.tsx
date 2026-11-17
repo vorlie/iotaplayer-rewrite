@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
-import { AudioLines, Library, RefreshCw, ShieldCheck, Sparkles, Trash2 } from 'lucide-react'
+import { AudioLines, ExternalLink, Library, RefreshCw, ShieldCheck, Sparkles, Trash2 } from 'lucide-react'
 import { notifyLyricsReload } from '../hooks/useLibrary'
 import { useAppStore } from '../store'
-import type { LyricsSourcePreference, PlaybackBackendMode, ScanResult } from '../types/electron'
+import type { AppInfo, LyricsSourcePreference, PlaybackBackendMode, ScanResult } from '../types/electron'
 import '../styles/settings.css'
 
-// Default library root
-const DEFAULT_LIBRARY_ROOT = 'D:\\Media\\Music'
+const DEFAULT_LIBRARY_ROOT = ''
 
 const settingsCategories = [
   { id: 'playback', label: 'Playback', Icon: AudioLines },
@@ -26,6 +25,7 @@ export function SettingsView() {
   const [discordClientId, setDiscordClientId] = useState('')
   const [imgurClientId, setImgurClientId] = useState('')
   const [savingSettings, setSavingSettings] = useState(false)
+  const [appInfo, setAppInfo] = useState<AppInfo | null>(null)
   const scanProgress = library.scanProgress
 
   useEffect(() => {
@@ -38,6 +38,9 @@ export function SettingsView() {
       setImgurClientId(settings.imgurClientId)
       setLibraryRoot(settings.libraryRoot || DEFAULT_LIBRARY_ROOT)
       setLyricsSourcePreference(settings.lyricsSourcePreference ?? 'embedded')
+    })
+    void window.appInfo?.getInfo().then((info) => {
+      setAppInfo(info)
     })
   }, [])
 
@@ -359,6 +362,29 @@ export function SettingsView() {
                 <div className="settings-status settings-status--muted">
                   <span className="settings-status__dot settings-status__dot--muted" />
                   Imgur client ID {imgurClientId ? 'configured' : 'not configured'}
+                </div>
+              </div>
+
+              <div className="settings-card settings-card--compact" style={{ marginTop: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, color: 'var(--color-text-1)' }}>
+                      {appInfo?.name ?? 'IotaPlayer'} {appInfo?.version ? `v${appInfo.version}` : ''}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginTop: 2 }}>
+                      Published by {appInfo?.publisher ?? 'vorlie'} · Identifier: pl.vorlie.iotaplayer
+                    </div>
+                  </div>
+                  <a
+                    href={appInfo?.projectUrl ?? 'https://vorlie.pl/projects/iotaplayer'}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="settings-button settings-button--secondary"
+                    style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  >
+                    <span>vorlie.pl</span>
+                    <ExternalLink size={13} />
+                  </a>
                 </div>
               </div>
             </section>

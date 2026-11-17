@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import {
   dbGetAlbum,
   dbGetAlbums,
@@ -121,9 +121,12 @@ export function registerIpcHandlers(): void {
 
   // library.scan(rootDir)
   ipcMain.handle(IPC.LIBRARY_SCAN, async (event, rootDir: string) => {
+    if (typeof rootDir !== 'string' || !rootDir.trim()) {
+      throw new Error('Invalid library root directory')
+    }
     const win = BrowserWindow.fromWebContents(event.sender)
 
-    const result = await scanLibrary(rootDir, (progress: ScanProgress) => {
+    const result = await scanLibrary(rootDir.trim(), (progress: ScanProgress) => {
       win?.webContents.send(IPC.SCAN_PROGRESS, progress)
     })
 
@@ -168,6 +171,7 @@ export function registerIpcHandlers(): void {
 
   // library.artwork(id)  — returns { mime_type, data } with data as base64
   ipcMain.handle(IPC.LIBRARY_ARTWORK, (_event, id: number) => {
+    if (typeof id !== 'number' || !Number.isInteger(id) || id <= 0) return null
     const artwork = dbGetArtwork(id)
     if (!artwork) return null
     return {
@@ -276,11 +280,24 @@ export function registerIpcHandlers(): void {
   // Playback handlers
   // -------------------------------------------------------------------------
 
+  ipcMain.handle('app:info', () => {
+    return {
+      name: 'IotaPlayer',
+      version: app.getVersion(),
+      publisher: 'vorlie',
+      websiteUrl: 'https://vorlie.pl',
+      projectUrl: 'https://vorlie.pl/projects/iotaplayer',
+    }
+  })
+
   ipcMain.handle('settings:get', () => {
     return getAppSettings()
   })
 
   ipcMain.handle('settings:set', (_event, nextSettings: Partial<typeof getAppSettings>) => {
+    if (!nextSettings || typeof nextSettings !== 'object') {
+      return getAppSettings()
+    }
     const saved = setAppSettings(nextSettings)
     const current = getAppSettings()
 
@@ -331,6 +348,9 @@ export function registerIpcHandlers(): void {
   })
 
   ipcMain.handle(IPC.PLAYBACK_PLAY, async (_event, filePath: string) => {
+    if (typeof filePath !== 'string' || !filePath.trim()) {
+      throw new Error('Invalid playback file path')
+    }
     await mpv.play(filePath)
   })
 
@@ -347,7 +367,8 @@ export function registerIpcHandlers(): void {
   })
 
   ipcMain.handle(IPC.PLAYBACK_SEEK, (_event, seconds: number) => {
-    mpv.seek(seconds)
+    if (typeof seconds !== 'number' || !Number.isFinite(seconds)) return
+    mpv.seek(Math.max(0, seconds))
   })
 
   ipcMain.handle(IPC.PLAYBACK_VOLUME, (_event, volume: number) => {

@@ -16,9 +16,18 @@ export interface AppSettings {
 }
 
 const DEFAULT_EQUALIZER_BANDS = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-const DEFAULT_LIBRARY_ROOT = process.platform === 'win32'
-  ? 'D:\\Media\\Music'
-  : path.join(os.homedir(), 'Music')
+
+function getDefaultLibraryRoot(): string {
+  try {
+    const musicPath = electronApp?.getPath?.('music')
+    if (musicPath) return musicPath
+  } catch {
+    // Fallback outside Electron app lifecycle (e.g. unit tests)
+  }
+  return path.join(os.homedir(), 'Music')
+}
+
+const DEFAULT_LIBRARY_ROOT = getDefaultLibraryRoot()
 
 const VALID_LYRICS_SOURCE_PREFERENCES: LyricsSourcePreference[] = [
   'embedded',
