@@ -70,12 +70,15 @@ jobs:
         run: npm run make
 
       - name: Sign Windows installer (optional)
-        if: ${{ secrets.WIN_CSC_LINK != '' && secrets.WIN_CSC_KEY_PASSWORD != '' }}
         shell: pwsh
         env:
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
         run: |
+          if ([string]::IsNullOrEmpty($env:WIN_CSC_LINK) -or [string]::IsNullOrEmpty($env:WIN_CSC_KEY_PASSWORD)) {
+            Write-Host "Skipping Windows Authenticode signing (WIN_CSC_LINK / WIN_CSC_KEY_PASSWORD not configured)."
+            exit 0
+          }
           $certPath = Join-Path $env:RUNNER_TEMP "win-cert.pfx"
           [IO.File]::WriteAllBytes($certPath, [Convert]::FromBase64String($env:WIN_CSC_LINK))
           $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" |
@@ -116,16 +119,23 @@ jobs:
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
-        run: npm run dist:mac
+        run: |
+          if [[ -z "${CSC_LINK}" ]]; then
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+          fi
+          npm run dist:mac
 
       - name: Notarize & staple macOS DMGs (optional)
-        if: ${{ secrets.CSC_LINK != '' && secrets.APPLE_ID != '' && secrets.APPLE_APP_SPECIFIC_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' }}
         env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
+          if [[ -z "${CSC_LINK}" || -z "${APPLE_ID}" || -z "${APPLE_APP_SPECIFIC_PASSWORD}" || -z "${APPLE_TEAM_ID}" ]]; then
+            echo "Skipping macOS notarization (signing/notarization secrets not configured)."
+            exit 0
+          fi
           for dmg in out/dist/*.dmg; do
             xcrun notarytool submit "$dmg" \
               --apple-id "$APPLE_ID" \
@@ -197,7 +207,7 @@ jobs:
         with:
           name: "IotaPlayer ${{ github.ref_name }}"
           draft: false
-          prerelease: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: true
           files: |
             release-artifacts/*
