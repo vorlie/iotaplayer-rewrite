@@ -96,6 +96,13 @@ interface AppSettings {
   equalizerPreset: string
   equalizerBands: number[]
   lyricsSourcePreference: LyricsSourcePreference
+  playbackRate: number
+  preservePitch: boolean
+}
+
+interface PlaybackPreferences {
+  playbackRate: number
+  preservePitch: boolean
 }
 
 interface SettingsAPI {
@@ -121,6 +128,8 @@ interface PlaybackAPI {
   seek: (seconds: number) => Promise<void>
   setVolume: (volume: number) => Promise<void>
   setEqualizer: (gains: number[]) => Promise<void>
+  setPlaybackSpeed: (prefs: Partial<PlaybackPreferences>) => Promise<PlaybackPreferences>
+  getPlaybackSpeed: () => Promise<PlaybackPreferences>
   stop: () => Promise<void>
   saveTrackResume: (trackId: number, position: number) => Promise<void>
   getTrackResume: (trackId: number) => Promise<number | null>
@@ -187,6 +196,7 @@ export type {
   LyricWord,
   PlaybackAPI,
   PlaybackBackendMode,
+  PlaybackPreferences,
   PlaybackStateEvent,
   Playlist,
   ScanProgress,

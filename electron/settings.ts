@@ -2,6 +2,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { app as electronApp } from 'electron'
+import {
+  DEFAULT_PLAYBACK_RATE,
+  DEFAULT_PRESERVE_PITCH,
+  normalizePlaybackRate,
+  normalizePreservePitch,
+} from './playbackSpeed'
 import type { LyricsSourcePreference } from './types'
 
 export interface AppSettings {
@@ -13,6 +19,8 @@ export interface AppSettings {
   equalizerPreset: string
   equalizerBands: number[]
   lyricsSourcePreference: LyricsSourcePreference
+  playbackRate: number
+  preservePitch: boolean
 }
 
 const DEFAULT_EQUALIZER_BANDS = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -54,6 +62,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   equalizerPreset: 'Flat',
   equalizerBands: [...DEFAULT_EQUALIZER_BANDS],
   lyricsSourcePreference: 'embedded',
+  playbackRate: DEFAULT_PLAYBACK_RATE,
+  preservePitch: DEFAULT_PRESERVE_PITCH,
 }
 
 function normalizeEqualizerBands(value: unknown): number[] {
@@ -95,6 +105,8 @@ export function getAppSettings(): AppSettings {
       equalizerPreset: parsed.equalizerPreset ?? DEFAULT_SETTINGS.equalizerPreset,
       equalizerBands: normalizeEqualizerBands(parsed.equalizerBands),
       lyricsSourcePreference: normalizeLyricsSourcePreference(parsed.lyricsSourcePreference),
+      playbackRate: normalizePlaybackRate(parsed.playbackRate, DEFAULT_SETTINGS.playbackRate),
+      preservePitch: normalizePreservePitch(parsed.preservePitch, DEFAULT_SETTINGS.preservePitch),
     }
   } catch {
     writeFileSync(settingsPath, JSON.stringify(DEFAULT_SETTINGS, null, 2), 'utf8')
@@ -111,6 +123,14 @@ export function setAppSettings(nextSettings: Partial<AppSettings>): AppSettings 
     equalizerBands: normalizeEqualizerBands(nextSettings.equalizerBands ?? current.equalizerBands),
     lyricsSourcePreference: normalizeLyricsSourcePreference(
       nextSettings.lyricsSourcePreference ?? current.lyricsSourcePreference,
+    ),
+    playbackRate: normalizePlaybackRate(
+      nextSettings.playbackRate ?? current.playbackRate,
+      current.playbackRate,
+    ),
+    preservePitch: normalizePreservePitch(
+      nextSettings.preservePitch ?? current.preservePitch,
+      current.preservePitch,
     ),
   }
   const settingsPath = getSettingsPath()

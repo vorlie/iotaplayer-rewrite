@@ -4,6 +4,11 @@ import {
   getActiveLyricIndex,
   getActiveWordIndex,
 } from '../../electron/lyricsSync'
+import {
+  DEFAULT_PLAYBACK_RATE,
+  interpolateMediaPosition,
+  normalizePlaybackRate,
+} from '../../electron/playbackSpeed'
 import type { Album, Artist, LyricLine, LyricsResult, Track } from '../types/electron'
 
 // Convenience hook for loading data from the IPC bridge
@@ -275,7 +280,9 @@ export function useInterpolatedPosition(
   lyrics: LyricsResult,
   enabled = true,
   duration = 0,
+  playbackRate = DEFAULT_PLAYBACK_RATE,
 ): number {
+  const safeRate = normalizePlaybackRate(playbackRate, DEFAULT_PLAYBACK_RATE)
   const isWordSynced = enabled && lyrics.synchronized && lyrics.syncQuality === 'word'
   const [syncPosition, setSyncPosition] = useState(position)
   const anchorRef = useRef<{
@@ -284,21 +291,28 @@ export function useInterpolatedPosition(
     highWaterMark: number
     lastLineIdx: number
     lastWordIdx: number
+    lastRate: number
   }>({
     position,
     timestamp: 0,
     highWaterMark: position,
     lastLineIdx: -1,
     lastWordIdx: -1,
+    lastRate: safeRate,
   })
 
   useEffect(() => {
     const now = performance.now()
     const prev = anchorRef.current
+    const forwardThreshold = 0.6 * Math.max(1, safeRate)
     const isBackwardSeek = position < prev.position - 0.25 || position < prev.highWaterMark - 0.6
-    const isForwardSeek = position > prev.highWaterMark + 0.6
+    const isForwardSeek = position > prev.highWaterMark + forwardThreshold
+
+    // If only playbackRate changed mid-playback without a new position tick, re-anchor from highWaterMark
+    const rateChangedOnly = prev.lastRate !== safeRate && position === prev.position
+    const basePosition = rateChangedOnly ? prev.highWaterMark : position
     const nextHighWater =
-      isBackwardSeek || isForwardSeek ? position : Math.max(prev.highWaterMark, position)
+      isBackwardSeek || isForwardSeek ? position : Math.max(prev.highWaterMark, basePosition)
 
     const lineIdx = isWordSynced ? getActiveLyricIndex(lyrics, nextHighWater) : -1
     const line = lineIdx >= 0 ? lyrics.lines[lineIdx] : null
@@ -306,13 +320,14 @@ export function useInterpolatedPosition(
     const wordIdx = line ? getActiveWordIndex(line, nextHighWater, nextLineTs) : -1
 
     anchorRef.current = {
-      position,
+      position: basePosition,
       timestamp: now,
       highWaterMark: nextHighWater,
       lastLineIdx: lineIdx,
       lastWordIdx: wordIdx,
+      lastRate: safeRate,
     }
-  }, [position, isPlaying, isWordSynced, lyrics])
+  }, [position, isPlaying, isWordSynced, lyrics, safeRate])
 
   useEffect(() => {
     if (!isWordSynced || !isPlaying) return
@@ -320,10 +335,14 @@ export function useInterpolatedPosition(
     let frameId = 0
     const tick = (now: number) => {
       const anchor = anchorRef.current
-      const elapsedSeconds = Math.max(0, (now - anchor.timestamp) / 1000)
-      const rawNext = anchor.position + Math.min(0.5, elapsedSeconds)
-      const monotonicNext = Math.max(anchor.highWaterMark, rawNext)
-      const clampedNext = duration > 0 ? Math.min(duration, monotonicNext) : monotonicNext
+      const clampedNext = interpolateMediaPosition({
+        anchorPosition: anchor.position,
+        anchorTimestampMs: anchor.timestamp,
+        nowMs: now,
+        highWaterMark: anchor.highWaterMark,
+        playbackRate: safeRate,
+        duration,
+      })
       anchor.highWaterMark = clampedNext
 
       const lineIdx = getActiveLyricIndex(lyrics, clampedNext)
@@ -344,14 +363,15 @@ export function useInterpolatedPosition(
     return () => {
       window.cancelAnimationFrame(frameId)
     }
-  }, [isWordSynced, isPlaying, lyrics, duration])
+  }, [isWordSynced, isPlaying, lyrics, duration, safeRate])
 
   if (!isWordSynced || !isPlaying) {
     return position
   }
 
+  const maxAhead = 1.0 * Math.max(1, safeRate)
   // Only snap backward if the user explicitly sought backward or changed tracks
-  if (position < syncPosition - 0.6 || position > syncPosition + 1.0) {
+  if (position < syncPosition - 0.6 || position > syncPosition + maxAhead) {
     return position
   }
 

@@ -49,6 +49,7 @@ export function FullscreenNowPlaying() {
     queueIndex,
     repeatMode,
     shuffle,
+    playbackRate,
     activeBackend,
     favoriteIds,
     toggleFavorite,
@@ -88,6 +89,7 @@ export function FullscreenNowPlaying() {
     lyrics,
     isFullscreen,
     duration,
+    playbackRate,
   )
 
   // Find active lyric line index based on current playback position

@@ -46,6 +46,7 @@ export function NowPlayingView() {
     playlistName,
     repeatMode,
     shuffle,
+    playbackRate,
     activeBackend,
     favoriteIds,
     toggleFavorite,
@@ -107,6 +108,7 @@ export function NowPlayingView() {
     lyrics,
     true,
     duration,
+    playbackRate,
   )
   const activeLyricIndex = getActiveLyricIndex(lyrics, syncPosition)
   const lyricsSource = formatLyricsSourceLabel(lyrics)

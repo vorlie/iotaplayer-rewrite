@@ -1,6 +1,13 @@
 import { create } from 'zustand'
 import { normalizeMediaControlSnapshot } from '../../electron/mediaControls'
 import {
+  DEFAULT_PLAYBACK_PREFERENCES,
+  DEFAULT_PLAYBACK_RATE,
+  DEFAULT_PRESERVE_PITCH,
+  normalizePlaybackPreferences,
+  type PlaybackPreferences,
+} from '../../electron/playbackSpeed'
+import {
   advanceShuffleNext,
   createEmptyShuffleState,
   createQueueEntryId,
@@ -211,6 +218,8 @@ export interface PlaybackState {
   repeatMode: PlaybackRepeatMode
   shuffle: boolean
   shuffleState: ShuffleState
+  playbackRate: number
+  preservePitch: boolean
   playlists: Playlist[]
   activeBackend: 'mpv' | 'browser' | 'idle'
   favoriteIds: number[]
@@ -253,6 +262,8 @@ interface PlaybackStore extends PlaybackState {
   setRepeatMode: (mode: PlaybackRepeatMode) => void
   toggleRepeat: () => void
   toggleShuffle: () => void
+  setPlaybackSpeed: (prefs: Partial<PlaybackPreferences>) => void
+  resetPlaybackSpeed: () => void
 }
 
 export const usePlaybackStore = create<PlaybackStore>((set, get) => {
@@ -261,6 +272,7 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
   let hasUserChangedVolume = false
   let hasUserChangedRepeat = false
   let hasUserChangedShuffle = false
+  let hasUserChangedSpeed = false
 
   const syncSystemMediaSession = async () => {
     if (typeof window === 'undefined' || typeof navigator === 'undefined' || !('mediaSession' in navigator)) {
@@ -409,7 +421,27 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
             : createEmptyShuffleState(),
         })
       }
+      if (!hasUserChangedSpeed && (saved.playbackRate !== undefined || saved.preservePitch !== undefined)) {
+        const normalized = normalizePlaybackPreferences({
+          playbackRate: saved.playbackRate,
+          preservePitch: saved.preservePitch,
+        })
+        set(normalized)
+        void window.playback.setPlaybackSpeed(normalized)
+      }
     })
+
+    if ('settings' in window) {
+      void window.settings.get().then((settings) => {
+        if (!settings || hasUserChangedSpeed) return
+        const normalized = normalizePlaybackPreferences({
+          playbackRate: settings.playbackRate,
+          preservePitch: settings.preservePitch,
+        })
+        set(normalized)
+        void window.playback.setPlaybackSpeed(normalized)
+      })
+    }
   }
 
   if (typeof window !== 'undefined' && 'library' in window) {
@@ -424,11 +456,13 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
 
   const persistSettings = () => {
     if (typeof window === 'undefined' || !('playback' in window)) return
-    const { volume, repeatMode, shuffle } = get()
+    const { volume, repeatMode, shuffle, playbackRate, preservePitch } = get()
     void window.playback.savePlaybackState({
       volume: volume.toString(),
       repeatMode,
       shuffle: shuffle ? 'true' : 'false',
+      playbackRate: playbackRate.toString(),
+      preservePitch: preservePitch ? 'true' : 'false',
     })
   }
 
@@ -509,6 +543,8 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
     repeatMode: 'off',
     shuffle: false,
     shuffleState: createEmptyShuffleState(),
+    playbackRate: DEFAULT_PLAYBACK_RATE,
+    preservePitch: DEFAULT_PRESERVE_PITCH,
     activeBackend: 'mpv',
     favoriteIds: [],
     playlists: [
@@ -1002,6 +1038,33 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
         }
       })
       persistSettings()
+    },
+
+    setPlaybackSpeed: (prefs) => {
+      hasUserChangedSpeed = true
+      const current = get()
+      const normalized = normalizePlaybackPreferences(prefs, {
+        playbackRate: current.playbackRate,
+        preservePitch: current.preservePitch,
+      })
+      if (
+        normalized.playbackRate === current.playbackRate &&
+        normalized.preservePitch === current.preservePitch
+      ) {
+        return
+      }
+      set(normalized)
+      if (typeof window !== 'undefined' && 'playback' in window) {
+        void window.playback.setPlaybackSpeed(normalized)
+      }
+    },
+
+    resetPlaybackSpeed: () => {
+      hasUserChangedSpeed = true
+      set({ ...DEFAULT_PLAYBACK_PREFERENCES })
+      if (typeof window !== 'undefined' && 'playback' in window) {
+        void window.playback.setPlaybackSpeed({ ...DEFAULT_PLAYBACK_PREFERENCES })
+      }
     },
   }
 })

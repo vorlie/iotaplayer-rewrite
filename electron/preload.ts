@@ -1,6 +1,11 @@
 import { readFileSync } from 'node:fs'
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
+import {
+  DEFAULT_PLAYBACK_PREFERENCES,
+  normalizePlaybackPreferences,
+  type PlaybackPreferences,
+} from './playbackSpeed'
 import { DEFAULT_VOLUME, VolumeController, normalizeVolume } from './volume'
 import type {
   Album,
@@ -142,6 +147,9 @@ let browserVolume = DEFAULT_VOLUME
 
 type PlaybackBackendMode = 'auto' | 'mpv' | 'browser'
 let preferredPlaybackBackend: PlaybackBackendMode = 'auto'
+let browserPlaybackPreferences: PlaybackPreferences = {
+  ...DEFAULT_PLAYBACK_PREFERENCES,
+}
 
 type BrowserAudioElement = {
   src: string
@@ -149,6 +157,11 @@ type BrowserAudioElement = {
   currentTime: number
   duration: number
   paused: boolean
+  playbackRate?: number
+  defaultPlaybackRate?: number
+  preservesPitch?: boolean
+  webkitPreservesPitch?: boolean
+  mozPreservesPitch?: boolean
   canPlayType: (mime: string) => string
   play: () => Promise<void> | void
   pause: () => void
@@ -160,10 +173,28 @@ type BrowserAudioElement = {
   onended: (() => void) | null
 }
 
+function applyBrowserPlaybackSpeed(targetAudio: BrowserAudioElement): void {
+  const { playbackRate, preservePitch } = browserPlaybackPreferences
+  try {
+    targetAudio.preservesPitch = preservePitch
+    if ('webkitPreservesPitch' in targetAudio) {
+      targetAudio.webkitPreservesPitch = preservePitch
+    }
+    if ('mozPreservesPitch' in targetAudio) {
+      targetAudio.mozPreservesPitch = preservePitch
+    }
+    targetAudio.defaultPlaybackRate = playbackRate
+    targetAudio.playbackRate = playbackRate
+  } catch {
+    // Ignore unsupported audio element properties in minimal test mocks
+  }
+}
+
 function createRawBrowserAudio(): BrowserAudioElement {
   const AudioCtor = (globalThis as unknown as { Audio: new () => BrowserAudioElement }).Audio
   const audio = new AudioCtor()
   audio.volume = browserVolume
+  applyBrowserPlaybackSpeed(audio)
   return audio
 }
 
@@ -375,9 +406,11 @@ function emitBrowserEnded(): void {
 
 function attachBrowserAudioEvents(targetAudio: BrowserAudioElement = browserAudio): void {
   targetAudio.volume = volumeController.getVolume()
+  applyBrowserPlaybackSpeed(targetAudio)
 
   targetAudio.onplay = () => {
     const currentVol = volumeController.applyToAudioElement(targetAudio)
+    applyBrowserPlaybackSpeed(targetAudio)
     emitBrowserState({
       isPlaying: true,
       position: targetAudio.currentTime || 0,
@@ -407,6 +440,7 @@ function attachBrowserAudioEvents(targetAudio: BrowserAudioElement = browserAudi
 
   targetAudio.onloadedmetadata = () => {
     const currentVol = volumeController.applyToAudioElement(targetAudio)
+    applyBrowserPlaybackSpeed(targetAudio)
     emitBrowserState({
       duration: Number.isFinite(targetAudio.duration) ? targetAudio.duration : 0,
       position: targetAudio.currentTime || 0,
@@ -443,6 +477,8 @@ const settingsAPI = {
     equalizerPreset: string
     equalizerBands: number[]
     lyricsSourcePreference: LyricsSourcePreference
+    playbackRate: number
+    preservePitch: boolean
   }> => ipcRenderer.invoke('settings:get'),
   set: (value: {
     discordClientId?: string
@@ -453,7 +489,15 @@ const settingsAPI = {
     equalizerPreset?: string
     equalizerBands?: number[]
     lyricsSourcePreference?: LyricsSourcePreference
-  }): Promise<void> => ipcRenderer.invoke('settings:set', value),
+    playbackRate?: number
+    preservePitch?: boolean
+  }): Promise<void> => {
+    if (value.playbackRate !== undefined || value.preservePitch !== undefined) {
+      browserPlaybackPreferences = normalizePlaybackPreferences(value, browserPlaybackPreferences)
+      applyBrowserPlaybackSpeed(browserAudio)
+    }
+    return ipcRenderer.invoke('settings:set', value)
+  },
   pickLibraryRoot: (): Promise<string | null> =>
     ipcRenderer.invoke('settings:pick-library-root'),
 }
@@ -495,6 +539,7 @@ const playbackAPI = {
       browserAudio.src = toBrowserAudioUrl(filePath)
       browserAudio.load()
       browserAudio.volume = appliedVolume
+      applyBrowserPlaybackSpeed(browserAudio)
 
       try {
         initializeAnalyser()
@@ -585,6 +630,24 @@ const playbackAPI = {
     return ipcRenderer.invoke('playback:set-equalizer', normalized)
   },
 
+  setPlaybackSpeed: (
+    prefs: Partial<{ playbackRate: number; preservePitch: boolean }>,
+  ): Promise<PlaybackPreferences> => {
+    const normalized = normalizePlaybackPreferences(prefs, browserPlaybackPreferences)
+    browserPlaybackPreferences = normalized
+    applyBrowserPlaybackSpeed(browserAudio)
+    return ipcRenderer.invoke('playback:set-speed', normalized)
+  },
+
+  getPlaybackSpeed: async (): Promise<PlaybackPreferences> => {
+    const saved = (await ipcRenderer.invoke('playback:get-speed')) as PlaybackPreferences | undefined
+    if (saved) {
+      browserPlaybackPreferences = normalizePlaybackPreferences(saved, browserPlaybackPreferences)
+      applyBrowserPlaybackSpeed(browserAudio)
+    }
+    return browserPlaybackPreferences
+  },
+
   stop: (): Promise<void> => {
     if (browserAudioActive) {
       browserAudio.pause()
@@ -617,6 +680,16 @@ const playbackAPI = {
     const saved = (await ipcRenderer.invoke('playback:get-state')) as Record<string, string>
     if (saved && saved.volume !== undefined) {
       volumeController.hydrate(saved.volume)
+    }
+    if (saved && (saved.playbackRate !== undefined || saved.preservePitch !== undefined)) {
+      browserPlaybackPreferences = normalizePlaybackPreferences(
+        {
+          playbackRate: saved.playbackRate,
+          preservePitch: saved.preservePitch,
+        },
+        browserPlaybackPreferences,
+      )
+      applyBrowserPlaybackSpeed(browserAudio)
     }
     return saved
   },
