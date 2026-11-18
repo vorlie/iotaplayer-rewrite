@@ -2,7 +2,7 @@
   "name": "iotaplayer",
   "productName": "IotaPlayer",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A modern desktop music player focused on local music libraries, seamless playback and a native-feeling interface.",
   "author": {
     "name": "vorlie",
