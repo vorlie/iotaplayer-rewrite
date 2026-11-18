@@ -1,5 +1,19 @@
 import { useEffect, useState } from "react";
-import { SlidersHorizontal } from "lucide-react";
+import { Gauge, RotateCcw, SlidersHorizontal } from "lucide-react";
+import {
+  calculatePitchSemitones,
+  DEFAULT_PLAYBACK_RATE,
+  formatPitchSemitones,
+  formatPlaybackRate,
+  getPlaybackSpeedPreset,
+  matchPlaybackSpeedPreset,
+  MAX_PLAYBACK_RATE,
+  MIN_PLAYBACK_RATE,
+  PLAYBACK_RATE_STEP,
+  PLAYBACK_SPEED_PRESETS,
+  normalizePlaybackRate,
+} from "../../electron/playbackSpeed";
+import { usePlaybackStore } from "../store";
 import "../styles/settings.css";
 
 const DEFAULT_EQUALIZER_BANDS = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -22,13 +36,30 @@ const EQ_SCALE_MARKS = Array.from(
   (_, index) => EQ_MIN + index,
 );
 
+const SPEED_SCALE_TICKS = [0.5, 0.75, 1.0, 1.16, 1.25, 1.5];
+
 export function EqualizerView() {
+  const {
+    playbackRate,
+    preservePitch,
+    setPlaybackSpeed,
+    resetPlaybackSpeed,
+  } = usePlaybackStore();
+
   const [equalizerEnabled, setEqualizerEnabled] = useState(false);
   const [equalizerPreset, setEqualizerPreset] = useState("Flat");
   const [equalizerBands, setEqualizerBands] = useState<number[]>(
     DEFAULT_EQUALIZER_BANDS,
   );
+  const [editingSpeedText, setEditingSpeedText] = useState<string | null>(null);
   const [savingSettings, setSavingSettings] = useState(false);
+
+  const activeSpeedPreset = matchPlaybackSpeedPreset({
+    playbackRate,
+    preservePitch,
+  });
+  const pitchSemitones = calculatePitchSemitones(playbackRate, preservePitch);
+  const displayedSpeedText = editingSpeedText ?? playbackRate.toFixed(2);
 
   useEffect(() => {
     void window.settings.get().then((settings) => {
@@ -39,8 +70,17 @@ export function EqualizerView() {
           ? settings.equalizerBands
           : DEFAULT_EQUALIZER_BANDS,
       );
+      if (
+        settings.playbackRate !== undefined ||
+        settings.preservePitch !== undefined
+      ) {
+        setPlaybackSpeed({
+          playbackRate: settings.playbackRate,
+          preservePitch: settings.preservePitch,
+        });
+      }
     });
-  }, []);
+  }, [setPlaybackSpeed]);
 
   useEffect(() => {
     if (!equalizerEnabled) {
@@ -58,16 +98,22 @@ export function EqualizerView() {
         equalizerEnabled,
         equalizerPreset,
         equalizerBands,
+        playbackRate,
+        preservePitch,
       });
       await window.playback.setEqualizer(
         equalizerEnabled ? equalizerBands : DEFAULT_EQUALIZER_BANDS,
       );
+      await window.playback.setPlaybackSpeed({
+        playbackRate,
+        preservePitch,
+      });
     } finally {
       setSavingSettings(false);
     }
   }
 
-  function applyPreset(name: string) {
+  function applyEqPreset(name: string) {
     const preset = EQUALIZER_PRESETS[name];
     if (!preset) return;
 
@@ -84,17 +130,184 @@ export function EqualizerView() {
     setEqualizerPreset("Custom");
   }
 
+  function handleSpeedPresetSelect(name: string) {
+    const preset = getPlaybackSpeedPreset(name);
+    if (!preset) return;
+    setPlaybackSpeed({
+      playbackRate: preset.playbackRate,
+      preservePitch: preset.preservePitch,
+    });
+  }
+
+  function handleSpeedSliderChange(nextValue: number) {
+    const normalized = normalizePlaybackRate(nextValue, playbackRate);
+    setPlaybackSpeed({ playbackRate: normalized });
+  }
+
+  function commitNumericSpeedInput() {
+    if (editingSpeedText === null) return;
+    const normalized = normalizePlaybackRate(editingSpeedText, playbackRate);
+    setEditingSpeedText(null);
+    setPlaybackSpeed({ playbackRate: normalized });
+  }
+
   return (
     <div className="page">
       <div className="page-header">
-        <h1 className="page-title">Equalizer</h1>
+        <h1 className="page-title">Equalizer &amp; Speed</h1>
         <p className="page-subtitle">
-          Shape your sound with presets and custom boosts.
+          Shape your sound with 10-band EQ, Nightcore/Daycore presets, and custom speed &amp; pitch controls.
         </p>
       </div>
 
       <div className="page-body eq-page-body">
         <div className="eq-shell">
+          {/* Speed & Pitch Section */}
+          <section className="eq-panel speed-panel" aria-label="Playback Speed and Pitch">
+            <div className="eq-panel__header speed-panel__header">
+              <div className="eq-panel__label">
+                <Gauge size={14} />
+                <span>Speed &amp; Pitch</span>
+              </div>
+
+              <div className="speed-readout-badges">
+                <span
+                  className={`speed-badge ${
+                    playbackRate !== DEFAULT_PLAYBACK_RATE ? "speed-badge--active" : ""
+                  }`}
+                  title="Current playback rate"
+                >
+                  {formatPlaybackRate(playbackRate)}
+                </span>
+
+                {!preservePitch && (
+                  <span
+                    className="speed-badge speed-badge--pitch"
+                    title="Calculated pitch shift in semitones (12 × log2(rate))"
+                  >
+                    Pitch {formatPitchSemitones(pitchSemitones)}
+                  </span>
+                )}
+
+                <span
+                  className={`speed-badge ${
+                    activeSpeedPreset === "Custom" ? "speed-badge--custom" : "speed-badge--preset"
+                  }`}
+                >
+                  {activeSpeedPreset}
+                </span>
+              </div>
+            </div>
+
+            {/* Single-click preset pills */}
+            <div className="speed-presets-row" role="group" aria-label="Playback speed presets">
+              {PLAYBACK_SPEED_PRESETS.map((preset) => {
+                const isSelected = activeSpeedPreset === preset.name;
+                return (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    className={`speed-preset-btn ${isSelected ? "is-active" : ""}`}
+                    onClick={() => handleSpeedPresetSelect(preset.name)}
+                    title={preset.description}
+                    aria-pressed={isSelected}
+                  >
+                    <span className="speed-preset-btn__name">{preset.name}</span>
+                    <span className="speed-preset-btn__meta">
+                      {preset.playbackRate.toFixed(2)}×
+                    </span>
+                  </button>
+                );
+              })}
+              <span
+                className={`speed-preset-chip-custom ${
+                  activeSpeedPreset === "Custom" ? "is-active" : ""
+                }`}
+                aria-current={activeSpeedPreset === "Custom" ? "true" : undefined}
+              >
+                Custom
+              </span>
+            </div>
+
+            {/* Slider + Numeric Input + Preserve Pitch + Reset */}
+            <div className="speed-controls-grid">
+              <div className="speed-slider-col">
+                <input
+                  type="range"
+                  min={MIN_PLAYBACK_RATE}
+                  max={MAX_PLAYBACK_RATE}
+                  step={PLAYBACK_RATE_STEP}
+                  value={playbackRate}
+                  className="speed-range-slider"
+                  onChange={(e) => handleSpeedSliderChange(Number(e.target.value))}
+                  aria-label="Playback speed multiplier"
+                />
+                <div className="speed-slider-ticks">
+                  {SPEED_SCALE_TICKS.map((tick) => (
+                    <button
+                      key={tick}
+                      type="button"
+                      className={`speed-tick-btn ${
+                        Math.abs(playbackRate - tick) < 0.005 ? "is-active" : ""
+                      }`}
+                      onClick={() => handleSpeedSliderChange(tick)}
+                    >
+                      {tick.toFixed(2)}×
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="speed-actions-col">
+                <div className="speed-number-field">
+                  <label htmlFor="playback-speed-input">Exact speed</label>
+                  <div className="speed-number-input-wrap">
+                    <input
+                      id="playback-speed-input"
+                      type="number"
+                      min={MIN_PLAYBACK_RATE}
+                      max={MAX_PLAYBACK_RATE}
+                      step={PLAYBACK_RATE_STEP}
+                      value={displayedSpeedText}
+                      onChange={(e) => setEditingSpeedText(e.target.value)}
+                      onBlur={commitNumericSpeedInput}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          commitNumericSpeedInput();
+                        }
+                      }}
+                      aria-label="Exact playback speed"
+                    />
+                    <span className="speed-number-unit">×</span>
+                  </div>
+                </div>
+
+                <label className="eq-toggle speed-pitch-toggle">
+                  <input
+                    type="checkbox"
+                    checked={preservePitch}
+                    onChange={(e) =>
+                      setPlaybackSpeed({ preservePitch: e.target.checked })
+                    }
+                    aria-label="Preserve original pitch"
+                  />
+                  <span>Preserve pitch</span>
+                </label>
+
+                <button
+                  type="button"
+                  className="settings-button settings-button--secondary"
+                  onClick={resetPlaybackSpeed}
+                  title="Reset speed to 1.00× and enable pitch preservation"
+                >
+                  <RotateCcw size={13} />
+                  Reset Speed
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* Equalizer Toolbar */}
           <div className="eq-toolbar">
             <label className="eq-toggle">
               <input
@@ -108,7 +321,8 @@ export function EqualizerView() {
             <div className="eq-toolbar__actions">
               <select
                 value={equalizerPreset}
-                onChange={(e) => applyPreset(e.target.value)}
+                onChange={(e) => applyEqPreset(e.target.value)}
+                aria-label="Equalizer preset"
               >
                 {Object.keys(EQUALIZER_PRESETS).map((presetName) => (
                   <option key={presetName} value={presetName}>
@@ -126,7 +340,7 @@ export function EqualizerView() {
                   setEqualizerBands([...DEFAULT_EQUALIZER_BANDS]);
                 }}
               >
-                Reset
+                Reset EQ
               </button>
             </div>
           </div>

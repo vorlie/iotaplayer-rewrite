@@ -22,5 +22,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "electron/types.ts", "electron/lyricsSync.ts", "electron/mediaControls.ts", "electron/volume.ts", "electron/shuffle.ts"]
+  "include": ["src", "electron/types.ts", "electron/lyricsSync.ts", "electron/mediaControls.ts", "electron/volume.ts", "electron/shuffle.ts", "electron/playbackSpeed.ts"]
 }

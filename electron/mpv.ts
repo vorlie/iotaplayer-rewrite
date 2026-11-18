@@ -1,6 +1,12 @@
 import { ChildProcess, spawn } from 'child_process'
 import net from 'net'
 import path from 'path'
+import {
+  DEFAULT_PLAYBACK_RATE,
+  DEFAULT_PRESERVE_PITCH,
+  normalizePlaybackPreferences,
+  type PlaybackPreferences,
+} from './playbackSpeed'
 import type { PlaybackStateEvent } from './types'
 import { DEFAULT_VOLUME, fromMpvVolume, normalizeVolume, toMpvVolume } from './volume'
 
@@ -14,6 +20,10 @@ export class MpvController {
   private isPlaying = false
   private initPromise: Promise<void> | null = null
   private currentVolume = DEFAULT_VOLUME
+  private playbackRate = DEFAULT_PLAYBACK_RATE
+  private preservePitch = DEFAULT_PRESERVE_PITCH
+  private lastAppliedRate: number | null = null
+  private lastAppliedPreservePitch: boolean | null = null
   private equalizerBands = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
   private readonly equalizerFrequencies = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
 
@@ -69,6 +79,8 @@ export class MpvController {
       '--keep-open=yes',
       '--gapless-audio=yes',
       `--volume=${toMpvVolume(this.currentVolume)}`,
+      `--speed=${this.playbackRate}`,
+      `--audio-pitch-correction=${this.preservePitch ? 'yes' : 'no'}`,
     ]
 
     try {
@@ -115,6 +127,8 @@ export class MpvController {
     socket.on('close', () => {
       this.isConnected = false
       this.socket = null
+      this.lastAppliedRate = null
+      this.lastAppliedPreservePitch = null
     })
   }
 
@@ -127,9 +141,28 @@ export class MpvController {
     this.socket.write(payload)
   }
 
+  private applyPlaybackSpeed(force = false): void {
+    if (!this.socket || !this.isConnected) return
+
+    if (force || this.lastAppliedPreservePitch !== this.preservePitch) {
+      this.sendCommand([
+        'set_property',
+        'audio-pitch-correction',
+        this.preservePitch ? 'yes' : 'no',
+      ])
+      this.lastAppliedPreservePitch = this.preservePitch
+    }
+
+    if (force || this.lastAppliedRate !== this.playbackRate) {
+      this.sendCommand(['set_property', 'speed', this.playbackRate])
+      this.lastAppliedRate = this.playbackRate
+    }
+  }
+
   private setupObservers(): void {
-    // Apply currentVolume before observing so any volume changes made during async init are enforced immediately
+    // Apply currentVolume & playback speed before observing so any changes made during async init are enforced immediately
     this.sendCommand(['set_property', 'volume', toMpvVolume(this.currentVolume)])
+    this.applyPlaybackSpeed(true)
     // Observe core playback properties
     this.sendCommand(['observe_property', 1, 'time-pos'])
     this.sendCommand(['observe_property', 2, 'duration'])
@@ -209,6 +242,7 @@ export class MpvController {
     this.sendCommand(['set_property', 'volume', toMpvVolume(this.currentVolume)])
     this.sendCommand(['loadfile', filePath, 'replace'])
     this.sendCommand(['set_property', 'volume', toMpvVolume(this.currentVolume)])
+    this.applyPlaybackSpeed(true)
     this.sendCommand(['set_property', 'pause', false])
     this.applyEqualizer()
     this.isPlaying = true
@@ -250,6 +284,26 @@ export class MpvController {
   public setEqualizer(gains: number[]): void {
     this.equalizerBands = gains.map((gain) => Math.max(-12, Math.min(12, Number(gain) || 0)))
     this.applyEqualizer()
+  }
+
+  public getPlaybackSpeed(): PlaybackPreferences {
+    return {
+      playbackRate: this.playbackRate,
+      preservePitch: this.preservePitch,
+    }
+  }
+
+  public setPlaybackSpeed(
+    prefs: Partial<{ playbackRate: unknown; preservePitch: unknown }>,
+  ): PlaybackPreferences {
+    const normalized = normalizePlaybackPreferences(prefs, {
+      playbackRate: this.playbackRate,
+      preservePitch: this.preservePitch,
+    })
+    this.playbackRate = normalized.playbackRate
+    this.preservePitch = normalized.preservePitch
+    this.applyPlaybackSpeed(false)
+    return normalized
   }
 
   public stop(): void {

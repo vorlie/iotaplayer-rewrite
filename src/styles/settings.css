@@ -774,6 +774,256 @@
   border-color: var(--color-text-3);
 }
 
+/* Speed & Pitch panel */
+.speed-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.speed-panel__header {
+  margin-bottom: 0;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.speed-readout-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.speed-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text-2);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.speed-badge--active {
+  background: var(--color-accent-dim);
+  border-color: var(--color-accent-border);
+  color: var(--color-accent);
+}
+
+.speed-badge--pitch {
+  font-family: var(--font-mono);
+  color: var(--color-text);
+}
+
+.speed-badge--custom {
+  border-style: dashed;
+  color: var(--color-text-3);
+}
+
+.speed-presets-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.speed-preset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 34px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text-2);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    border-color var(--transition),
+    color var(--transition),
+    transform var(--transition);
+}
+
+.speed-preset-btn:hover {
+  background: var(--color-surface-3);
+  border-color: var(--color-border-hover);
+  color: var(--color-text);
+}
+
+.speed-preset-btn.is-active {
+  background: var(--color-accent-dim);
+  border-color: var(--color-accent-border);
+  color: var(--color-accent);
+}
+
+.speed-preset-btn__meta {
+  font-family: var(--font-mono);
+  opacity: 0.78;
+}
+
+.speed-preset-chip-custom {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-border);
+  color: var(--color-text-3);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  user-select: none;
+}
+
+.speed-preset-chip-custom.is-active {
+  border-color: var(--color-accent-border);
+  background: rgba(255, 167, 167, 0.06);
+  color: var(--color-accent);
+}
+
+.speed-controls-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.speed-slider-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.speed-range-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+  margin: 0;
+}
+
+.speed-range-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 5px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-3);
+  border: 1px solid var(--color-border);
+}
+
+.speed-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  margin-top: -6.5px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 2px solid var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-surface), 0 1px 5px rgba(0, 0, 0, 0.35);
+  transition: background var(--transition), transform var(--transition);
+}
+
+.speed-range-slider:hover::-webkit-slider-thumb {
+  background: var(--color-accent);
+  transform: scale(1.1);
+}
+
+.speed-slider-ticks {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-1);
+}
+
+.speed-tick-btn {
+  background: transparent;
+  border: none;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: color var(--transition), background var(--transition);
+}
+
+.speed-tick-btn:hover {
+  color: var(--color-text);
+  background: var(--color-surface-2);
+}
+
+.speed-tick-btn.is-active {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.speed-actions-col {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.speed-number-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.speed-number-field label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-text-2);
+  white-space: nowrap;
+}
+
+.speed-number-input-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.speed-number-input-wrap input {
+  width: 78px;
+  height: 36px;
+  padding: 0 24px 0 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.speed-number-input-wrap input:focus-visible {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(255, 167, 167, 0.14);
+}
+
+.speed-number-unit {
+  position: absolute;
+  right: 8px;
+  color: var(--color-text-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  pointer-events: none;
+}
+
+@media (max-width: 860px) {
+  .speed-controls-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 780px) {
   .settings-shell {
     grid-template-columns: 1fr;

@@ -34,6 +34,7 @@ import { getMpv } from './mpv'
 import { cleanupMissingTracks, scanLibrary } from './scanner'
 import { getAppSettings, setAppSettings } from './settings'
 import { getLyrics } from './lyrics'
+import { normalizePlaybackPreferences, type PlaybackPreferences } from './playbackSpeed'
 import { normalizeVolume } from './volume'
 import type { LyricsSourcePreference, ScanProgress } from './types'
 
@@ -76,6 +77,8 @@ export const IPC = {
   PLAYBACK_SEEK:    'playback:seek',
   PLAYBACK_VOLUME:  'playback:volume',
   PLAYBACK_SET_EQUALIZER: 'playback:set-equalizer',
+  PLAYBACK_SET_SPEED: 'playback:set-speed',
+  PLAYBACK_GET_SPEED: 'playback:get-speed',
   PLAYBACK_STOP:    'playback:stop',
   PLAYBACK_STATE:   'playback:state',
   PLAYBACK_ENDED:   'playback:ended',
@@ -94,9 +97,14 @@ export function registerIpcHandlers(): void {
   // Setup MPV controller callbacks to push state to renderer
   const mpv = getMpv()
   const initialPlaybackState = dbGetAllPlaybackState()
+  const initialSettings = getAppSettings()
   if (initialPlaybackState.volume !== undefined) {
     mpv.setVolume(normalizeVolume(initialPlaybackState.volume))
   }
+  mpv.setPlaybackSpeed({
+    playbackRate: initialPlaybackState.playbackRate ?? initialSettings.playbackRate,
+    preservePitch: initialPlaybackState.preservePitch ?? initialSettings.preservePitch,
+  })
   mpv.setCallbacks(
     (state) => {
       BrowserWindow.getAllWindows().forEach((win) => {
@@ -305,6 +313,15 @@ export function registerIpcHandlers(): void {
       discordPresence.setEnabled(current.discordEnabled)
     }
 
+    if ('playbackRate' in nextSettings || 'preservePitch' in nextSettings) {
+      const applied = mpv.setPlaybackSpeed({
+        playbackRate: saved.playbackRate,
+        preservePitch: saved.preservePitch,
+      })
+      dbSetPlaybackState('playbackRate', applied.playbackRate.toString())
+      dbSetPlaybackState('preservePitch', applied.preservePitch ? 'true' : 'false')
+    }
+
     return saved
   })
 
@@ -382,6 +399,25 @@ export function registerIpcHandlers(): void {
     return true
   })
 
+  ipcMain.handle(
+    IPC.PLAYBACK_SET_SPEED,
+    (_event, prefs: Partial<{ playbackRate: unknown; preservePitch: unknown }>) => {
+      const normalized = normalizePlaybackPreferences(prefs, mpv.getPlaybackSpeed())
+      const applied = mpv.setPlaybackSpeed(normalized)
+      setAppSettings({
+        playbackRate: applied.playbackRate,
+        preservePitch: applied.preservePitch,
+      })
+      dbSetPlaybackState('playbackRate', applied.playbackRate.toString())
+      dbSetPlaybackState('preservePitch', applied.preservePitch ? 'true' : 'false')
+      return applied
+    },
+  )
+
+  ipcMain.handle(IPC.PLAYBACK_GET_SPEED, (): PlaybackPreferences => {
+    return mpv.getPlaybackSpeed()
+  })
+
   ipcMain.handle(IPC.PLAYBACK_STOP, () => {
     mpv.stop()
   })
@@ -406,6 +442,15 @@ export function registerIpcHandlers(): void {
         const normalized = normalizeVolume(val, mpv.getVolume())
         mpv.setVolume(normalized)
         dbSetPlaybackState('volume', normalized.toString())
+      } else if (key === 'playbackRate' || key === 'preservePitch') {
+        const currentSpeed = mpv.getPlaybackSpeed()
+        const applied = mpv.setPlaybackSpeed({
+          playbackRate: key === 'playbackRate' ? val : currentSpeed.playbackRate,
+          preservePitch: key === 'preservePitch' ? val : currentSpeed.preservePitch,
+        })
+        setAppSettings(applied)
+        dbSetPlaybackState('playbackRate', applied.playbackRate.toString())
+        dbSetPlaybackState('preservePitch', applied.preservePitch ? 'true' : 'false')
       } else {
         dbSetPlaybackState(key, typeof val === 'string' ? val : JSON.stringify(val))
       }
