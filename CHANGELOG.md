@@ -2,6 +2,13 @@
 
 All notable changes to **IotaPlayer** are documented in this file.
 
+## [1.1.0] - 2026-11-18
+
+### Added
+- **Configurable Playback Speed & Pitch Control**: Added a **Speed & Pitch** panel in the Equalizer view (`0.50×`–`1.50×`, `0.01×` precision), numeric speed input, independent **Preserve pitch** toggle, semitone pitch-shift readout (`12 × log2(rate)`), and built-in presets (`Normal`, `Nightcore` `1.16×`, `Fast Nightcore` `1.25×`, `Daycore` `0.85×`, `Slowed` `0.90×`, `Custom`).
+- **Dual-Backend Speed & Pitch Parity**: Integrated `speed` and `audio-pitch-correction` (`yes`/`no`) in `MpvController` and `playbackRate`/`defaultPlaybackRate`/`preservesPitch` on `HTMLAudioElement`, with persistent preferences across restarts.
+- **Rate-Aware Lyrics Interpolation**: Scaled `useInterpolatedPosition` wall-clock deltas by `playbackRate` with seamless mid-line speed-change re-anchoring.
+
 ## [1.0.0] - 2026-11-17
 
 ### Added
