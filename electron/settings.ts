@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import os from 'node:os'
 import path from 'node:path'
-import { app as electronApp } from 'electron'
 import {
   DEFAULT_PLAYBACK_RATE,
   DEFAULT_PRESERVE_PITCH,
@@ -9,6 +9,17 @@ import {
   normalizePreservePitch,
 } from './playbackSpeed'
 import type { LyricsSourcePreference } from './types'
+
+const nodeRequire = createRequire(__filename)
+
+function getElectronApp(): typeof import('electron').app | undefined {
+  if (!process.versions?.electron) return undefined
+  try {
+    return (nodeRequire('electron') as typeof import('electron')).app
+  } catch {
+    return undefined
+  }
+}
 
 export interface AppSettings {
   discordClientId: string
@@ -27,7 +38,7 @@ const DEFAULT_EQUALIZER_BANDS = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 function getDefaultLibraryRoot(): string {
   try {
-    const musicPath = electronApp?.getPath?.('music')
+    const musicPath = getElectronApp()?.getPath?.('music')
     if (musicPath) return musicPath
   } catch {
     // Fallback outside Electron app lifecycle (e.g. unit tests)
@@ -75,7 +86,7 @@ function normalizeEqualizerBands(value: unknown): number[] {
 }
 
 function getSettingsPath(): string {
-  const userDataDir = electronApp?.getPath?.('userData') ?? path.join(os.homedir(), '.iotaplayer')
+  const userDataDir = getElectronApp()?.getPath?.('userData') ?? path.join(os.homedir(), '.iotaplayer')
   const settingsDir = path.join(userDataDir, 'settings')
 
   if (!existsSync(settingsDir)) {

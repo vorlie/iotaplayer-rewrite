@@ -1,7 +1,22 @@
 import Database from 'better-sqlite3'
-import { app } from 'electron'
+import { createRequire } from 'node:module'
+import os from 'os'
 import path from 'path'
 import type { Album, Artist, Artwork, LibraryStats, Track } from './types'
+
+const nodeRequire = createRequire(__filename)
+
+function getUserDataPath(): string {
+  if (process.versions?.electron) {
+    try {
+      const { app } = nodeRequire('electron') as typeof import('electron')
+      return app.getPath('userData')
+    } catch {
+      // ignore
+    }
+  }
+  return path.join(os.homedir(), '.iotaplayer')
+}
 
 // ---------------------------------------------------------------------------
 // Database setup
@@ -17,7 +32,7 @@ export function getDatabase(): Database.Database {
 }
 
 export function initDatabase(): Database.Database {
-  const userDataPath = app.getPath('userData')
+  const userDataPath = getUserDataPath()
   const dbPath = path.join(userDataPath, 'library.db')
 
   console.log(`[DB] Opening database at: ${dbPath}`)
