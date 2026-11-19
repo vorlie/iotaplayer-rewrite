@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   ChevronDown,
   ChevronUp,
@@ -36,6 +37,7 @@ import { LyricGapIndicator } from './LyricGapIndicator'
 import '../styles/fullscreen-now-playing.css'
 
 export function FullscreenNowPlaying() {
+  const { t } = useTranslation(['player', 'library', 'common'])
   const isFullscreen = useAppStore((s) => s.isFullscreenNowPlaying)
   const setFullscreen = useAppStore((s) => s.setFullscreenNowPlaying)
 
@@ -152,7 +154,11 @@ export function FullscreenNowPlaying() {
   }
 
   const repeatLabel =
-    repeatMode === 'off' ? 'Repeat off' : repeatMode === 'all' ? 'Repeat all' : 'Repeat one'
+    repeatMode === 'off'
+      ? t('controls.repeatOff')
+      : repeatMode === 'all'
+        ? t('controls.repeatAll')
+        : t('controls.repeatOne')
 
   // Lyrics source human-readable tag
   const lyricsSource = formatLyricsSourceLabel(lyrics)
@@ -180,11 +186,11 @@ export function FullscreenNowPlaying() {
         <div className="fullscreen-header__left">
           <div className="fullscreen-header__brand">
             <Disc size={16} />
-            <span>IotaPlayer</span>
+            <span>{t('common:app.name')}</span>
           </div>
           <span
             className={`player-backend-badge player-backend-badge--${activeBackend}`}
-            title={`Playback backend: ${activeBackend.toUpperCase()}`}
+            title={t('status.backendLabel', { backend: activeBackend.toUpperCase() })}
           >
             {activeBackend}
           </span>
@@ -196,17 +202,17 @@ export function FullscreenNowPlaying() {
             type="button"
             className={`fullscreen-nav-tab ${viewMode === 'split' ? 'is-active' : ''}`}
             onClick={() => setViewMode('split')}
-            title="Split view (Artwork & Lyrics)"
+            title={t('fullscreen.splitTitle')}
           >
-            Split
+            {t('fullscreen.split')}
           </button>
           <button
             type="button"
             className={`fullscreen-nav-tab ${viewMode === 'artwork' ? 'is-active' : ''}`}
             onClick={() => setViewMode('artwork')}
-            title="Artwork focus"
+            title={t('fullscreen.artworkTitle')}
           >
-            Artwork
+            {t('fullscreen.artwork')}
           </button>
           <button
             type="button"
@@ -215,9 +221,9 @@ export function FullscreenNowPlaying() {
               setViewMode('lyrics')
               setSecondaryTab('lyrics')
             }}
-            title="Lyrics focus"
+            title={t('fullscreen.lyricsTitle')}
           >
-            Lyrics
+            {t('fullscreen.lyrics')}
           </button>
         </div>
 
@@ -228,7 +234,7 @@ export function FullscreenNowPlaying() {
                 type="button"
                 className={`fullscreen-icon-btn ${secondaryTab === 'lyrics' ? 'is-active' : ''}`}
                 onClick={() => setSecondaryTab('lyrics')}
-                title="Show Lyrics"
+                title={t('fullscreen.showLyrics')}
               >
                 <Mic2 size={16} />
               </button>
@@ -236,7 +242,7 @@ export function FullscreenNowPlaying() {
                 type="button"
                 className={`fullscreen-icon-btn ${secondaryTab === 'queue' ? 'is-active' : ''}`}
                 onClick={() => setSecondaryTab('queue')}
-                title="Show Up Next Queue"
+                title={t('fullscreen.showQueue')}
               >
                 <ListMusic size={16} />
               </button>
@@ -247,7 +253,7 @@ export function FullscreenNowPlaying() {
             type="button"
             className="fullscreen-icon-btn"
             onClick={() => setFullscreen(false)}
-            title="Exit Fullscreen (Esc or F)"
+            title={t('controls.exitFullscreen')}
           >
             <Minimize2 size={16} />
           </button>
@@ -262,7 +268,7 @@ export function FullscreenNowPlaying() {
             {artworkSrc ? (
               <img
                 src={artworkSrc}
-                alt={currentTrack?.title ?? 'Album art'}
+                alt={currentTrack?.title ?? t('status.albumArt')}
                 className="fullscreen-artwork-img"
               />
             ) : (
@@ -274,13 +280,13 @@ export function FullscreenNowPlaying() {
             <div className="fullscreen-meta__header">
               <div style={{ minWidth: 0, flex: 1 }}>
                 <h1 className="fullscreen-meta__title">
-                  {currentTrack?.title ?? 'No track selected'}
+                  {currentTrack?.title ?? t('status.noTrackSelected')}
                 </h1>
                 <div className="fullscreen-meta__artist">
-                  {currentTrack?.artist ?? currentTrack?.album_artist ?? 'Unknown artist'}
+                  {currentTrack?.artist ?? currentTrack?.album_artist ?? t('common:fallbacks.unknownArtist')}
                 </div>
                 <div className="fullscreen-meta__album">
-                  <span>{currentTrack?.album ?? 'Unknown album'}</span>
+                  <span>{currentTrack?.album ?? t('common:fallbacks.unknownAlbum')}</span>
                   {currentTrack?.year != null && currentTrack.year > 0 && (
                     <>
                       <span>•</span>
@@ -295,7 +301,7 @@ export function FullscreenNowPlaying() {
                   type="button"
                   className={`player-fav-btn ${isFav ? 'is-fav' : ''}`}
                   onClick={() => toggleFavorite(currentTrack)}
-                  title={isFav ? 'Remove from Favorites' : 'Add to Favorites'}
+                  title={isFav ? t('common:actions.removeFromFavorites') : t('common:actions.addToFavorites')}
                 >
                   <Heart size={22} fill={isFav ? 'currentColor' : 'none'} />
                 </button>
@@ -310,7 +316,7 @@ export function FullscreenNowPlaying() {
               className="fullscreen-progress-track"
               onClick={handleProgressClick}
               role="slider"
-              aria-label="Seek progress"
+              aria-label={t('status.seekProgress')}
               aria-valuenow={position}
               aria-valuemin={0}
               aria-valuemax={duration}
@@ -325,7 +331,7 @@ export function FullscreenNowPlaying() {
             <button
               type="button"
               className={`fullscreen-btn ${shuffle ? 'is-active' : ''}`}
-              title={shuffle ? 'Shuffle on' : 'Shuffle off'}
+              title={shuffle ? t('controls.shuffleOn') : t('controls.shuffleOff')}
               onClick={toggleShuffle}
             >
               <Shuffle size={18} />
@@ -334,7 +340,7 @@ export function FullscreenNowPlaying() {
               type="button"
               className="fullscreen-btn"
               onClick={previous}
-              title="Previous Track"
+              title={t('controls.previousTrack')}
             >
               <SkipBack size={22} />
             </button>
@@ -342,7 +348,7 @@ export function FullscreenNowPlaying() {
               type="button"
               className="fullscreen-btn fullscreen-btn--play"
               onClick={toggle}
-              title="Play/Pause (Space)"
+              title={t('controls.playPauseShortcut')}
             >
               {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" />}
             </button>
@@ -350,7 +356,7 @@ export function FullscreenNowPlaying() {
               type="button"
               className="fullscreen-btn"
               onClick={next}
-              title="Next Track"
+              title={t('controls.nextTrack')}
             >
               <SkipForward size={22} />
             </button>
@@ -370,7 +376,7 @@ export function FullscreenNowPlaying() {
               type="button"
               className="player-fav-btn"
               onClick={handleToggleMute}
-              title={volume === 0 ? 'Unmute' : 'Mute'}
+              title={volume === 0 ? t('controls.unmute') : t('controls.mute')}
               style={{ padding: 4 }}
             >
               {volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
@@ -379,7 +385,7 @@ export function FullscreenNowPlaying() {
               className="fullscreen-volume-track"
               onClick={handleVolumeClick}
               role="slider"
-              aria-label="Volume"
+              aria-label={t('status.volume')}
               aria-valuenow={volume}
               aria-valuemin={0}
               aria-valuemax={1}
@@ -413,18 +419,18 @@ export function FullscreenNowPlaying() {
                         color: 'var(--color-text-3)',
                       }}
                     >
-                      {lyricsSource ?? 'Lyrics'}
+                      {lyricsSource ?? t('status.lyrics')}
                     </span>
                     {currentTrack && lyrics.lines.length > 0 && (
                       <button
                         type="button"
                         className="fullscreen-reload-btn"
                         onClick={reloadLyrics}
-                        title="Search for lyrics file again"
+                        title={t('status.searchLyricsFileAgain')}
                         style={{ padding: '4px 10px' }}
                       >
                         <RotateCcw size={11} />
-                        Check Again
+                        {t('common:actions.checkAgain')}
                       </button>
                     )}
                   </div>
@@ -451,7 +457,7 @@ export function FullscreenNowPlaying() {
                 >
                   {lyricsLoading ? (
                     <div className="fullscreen-lyrics-empty">
-                      <div className="fullscreen-lyrics-empty__title">Loading lyrics…</div>
+                      <div className="fullscreen-lyrics-empty__title">{t('status.loadingLyrics')}</div>
                     </div>
                   ) : lyrics.lines.length > 0 ? (
                     <div className="fullscreen-lyrics-list">
@@ -497,7 +503,7 @@ export function FullscreenNowPlaying() {
                                 seek(line.timestamp)
                               }
                             }}
-                            title={line.timestamp != null ? `Seek to ${fmt(line.timestamp)}` : undefined}
+                            title={line.timestamp != null ? t('status.seekTo', { time: fmt(line.timestamp) }) : undefined}
                           >
                             {words
                               ? words.map((word, wIdx) => {
@@ -530,7 +536,7 @@ export function FullscreenNowPlaying() {
                                           e.stopPropagation()
                                           seek(word.timestamp)
                                         }}
-                                        title={`Seek to "${visibleText}" (${fmt(word.timestamp)})`}
+                                        title={t('status.seekToWord', { word: visibleText, time: fmt(word.timestamp) })}
                                       >
                                         {visibleText}
                                       </span>
@@ -546,21 +552,21 @@ export function FullscreenNowPlaying() {
                   ) : (
                     <div className="fullscreen-lyrics-empty">
                       <Mic2 size={36} className="fullscreen-lyrics-empty__icon" />
-                      <div className="fullscreen-lyrics-empty__title">No Lyrics Available</div>
+                      <div className="fullscreen-lyrics-empty__title">{t('status.noLyricsAvailable')}</div>
                       <div className="fullscreen-lyrics-empty__desc">
                         {currentTrack
-                          ? `We couldn't find embedded lyrics or a sidecar .lrc/.txt file for "${currentTrack.title}".`
-                          : 'Select a track to view synchronized or plain lyrics.'}
+                          ? t('status.noLyricsDetail', { title: currentTrack.title })
+                          : t('status.selectTrackLyricsDetail')}
                       </div>
                       {currentTrack && (
                         <button
                           type="button"
                           className="fullscreen-reload-btn"
                           onClick={reloadLyrics}
-                          title="Search for lyrics file again"
+                          title={t('status.searchLyricsFileAgain')}
                         >
                           <RotateCcw size={13} />
-                          Check Again
+                          {t('common:actions.checkAgain')}
                         </button>
                       )}
                     </div>
@@ -572,9 +578,9 @@ export function FullscreenNowPlaying() {
               <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, width: '100%', minWidth: 0, overflow: 'hidden' }}>
                 <div className="fullscreen-queue-header">
                   <div>
-                    <div className="fullscreen-queue-title">Up Next</div>
+                    <div className="fullscreen-queue-title">{t('status.upNextTitle')}</div>
                     <div className="fullscreen-queue-subtitle">
-                      {queue.length} {queue.length === 1 ? 'track' : 'tracks'}
+                      {t('library:counts.track', { count: queue.length })}
                     </div>
                   </div>
                   {queue.length > 0 && (
@@ -582,11 +588,11 @@ export function FullscreenNowPlaying() {
                       type="button"
                       className="fullscreen-reload-btn"
                       onClick={clearQueue}
-                      title="Clear queue except current track"
+                      title={t('status.clearQueueShort')}
                       style={{ padding: '4px 10px' }}
                     >
                       <Trash2 size={12} />
-                      Clear
+                      {t('common:actions.clear')}
                     </button>
                   )}
                 </div>
@@ -594,7 +600,7 @@ export function FullscreenNowPlaying() {
                 <div className="fullscreen-queue-list">
                   {queue.length === 0 ? (
                     <div className="fullscreen-lyrics-empty">
-                      <div className="fullscreen-lyrics-empty__desc">No tracks in queue</div>
+                      <div className="fullscreen-lyrics-empty__desc">{t('status.noTracksInQueue')}</div>
                     </div>
                   ) : (
                     queue.map((track, idx) => {
@@ -610,7 +616,7 @@ export function FullscreenNowPlaying() {
                           <div style={{ minWidth: 0 }}>
                             <div className="fullscreen-queue-item-title">{track.title}</div>
                             <div className="fullscreen-queue-item-artist">
-                              {track.artist ?? track.album_artist ?? 'Unknown artist'}
+                              {track.artist ?? track.album_artist ?? t('common:fallbacks.unknownArtist')}
                             </div>
                           </div>
                           <span className="fullscreen-queue-item-duration">{fmt(track.duration)}</span>
@@ -623,7 +629,7 @@ export function FullscreenNowPlaying() {
                               className="queue-icon-btn"
                               disabled={idx === 0}
                               onClick={() => moveQueueItem(idx, idx - 1)}
-                              title="Move up"
+                              title={t('common:actions.moveUp')}
                             >
                               <ChevronUp size={13} />
                             </button>
@@ -632,7 +638,7 @@ export function FullscreenNowPlaying() {
                               className="queue-icon-btn"
                               disabled={idx === queue.length - 1}
                               onClick={() => moveQueueItem(idx, idx + 1)}
-                              title="Move down"
+                              title={t('common:actions.moveDown')}
                             >
                               <ChevronDown size={13} />
                             </button>
@@ -640,7 +646,7 @@ export function FullscreenNowPlaying() {
                               type="button"
                               className="queue-icon-btn queue-icon-btn--danger"
                               onClick={() => removeFromQueue(idx)}
-                              title="Remove from queue"
+                              title={t('common:actions.removeFromQueue')}
                             >
                               <X size={13} />
                             </button>

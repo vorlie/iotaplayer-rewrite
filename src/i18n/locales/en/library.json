@@ -5,13 +5,97 @@
     "album_one": "{{count}} album",
     "album_other": "{{count}} albums",
     "artist_one": "{{count}} artist",
-    "artist_other": "{{count}} artists"
+    "artist_other": "{{count}} artists",
+    "showingOfAlbums": "Showing {{shown}} of {{total}} albums",
+    "showingOfArtists": "Showing {{shown}} of {{total}} artists",
+    "showingOfTracks": "Showing {{shown}} of {{total}} tracks · {{duration}}",
+    "tracksDuration": "{{count}} tracks · {{duration}}"
+  },
+  "albums": {
+    "title": "Albums",
+    "album": "Album",
+    "loading": "Loading albums…",
+    "emptyTitle": "No albums yet",
+    "emptyBody": "Go to Settings and scan your music library to get started.",
+    "filterPlaceholder": "Filter albums...",
+    "noMatchingTitle": "No matching albums",
+    "noMatchingBody": "No albums match your filter \"{{query}}\".",
+    "notFound": "Album not found",
+    "sort": {
+      "artist": "Sort: Artist",
+      "titleAsc": "Sort: Title (A-Z)",
+      "titleDesc": "Sort: Title (Z-A)",
+      "yearDesc": "Sort: Year (Newest)",
+      "yearAsc": "Sort: Year (Oldest)",
+      "mostTracks": "Sort: Most Tracks"
+    }
+  },
+  "artists": {
+    "title": "Artists",
+    "artist": "Artist",
+    "loading": "Loading artists…",
+    "emptyTitle": "No artists yet",
+    "emptyBody": "Go to Settings and scan your music library to get started.",
+    "filterPlaceholder": "Filter artists...",
+    "noMatchingTitle": "No matching artists",
+    "noMatchingBody": "No artists match your filter \"{{query}}\".",
+    "notFound": "Artist not found",
+    "sort": {
+      "nameAsc": "Sort: Name (A-Z)",
+      "nameDesc": "Sort: Name (Z-A)",
+      "mostAlbums": "Sort: Most Albums",
+      "mostTracks": "Sort: Most Tracks"
+    }
+  },
+  "tracks": {
+    "title": "Tracks",
+    "loading": "Loading tracks…",
+    "emptyTitle": "No tracks yet",
+    "emptyBody": "Go to Settings and scan your music library to get started.",
+    "filterPlaceholder": "Filter tracks...",
+    "noMatchingTitle": "No matching tracks",
+    "noMatchingBody": "No tracks match your filter \"{{query}}\".",
+    "columns": {
+      "number": "#",
+      "title": "Title",
+      "album": "Album",
+      "year": "Year",
+      "time": "Time",
+      "actions": "Actions"
+    }
   },
   "search": {
+    "title": "Search",
     "placeholder": "Search artists, albums, tracks, genre...",
-    "all": "All",
-    "tracks": "Tracks",
-    "albums": "Albums",
-    "artists": "Artists"
+    "all": "All ({{count}})",
+    "tracks": "Tracks ({{count}})",
+    "albums": "Albums ({{count}})",
+    "artists": "Artists ({{count}})",
+    "searching": "Searching…",
+    "noResultsTitle": "No results found",
+    "noResultsBody": "Try searching with a different keyword or check your spelling.",
+    "emptyTitle": "Search your library",
+    "emptyBody": "Find tracks, albums, artists, genres, and release years.",
+    "sectionArtists": "Artists",
+    "sectionAlbums": "Albums",
+    "sectionTracks": "Tracks"
+  },
+  "favorites": {
+    "title": "Favorites",
+    "subtitle": "Tracks you've starred",
+    "collection": "Collection",
+    "loading": "Loading favorites…",
+    "emptyTitle": "No favorites yet",
+    "emptyBody": "Click the heart icon on any track in your library to add it to your favorites."
+  },
+  "recentlyPlayed": {
+    "title": "Recently Played",
+    "subtitle": "Your playback history",
+    "history": "History",
+    "loading": "Loading history…",
+    "emptyTitle": "No playback history yet",
+    "emptyBody": "Play music from your library and your recently played tracks will appear here.",
+    "clearHistory": "Clear History",
+    "confirmClear": "Clear all playback history?"
   }
 }

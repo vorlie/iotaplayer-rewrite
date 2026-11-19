@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import {
   Disc3,
   Heart,
@@ -16,24 +17,32 @@ import '../styles/layout.css'
 
 interface NavItem {
   id: NavSection
-  label: string
+  labelKey:
+    | 'nav.artists'
+    | 'nav.albums'
+    | 'nav.tracks'
+    | 'nav.playlists'
+    | 'nav.nowPlaying'
+    | 'nav.favorites'
+    | 'nav.recentlyPlayed'
   icon: React.ReactNode
 }
 
 const LIBRARY_ITEMS: NavItem[] = [
-  { id: 'artists', label: 'Artists', icon: <Mic2 size={15} /> },
-  { id: 'albums',  label: 'Albums',  icon: <Disc3 size={15} /> },
-  { id: 'tracks',  label: 'Tracks',  icon: <Music2 size={15} /> },
-  { id: 'playlists', label: 'Playlists', icon: <ListMusic size={15} /> },
-  { id: 'now-playing', label: 'Now Playing', icon: <PlayCircle size={15} /> },
+  { id: 'artists', labelKey: 'nav.artists', icon: <Mic2 size={15} /> },
+  { id: 'albums', labelKey: 'nav.albums', icon: <Disc3 size={15} /> },
+  { id: 'tracks', labelKey: 'nav.tracks', icon: <Music2 size={15} /> },
+  { id: 'playlists', labelKey: 'nav.playlists', icon: <ListMusic size={15} /> },
+  { id: 'now-playing', labelKey: 'nav.nowPlaying', icon: <PlayCircle size={15} /> },
 ]
 
 const YOUR_MUSIC_ITEMS: NavItem[] = [
-  { id: 'favorites',      label: 'Favorites',       icon: <Heart size={15} /> },
-  { id: 'recently-played', label: 'Recently Played', icon: <History size={15} /> },
+  { id: 'favorites', labelKey: 'nav.favorites', icon: <Heart size={15} /> },
+  { id: 'recently-played', labelKey: 'nav.recentlyPlayed', icon: <History size={15} /> },
 ]
 
 export function Sidebar() {
+  const { t } = useTranslation('common')
   const { nav, navigate, setSearch } = useAppStore()
   const activeSection = nav.section
 
@@ -51,7 +60,7 @@ export function Sidebar() {
       <div className="sidebar__section">
         <div className="sidebar__section-label">
           <Library size={10} style={{ display: 'inline', marginRight: 5 }} />
-          Library
+          {t('nav.library')}
         </div>
         <nav className="sidebar__nav">
           {LIBRARY_ITEMS.map((item) => (
@@ -61,7 +70,7 @@ export function Sidebar() {
               onClick={() => navigate(item.id)}
             >
               <span className="sidebar__item-icon">{item.icon}</span>
-              {item.label}
+              {t(item.labelKey)}
             </button>
           ))}
         </nav>
@@ -71,7 +80,7 @@ export function Sidebar() {
 
       {/* Your Music section */}
       <div className="sidebar__section">
-        <div className="sidebar__section-label">Your Music</div>
+        <div className="sidebar__section-label">{t('nav.yourMusic')}</div>
         <nav className="sidebar__nav">
           {YOUR_MUSIC_ITEMS.map((item) => (
             <button
@@ -80,7 +89,7 @@ export function Sidebar() {
               onClick={() => navigate(item.id)}
             >
               <span className="sidebar__item-icon">{item.icon}</span>
-              {item.label}
+              {t(item.labelKey)}
             </button>
           ))}
         </nav>
@@ -96,7 +105,7 @@ export function Sidebar() {
             onClick={handleSearchClick}
           >
             <span className="sidebar__item-icon"><Search size={15} /></span>
-            Search
+            {t('nav.search')}
           </button>
         </nav>
       </div>
@@ -112,7 +121,7 @@ export function Sidebar() {
           onClick={() => navigate('equalizer')}
         >
           <span className="sidebar__item-icon"><SlidersHorizontal size={15} /></span>
-          Equalizer
+          {t('nav.equalizer')}
         </button>
 
         <button
@@ -121,7 +130,7 @@ export function Sidebar() {
           style={{ marginTop: 6 }}
         >
           <span className="sidebar__item-icon"><Settings size={15} /></span>
-          Settings
+          {t('nav.settings')}
         </button>
       </div>
     </aside>

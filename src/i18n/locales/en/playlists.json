@@ -1,13 +1,37 @@
 {
   "title": "Playlists",
+  "subtitle": "Saved queues and listening sessions",
+  "kind": "Playlist",
+  "defaultName": "My Playlist {{number}}",
   "actions": {
-    "newPlaylist": "New playlist…",
+    "newPlaylist": "New playlist",
+    "newPlaylistEllipsis": "New playlist…",
+    "newPlaylistPrompt": "New playlist name",
+    "saveCurrentQueue": "Save current queue",
     "addToPlaylist": "Add to playlist",
     "addAlbumToPlaylist": "Add album to playlist",
     "renamePlaylist": "Rename playlist",
-    "deletePlaylist": "Delete playlist"
+    "deletePlaylist": "Delete playlist",
+    "editDetails": "Edit playlist details",
+    "changeCover": "Change cover art",
+    "confirmDelete": "Delete playlist \"{{name}}\"?"
+  },
+  "editor": {
+    "name": "Playlist name",
+    "description": "Description",
+    "descriptionPlaceholder": "Add a short description..."
   },
   "empty": {
-    "noPlaylists": "No playlists yet"
+    "noPlaylists": "No playlists yet",
+    "noPlaylistsBody": "Create one from the current queue or your favorite tracks.",
+    "noDescription": "No description yet",
+    "noDescriptionDetail": "No description yet. Add one to give this playlist a little personality.",
+    "notFoundTitle": "Playlist not found",
+    "notFoundBody": "This playlist may have been removed or is no longer available.",
+    "noTracksTitle": "No tracks in this playlist",
+    "noTracksBody": "Right-click any track or album in your library to add it here."
+  },
+  "meta": {
+    "minutes": "{{count}} min"
   }
 }

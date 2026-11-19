@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { ArrowLeft, ImagePlus, Pencil, Play, Trash2 } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { useAppStore, usePlaybackStore } from '../store'
@@ -5,6 +6,7 @@ import { TracksTable } from './TracksView'
 import '../styles/playlists.css'
 
 export function PlaylistDetailView() {
+  const { t } = useTranslation(['playlists', 'library', 'common'])
   const playlistId = useAppStore((s) => s.nav.playlistId)
   const navigate = useAppStore((s) => s.navigate)
   const playlists = usePlaybackStore((s) => s.playlists)
@@ -21,8 +23,8 @@ export function PlaylistDetailView() {
     return (
       <div className="page">
         <div className="empty-state">
-          <div className="empty-state-title">Playlist not found</div>
-          <div className="empty-state-body">This playlist may have been removed or is no longer available.</div>
+          <div className="empty-state-title">{t('empty.notFoundTitle')}</div>
+          <div className="empty-state-body">{t('empty.notFoundBody')}</div>
         </div>
       </div>
     )
@@ -76,7 +78,7 @@ export function PlaylistDetailView() {
           onClick={() => navigate('playlists')}
         >
           <ArrowLeft size={14} />
-          Playlists
+          {t('title')}
         </button>
 
         <div className="detail-artwork detail-artwork--playlist">
@@ -84,60 +86,60 @@ export function PlaylistDetailView() {
         </div>
 
         <div className="detail-info">
-          <div className="detail-kind">Playlist</div>
+          <div className="detail-kind">{t('kind')}</div>
 
           {isEditing ? (
             <div className="playlist-detail-editor">
               <label className="playlist-field">
-                <span>Playlist name</span>
+                <span>{t('editor.name')}</span>
                 <input value={name} onChange={(event) => setName(event.target.value)} />
               </label>
 
               <label className="playlist-field">
-                <span>Description</span>
+                <span>{t('editor.description')}</span>
                 <textarea
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
                   rows={2}
-                  placeholder="Add a short description..."
+                  placeholder={t('editor.descriptionPlaceholder')}
                 />
               </label>
 
               <div className="playlist-editor-actions">
-                <button className="detail-play-btn playlist-toolbar-btn" onClick={saveDetails}>Save changes</button>
-                <button className="secondary-btn playlist-toolbar-btn" onClick={() => setIsEditing(false)}>Cancel</button>
+                <button className="detail-play-btn playlist-toolbar-btn" onClick={saveDetails}>{t('common:actions.saveChanges')}</button>
+                <button className="secondary-btn playlist-toolbar-btn" onClick={() => setIsEditing(false)}>{t('common:actions.cancel')}</button>
               </div>
             </div>
           ) : (
             <>
               <div className="detail-title">{playlist.name}</div>
               <div className="detail-meta">
-                <span>{playlist.tracks.length} tracks</span>
+                <span>{t('library:counts.track', { count: playlist.tracks.length })}</span>
                 <span className="detail-meta-dot" />
-                <span>{playlist.tracks.length > 0 ? `${Math.floor(totalDuration / 60)} min` : '0 min'}</span>
+                <span>{t('meta.minutes', { count: playlist.tracks.length > 0 ? Math.floor(totalDuration / 60) : 0 })}</span>
               </div>
 
               <div className="playlist-description-block">
                 {playlist.description?.trim() ? (
                   <p>{playlist.description}</p>
                 ) : (
-                  <p className="playlist-description-empty">No description yet. Add one to give this playlist a little personality.</p>
+                  <p className="playlist-description-empty">{t('empty.noDescriptionDetail')}</p>
                 )}
               </div>
 
               <div className="playlist-detail-actions">
                 <button className="detail-play-btn playlist-toolbar-btn" onClick={() => playPlaylist(playlist.id)}>
                   <Play size={13} fill="currentColor" />
-                  Play
+                  {t('common:actions.play')}
                 </button>
 
-                <button className="player-btn playlist-icon-btn" title="Edit playlist details" onClick={beginEditing}>
+                <button className="player-btn playlist-icon-btn" title={t('actions.editDetails')} onClick={beginEditing}>
                   <Pencil size={13} />
                 </button>
 
                 <button
                   className="player-btn playlist-icon-btn"
-                  title="Change cover art"
+                  title={t('actions.changeCover')}
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <ImagePlus size={13} />
@@ -145,9 +147,9 @@ export function PlaylistDetailView() {
 
                 <button
                   className="player-btn playlist-icon-btn"
-                  title="Delete playlist"
+                  title={t('actions.deletePlaylist')}
                   onClick={() => {
-                    if (window.confirm(`Delete playlist "${playlist.name}"?`)) {
+                    if (window.confirm(t('actions.confirmDelete', { name: playlist.name }))) {
                       deletePlaylist(playlist.id)
                       navigate('playlists')
                     }
@@ -172,8 +174,8 @@ export function PlaylistDetailView() {
       <div className="page-body">
         {playlist.tracks.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-title">This playlist is empty</div>
-            <div className="empty-state-body">Add tracks from the library or the queue to start building it.</div>
+            <div className="empty-state-title">{t('empty.noTracksTitle')}</div>
+            <div className="empty-state-body">{t('empty.noTracksBody')}</div>
           </div>
         ) : (
           <TracksTable

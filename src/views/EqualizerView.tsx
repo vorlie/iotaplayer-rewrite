@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Gauge, RotateCcw, SlidersHorizontal } from "lucide-react";
 import {
   calculatePitchSemitones,
@@ -39,6 +40,7 @@ const EQ_SCALE_MARKS = Array.from(
 const SPEED_SCALE_TICKS = [0.5, 0.75, 1.0, 1.16, 1.25, 1.5];
 
 export function EqualizerView() {
+  const { t } = useTranslation("settings");
   const {
     playbackRate,
     preservePitch,
@@ -154,20 +156,20 @@ export function EqualizerView() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1 className="page-title">Equalizer &amp; Speed</h1>
+        <h1 className="page-title">{t("equalizer.title")}</h1>
         <p className="page-subtitle">
-          Shape your sound with 10-band EQ, Nightcore/Daycore presets, and custom speed &amp; pitch controls.
+          {t("equalizer.subtitle")}
         </p>
       </div>
 
       <div className="page-body eq-page-body">
         <div className="eq-shell">
           {/* Speed & Pitch Section */}
-          <section className="eq-panel speed-panel" aria-label="Playback Speed and Pitch">
+          <section className="eq-panel speed-panel" aria-label={t("equalizer.speedAria")}>
             <div className="eq-panel__header speed-panel__header">
               <div className="eq-panel__label">
                 <Gauge size={14} />
-                <span>Speed &amp; Pitch</span>
+                <span>{t("equalizer.speedSection")}</span>
               </div>
 
               <div className="speed-readout-badges">
@@ -175,7 +177,7 @@ export function EqualizerView() {
                   className={`speed-badge ${
                     playbackRate !== DEFAULT_PLAYBACK_RATE ? "speed-badge--active" : ""
                   }`}
-                  title="Current playback rate"
+                  title={t("equalizer.rateTitle")}
                 >
                   {formatPlaybackRate(playbackRate)}
                 </span>
@@ -183,9 +185,9 @@ export function EqualizerView() {
                 {!preservePitch && (
                   <span
                     className="speed-badge speed-badge--pitch"
-                    title="Calculated pitch shift in semitones (12 × log2(rate))"
+                    title={t("equalizer.pitchTitle")}
                   >
-                    Pitch {formatPitchSemitones(pitchSemitones)}
+                    {t("equalizer.pitchBadge", { shift: formatPitchSemitones(pitchSemitones) })}
                   </span>
                 )}
 
@@ -194,13 +196,15 @@ export function EqualizerView() {
                     activeSpeedPreset === "Custom" ? "speed-badge--custom" : "speed-badge--preset"
                   }`}
                 >
-                  {activeSpeedPreset}
+                  {activeSpeedPreset === "Custom"
+                    ? t("equalizer.custom")
+                    : t(`equalizer.presets.${activeSpeedPreset}.name` as never, { defaultValue: activeSpeedPreset })}
                 </span>
               </div>
             </div>
 
             {/* Single-click preset pills */}
-            <div className="speed-presets-row" role="group" aria-label="Playback speed presets">
+            <div className="speed-presets-row" role="group" aria-label={t("equalizer.presetsAria")}>
               {PLAYBACK_SPEED_PRESETS.map((preset) => {
                 const isSelected = activeSpeedPreset === preset.name;
                 return (
@@ -209,10 +213,12 @@ export function EqualizerView() {
                     type="button"
                     className={`speed-preset-btn ${isSelected ? "is-active" : ""}`}
                     onClick={() => handleSpeedPresetSelect(preset.name)}
-                    title={preset.description}
+                    title={t(`equalizer.presets.${preset.name}.description` as never, { defaultValue: preset.description })}
                     aria-pressed={isSelected}
                   >
-                    <span className="speed-preset-btn__name">{preset.name}</span>
+                    <span className="speed-preset-btn__name">
+                      {t(`equalizer.presets.${preset.name}.name` as never, { defaultValue: preset.name })}
+                    </span>
                     <span className="speed-preset-btn__meta">
                       {preset.playbackRate.toFixed(2)}×
                     </span>
@@ -225,7 +231,7 @@ export function EqualizerView() {
                 }`}
                 aria-current={activeSpeedPreset === "Custom" ? "true" : undefined}
               >
-                Custom
+                {t("equalizer.custom")}
               </span>
             </div>
 
@@ -240,7 +246,7 @@ export function EqualizerView() {
                   value={playbackRate}
                   className="speed-range-slider"
                   onChange={(e) => handleSpeedSliderChange(Number(e.target.value))}
-                  aria-label="Playback speed multiplier"
+                  aria-label={t("equalizer.sliderAria")}
                 />
                 <div className="speed-slider-ticks">
                   {SPEED_SCALE_TICKS.map((tick) => (
@@ -260,7 +266,7 @@ export function EqualizerView() {
 
               <div className="speed-actions-col">
                 <div className="speed-number-field">
-                  <label htmlFor="playback-speed-input">Exact speed</label>
+                  <label htmlFor="playback-speed-input">{t("equalizer.exactSpeed")}</label>
                   <div className="speed-number-input-wrap">
                     <input
                       id="playback-speed-input"
@@ -276,7 +282,7 @@ export function EqualizerView() {
                           commitNumericSpeedInput();
                         }
                       }}
-                      aria-label="Exact playback speed"
+                      aria-label={t("equalizer.exactSpeed")}
                     />
                     <span className="speed-number-unit">×</span>
                   </div>
@@ -289,19 +295,19 @@ export function EqualizerView() {
                     onChange={(e) =>
                       setPlaybackSpeed({ preservePitch: e.target.checked })
                     }
-                    aria-label="Preserve original pitch"
+                    aria-label={t("equalizer.preservePitchAria")}
                   />
-                  <span>Preserve pitch</span>
+                  <span>{t("equalizer.preservePitch")}</span>
                 </label>
 
                 <button
                   type="button"
                   className="settings-button settings-button--secondary"
                   onClick={resetPlaybackSpeed}
-                  title="Reset speed to 1.00× and enable pitch preservation"
+                  title={t("equalizer.resetSpeedTitle")}
                 >
                   <RotateCcw size={13} />
-                  Reset Speed
+                  {t("equalizer.resetSpeed")}
                 </button>
               </div>
             </div>
@@ -315,21 +321,21 @@ export function EqualizerView() {
                 checked={equalizerEnabled}
                 onChange={(e) => setEqualizerEnabled(e.target.checked)}
               />
-              <span>Enable equalizer</span>
+              <span>{t("equalizer.enableEq")}</span>
             </label>
 
             <div className="eq-toolbar__actions">
               <select
                 value={equalizerPreset}
                 onChange={(e) => applyEqPreset(e.target.value)}
-                aria-label="Equalizer preset"
+                aria-label={t("equalizer.eqPresetAria")}
               >
                 {Object.keys(EQUALIZER_PRESETS).map((presetName) => (
                   <option key={presetName} value={presetName}>
-                    {presetName}
+                    {t(`equalizer.eqPresets.${presetName}` as never, { defaultValue: presetName })}
                   </option>
                 ))}
-                <option value="Custom">Custom</option>
+                <option value="Custom">{t("equalizer.custom")}</option>
               </select>
 
               <button
@@ -340,7 +346,7 @@ export function EqualizerView() {
                   setEqualizerBands([...DEFAULT_EQUALIZER_BANDS]);
                 }}
               >
-                Reset EQ
+                {t("equalizer.resetEq")}
               </button>
             </div>
           </div>
@@ -349,7 +355,7 @@ export function EqualizerView() {
             <div className="eq-panel__header">
               <div className="eq-panel__label">
                 <SlidersHorizontal size={14} />
-                <span>Band response</span>
+                <span>{t("equalizer.bandResponse")}</span>
               </div>
             </div>
 
@@ -420,7 +426,7 @@ export function EqualizerView() {
                           updateBand(index, Number(e.target.value))
                         }
                         disabled={!equalizerEnabled}
-                        aria-label={`${EQUALIZER_BANDS[index]} Hz band`}
+                        aria-label={t("equalizer.bandAria", { freq: EQUALIZER_BANDS[index] })}
                       />
                     </div>
                     <div className="eq-band__freq">
@@ -439,7 +445,7 @@ export function EqualizerView() {
               onClick={handleSaveSettings}
               disabled={savingSettings}
             >
-              {savingSettings ? "Saving…" : "Save Settings"}
+              {savingSettings ? t("saving") : t("saveSettings")}
             </button>
           </div>
         </div>

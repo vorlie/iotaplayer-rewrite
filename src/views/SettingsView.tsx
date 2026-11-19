@@ -10,10 +10,10 @@ import '../styles/settings.css'
 const DEFAULT_LIBRARY_ROOT = ''
 
 const settingsCategories = [
-  { id: 'playback', label: 'Playback', Icon: AudioLines },
-  { id: 'library', label: 'Library', Icon: Library },
-  { id: 'integrations', label: 'Integrations', Icon: ShieldCheck },
-]
+  { id: 'playback', Icon: AudioLines },
+  { id: 'library', Icon: Library },
+  { id: 'integrations', Icon: ShieldCheck },
+] as const
 
 export function SettingsView() {
   const { t } = useTranslation(['settings', 'common'])
@@ -138,24 +138,24 @@ export function SettingsView() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1 className="page-title">Settings</h1>
-        <p className="page-subtitle">Manage playback, library, and app integrations.</p>
+        <h1 className="page-title">{t('title')}</h1>
+        <p className="page-subtitle">{t('subtitle')}</p>
       </div>
 
       <div className="page-body settings-page-body">
         <div className="settings-shell">
           <aside className="settings-sidebar">
-            <div className="settings-sidebar__label">Navigation</div>
-            {settingsCategories.map(({ id, label, Icon }) => (
+            <div className="settings-sidebar__label">{t('navigation')}</div>
+            {settingsCategories.map(({ id, Icon }) => (
               <a key={id} href={`#${id}`} className="settings-sidebar__link">
                 <Icon size={14} />
-                <span>{label}</span>
+                <span>{t(`categories.${id}`)}</span>
               </a>
             ))}
             <div className="settings-sidebar__divider" />
             <div className="settings-actions">
               <button type="button" className="settings-button settings-button--primary settings-button--save" onClick={handleSaveSettings} disabled={savingSettings}>
-                {savingSettings ? 'Saving…' : 'Save Settings'}
+                {savingSettings ? t('saving') : t('saveSettings')}
               </button>
             </div>
           </aside>
@@ -164,8 +164,8 @@ export function SettingsView() {
             <section id="playback" className="settings-section">
               <header className="settings-section__header">
                 <div>
-                  <p className="settings-section__eyebrow">Playback</p>
-                  <h2>Audio settings</h2>
+                  <p className="settings-section__eyebrow">{t('playback.eyebrow')}</p>
+                  <h2>{t('playback.heading')}</h2>
                 </div>
                 <Sparkles size={16} className="settings-section__icon" />
               </header>
@@ -189,45 +189,42 @@ export function SettingsView() {
                 </div>
 
                 <div className="settings-field">
-                  <label htmlFor="audio-backend">Audio backend</label>
+                  <label htmlFor="audio-backend">{t('playback.backendLabel')}</label>
                   <select
                     id="audio-backend"
                     value={backendMode}
                     onChange={(e) => setBackendMode(e.target.value as PlaybackBackendMode)}
                   >
-                    <option value="auto">Automatic</option>
-                    <option value="mpv">MPV only</option>
-                    <option value="browser">Browser fallback only</option>
+                    <option value="auto">{t('playback.backendOptions.auto')}</option>
+                    <option value="mpv">{t('playback.backendOptions.mpv')}</option>
+                    <option value="browser">{t('playback.backendOptions.browser')}</option>
                   </select>
-                  <small>.wav files always use MPV.</small>
+                  <small>{t('playback.backendHint')}</small>
                 </div>
 
                 <div className="settings-field">
-                  <p className="settings-section__eyebrow" style={{ marginBottom: 2 }}>Lyrics</p>
-                  <label htmlFor="lyrics-source-preference">Lyrics source preference</label>
+                  <p className="settings-section__eyebrow" style={{ marginBottom: 2 }}>{t('lyrics.eyebrow')}</p>
+                  <label htmlFor="lyrics-source-preference">{t('lyrics.label')}</label>
                   <select
                     id="lyrics-source-preference"
                     value={lyricsSourcePreference}
                     onChange={(e) => void handleLyricsPreferenceChange(e.target.value as LyricsSourcePreference)}
                   >
-                    <option value="embedded">Embedded (default)</option>
-                    <option value="synchronized">Synchronized</option>
-                    <option value="sidecar">Sidecar</option>
+                    <option value="embedded">{t('lyrics.options.embedded')}</option>
+                    <option value="synchronized">{t('lyrics.options.synchronized')}</option>
+                    <option value="sidecar">{t('lyrics.options.sidecar')}</option>
                   </select>
                   <small>
-                    {lyricsSourcePreference === 'embedded' &&
-                      'Prefer lyrics embedded in audio files, then fall back to sidecars.'}
-                    {lyricsSourcePreference === 'synchronized' &&
-                      'Prefer lyrics with the highest synchronization quality, regardless of source.'}
-                    {lyricsSourcePreference === 'sidecar' &&
-                      'Prefer external lyrics files, then fall back to embedded lyrics.'}
+                    {lyricsSourcePreference === 'embedded' && t('lyrics.hints.embedded')}
+                    {lyricsSourcePreference === 'synchronized' && t('lyrics.hints.synchronized')}
+                    {lyricsSourcePreference === 'sidecar' && t('lyrics.hints.sidecar')}
                   </small>
                 </div>
 
                 <div className="settings-toggle-row">
                   <div>
-                    <h3>Discord Rich Presence</h3>
-                    <p>Shows the current track and audio progress in Discord.</p>
+                    <h3>{t('discord.title')}</h3>
+                    <p>{t('discord.description')}</p>
                   </div>
                   <input
                     type="checkbox"
@@ -237,24 +234,24 @@ export function SettingsView() {
                 </div>
 
                 <div className="settings-field">
-                  <label htmlFor="discord-app-id">Discord Application ID</label>
+                  <label htmlFor="discord-app-id">{t('discord.clientIdLabel')}</label>
                   <input
                     id="discord-app-id"
                     type="text"
                     value={discordClientId}
                     onChange={(e) => setDiscordClientId(e.target.value)}
-                    placeholder="Paste your Discord app ID"
+                    placeholder={t('discord.clientIdPlaceholder')}
                   />
                 </div>
 
                 <div className="settings-field">
-                  <label htmlFor="imgur-client-id">Imgur Client ID</label>
+                  <label htmlFor="imgur-client-id">{t('discord.imgurIdLabel')}</label>
                   <input
                     id="imgur-client-id"
                     type="text"
                     value={imgurClientId}
                     onChange={(e) => setImgurClientId(e.target.value)}
-                    placeholder="Paste your Imgur client ID"
+                    placeholder={t('discord.imgurIdPlaceholder')}
                   />
                 </div>
               </div>
@@ -263,25 +260,25 @@ export function SettingsView() {
             <section id="library" className="settings-section">
               <header className="settings-section__header">
                 <div>
-                  <p className="settings-section__eyebrow">Library</p>
-                  <h2>Music collection</h2>
+                  <p className="settings-section__eyebrow">{t('library.eyebrow')}</p>
+                  <h2>{t('library.heading')}</h2>
                 </div>
                 <Library size={16} className="settings-section__icon" />
               </header>
 
               <div className="settings-card">
                 <div className="settings-field">
-                  <label htmlFor="library-root">Library root</label>
+                  <label htmlFor="library-root">{t('library.rootLabel')}</label>
                   <div className="settings-input-row">
                     <input
                       id="library-root"
                       type="text"
                       value={libraryRoot}
                       onChange={(e) => setLibraryRoot(e.target.value)}
-                      placeholder="e.g. D:\Media\Music"
+                      placeholder={t('library.rootPlaceholder')}
                     />
                     <button type="button" className="settings-button settings-button--secondary" onClick={handlePickLibraryRoot}>
-                      Browse
+                      {t('common:actions.browse')}
                     </button>
                   </div>
                 </div>
@@ -289,24 +286,23 @@ export function SettingsView() {
                 <div className="settings-button-row">
                   <button type="button" className="settings-button settings-button--primary" onClick={handleScan} disabled={scanning}>
                     <RefreshCw size={14} className={scanning ? 'spin' : ''} />
-                    {scanning ? 'Scanning…' : 'Scan Library'}
+                    {scanning ? t('library.scanning') : t('library.scan')}
                   </button>
 
                   <button type="button" className="settings-button settings-button--ghost" onClick={handleCleanupMissing} disabled={cleaningMissing}>
                     <Trash2 size={14} />
-                    {cleaningMissing ? 'Cleaning…' : 'Clean missing'}
+                    {cleaningMissing ? t('library.cleaning') : t('library.cleanMissing')}
                   </button>
                 </div>
 
                 {scanning && scanProgress && (
                   <div className="settings-progress">
                     <div className="settings-progress__label">
-                      {scanProgress.phase === 'discovering' && 'Discovering files…'}
-                      {scanProgress.phase === 'scanning' && (
-                        <>Scanning {scanProgress.current} / {scanProgress.total}…</>
-                      )}
-                      {scanProgress.phase === 'removing' && 'Cleaning up…'}
-                      {scanProgress.phase === 'done' && 'Done!'}
+                      {scanProgress.phase === 'discovering' && t('library.progress.discovering')}
+                      {scanProgress.phase === 'scanning' &&
+                        t('library.progress.scanning', { current: scanProgress.current, total: scanProgress.total })}
+                      {scanProgress.phase === 'removing' && t('library.progress.removing')}
+                      {scanProgress.phase === 'done' && t('library.progress.done')}
                     </div>
                     {scanProgress.current_file && (
                       <div className="settings-progress__file">{scanProgress.current_file}</div>
@@ -325,17 +321,17 @@ export function SettingsView() {
                 {lastResult && !scanning && (
                   <div className="settings-summary">
                     <div className="settings-summary__header">
-                      <span>Last scan</span>
-                      <strong>{(lastResult.duration_ms / 1000).toFixed(1)}s</strong>
+                      <span>{t('library.summary.lastScan')}</span>
+                      <strong>{t('library.summary.duration', { seconds: (lastResult.duration_ms / 1000).toFixed(1) })}</strong>
                     </div>
                     <div className="settings-summary__grid">
                       {[
-                        ['Total', lastResult.total],
-                        ['Unchanged', lastResult.unchanged],
-                        ['Added', lastResult.added],
-                        ['Updated', lastResult.updated],
-                        ['Removed', lastResult.removed],
-                        ['Failed', lastResult.failed],
+                        [t('library.summary.total'), lastResult.total],
+                        [t('library.summary.unchanged'), lastResult.unchanged],
+                        [t('library.summary.added'), lastResult.added],
+                        [t('library.summary.updated'), lastResult.updated],
+                        [t('library.summary.removed'), lastResult.removed],
+                        [t('library.summary.failed'), lastResult.failed],
                       ].map(([label, value]) => (
                         <div key={label as string} className="settings-summary__item">
                           <span>{label}</span>
@@ -346,7 +342,7 @@ export function SettingsView() {
 
                     {lastResult.errors.length > 0 && (
                       <details className="settings-errors">
-                        <summary>{lastResult.errors.length} errors</summary>
+                        <summary>{t('library.summary.errorsCount', { count: lastResult.errors.length })}</summary>
                         <div className="settings-errors__list">
                           {lastResult.errors.map((error, index) => (
                             <div key={`${error}-${index}`}>{error}</div>
@@ -360,9 +356,9 @@ export function SettingsView() {
                 {stats && (
                   <div className="settings-stat-grid">
                     {[
-                      ['Tracks', stats.track_count],
-                      ['Albums', stats.album_count],
-                      ['Artists', stats.artist_count],
+                      [t('library.stats.tracks'), stats.track_count],
+                      [t('library.stats.albums'), stats.album_count],
+                      [t('library.stats.artists'), stats.artist_count],
                     ].map(([label, value]) => (
                       <div key={label as string} className="settings-stat">
                         <div className="settings-stat__value">{value}</div>
@@ -377,8 +373,8 @@ export function SettingsView() {
             <section id="integrations" className="settings-section">
               <header className="settings-section__header">
                 <div>
-                  <p className="settings-section__eyebrow">Integrations</p>
-                  <h2>Connected services</h2>
+                  <p className="settings-section__eyebrow">{t('integrations.eyebrow')}</p>
+                  <h2>{t('integrations.heading')}</h2>
                 </div>
                 <ShieldCheck size={16} className="settings-section__icon" />
               </header>
@@ -386,11 +382,11 @@ export function SettingsView() {
               <div className="settings-card settings-card--compact">
                 <div className="settings-status">
                   <span className="settings-status__dot" />
-                  Discord presence is {discordEnabled ? 'enabled' : 'disabled'}
+                  {discordEnabled ? t('discord.enabledStatus') : t('discord.disabledStatus')}
                 </div>
                 <div className="settings-status settings-status--muted">
                   <span className="settings-status__dot settings-status__dot--muted" />
-                  Imgur client ID {imgurClientId ? 'configured' : 'not configured'}
+                  {imgurClientId ? t('discord.imgurConfigured') : t('discord.imgurNotConfigured')}
                 </div>
               </div>
 
@@ -398,10 +394,10 @@ export function SettingsView() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                   <div>
                     <div style={{ fontWeight: 600, color: 'var(--color-text-1)' }}>
-                      {appInfo?.name ?? 'IotaPlayer'} {appInfo?.version ? `v${appInfo.version}` : ''}
+                      {appInfo?.name ?? t('common:app.name')} {appInfo?.version ? `v${appInfo.version}` : ''}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginTop: 2 }}>
-                      Published by {appInfo?.publisher ?? 'vorlie'} · Identifier: pl.vorlie.iotaplayer
+                      {t('integrations.publishedBy', { publisher: appInfo?.publisher ?? 'vorlie', appId: 'pl.vorlie.iotaplayer' })}
                     </div>
                   </div>
                   <a

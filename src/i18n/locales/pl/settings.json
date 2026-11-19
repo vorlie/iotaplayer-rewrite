@@ -1,5 +1,9 @@
 {
   "title": "Ustawienia",
+  "subtitle": "Zarządzaj odtwarzaniem, biblioteką i integracjami.",
+  "navigation": "Nawigacja",
+  "saveSettings": "Zapisz ustawienia",
+  "saving": "Zapisywanie…",
   "categories": {
     "playback": "Odtwarzanie",
     "library": "Biblioteka",
@@ -12,6 +16,120 @@
       "system": "Domyślny systemowy",
       "en": "English",
       "pl": "Polski"
+    }
+  },
+  "playback": {
+    "eyebrow": "Odtwarzanie",
+    "heading": "Ustawienia dźwięku",
+    "backendLabel": "Silnik odtwarzania",
+    "backendOptions": {
+      "auto": "Automatyczny",
+      "mpv": "Tylko MPV",
+      "browser": "Tylko silnik przeglądarkowy"
+    },
+    "backendHint": "Pliki .wav zawsze używają MPV."
+  },
+  "lyrics": {
+    "eyebrow": "Teksty",
+    "label": "Preferowane źródło tekstu",
+    "options": {
+      "embedded": "Osadzone (domyślnie)",
+      "synchronized": "Zsynchronizowane",
+      "sidecar": "Pliki zewnętrzne"
+    },
+    "hints": {
+      "embedded": "Preferuj teksty osadzone w plikach audio, a w razie braku użyj plików obok utworu.",
+      "synchronized": "Preferuj teksty o najwyższej jakości synchronizacji, niezależnie od źródła.",
+      "sidecar": "Preferuj zewnętrzne pliki z tekstem, a w razie braku użyj tekstów osadzonych."
+    }
+  },
+  "discord": {
+    "title": "Discord Rich Presence",
+    "description": "Wyświetla aktualny utwór i postęp odtwarzania w Discordzie.",
+    "clientIdLabel": "Discord Client ID",
+    "clientIdPlaceholder": "Opcjonalne własne ID aplikacji Discord",
+    "imgurIdLabel": "Imgur Client ID",
+    "imgurIdPlaceholder": "Opcjonalne ID klienta Imgur do wysyłania okładek",
+    "enabledStatus": "Status Discord jest włączony",
+    "disabledStatus": "Status Discord jest wyłączony",
+    "imgurConfigured": "Imgur Client ID skonfigurowany",
+    "imgurNotConfigured": "Imgur Client ID nieskonfigurowany"
+  },
+  "library": {
+    "eyebrow": "Biblioteka",
+    "heading": "Folder i skanowanie",
+    "rootLabel": "Ścieżka folderu z muzyką",
+    "rootPlaceholder": "Wybierz folder z muzyką",
+    "scan": "Skanuj bibliotekę",
+    "scanning": "Skanowanie…",
+    "cleanMissing": "Usuń brakujące",
+    "cleaning": "Czyszczenie…",
+    "progress": {
+      "discovering": "Wyszukiwanie plików…",
+      "scanning": "Skanowanie {{current}} / {{total}}…",
+      "removing": "Czyszczenie…",
+      "done": "Gotowe!"
+    },
+    "summary": {
+      "lastScan": "Ostatnie skanowanie",
+      "duration": "{{seconds}} s",
+      "total": "Razem",
+      "unchanged": "Bez zmian",
+      "added": "Dodano",
+      "updated": "Zaktualizowano",
+      "removed": "Usunięto",
+      "failed": "Błędy",
+      "errorsCount_one": "{{count}} błąd",
+      "errorsCount_few": "{{count}} błędy",
+      "errorsCount_many": "{{count}} błędów",
+      "errorsCount_other": "{{count}} błędów"
+    },
+    "stats": {
+      "tracks": "Utwory",
+      "albums": "Albumy",
+      "artists": "Wykonawcy"
+    }
+  },
+  "integrations": {
+    "eyebrow": "Integracje",
+    "heading": "Połączone usługi",
+    "publishedBy": "Wydawca: {{publisher}} · Identyfikator: {{appId}}"
+  },
+  "equalizer": {
+    "title": "Korektor i prędkość",
+    "subtitle": "Kształtuj brzmienie za pomocą 10-pasmowego korektora, presetów Nightcore/Daycore oraz kontroli prędkości i wysokości dźwięku.",
+    "speedSection": "Prędkość i wysokość",
+    "speedAria": "Prędkość odtwarzania i wysokość dźwięku",
+    "rateTitle": "Aktualna prędkość odtwarzania",
+    "pitchBadge": "Wysokość {{shift}}",
+    "pitchTitle": "Obliczone przesunięcie wysokości w półtonach (12 × log2(prędkość))",
+    "presetsAria": "Presety prędkości odtwarzania",
+    "custom": "Własne",
+    "sliderAria": "Mnożnik prędkości odtwarzania",
+    "exactSpeed": "Dokładna prędkość",
+    "preservePitch": "Zachowaj wysokość",
+    "preservePitchAria": "Zachowaj oryginalną wysokość dźwięku",
+    "resetSpeed": "Resetuj prędkość",
+    "resetSpeedTitle": "Przywróć prędkość 1.00× i włącz zachowanie wysokości",
+    "enableEq": "Włącz korektor",
+    "eqPresetAria": "Preset korektora",
+    "resetEq": "Resetuj EQ",
+    "bandResponse": "Charakterystyka pasm",
+    "bandAria": "Pasmo {{freq}} Hz",
+    "presets": {
+      "Normal": { "name": "Normalny", "description": "Oryginalne tempo i wysokość" },
+      "Nightcore": { "name": "Nightcore", "description": "Klasyczne przyspieszenie +16% z podbiciem tonu" },
+      "Fast Nightcore": { "name": "Szybki Nightcore", "description": "Dynamiczne +25% prędkości i wysokości" },
+      "Daycore": { "name": "Daycore", "description": "Obniżenie prędkości i tonu o 15%" },
+      "Slowed": { "name": "Slowed", "description": "Spokojniejsze tempo i ton (−10%)" }
+    },
+    "eqPresets": {
+      "Flat": "Płaski",
+      "Warm": "Ciepły",
+      "Bright": "Jasny",
+      "Bass": "Bas",
+      "Vocal": "Wokal",
+      "Club": "Klubowy"
     }
   }
 }

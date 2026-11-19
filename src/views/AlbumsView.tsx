@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Search } from 'lucide-react'
 import { AlbumCard } from '../components/AlbumCard'
 import { useAlbums } from '../hooks/useLibrary'
@@ -8,6 +9,7 @@ import '../styles/library.css'
 type AlbumSort = 'artist-asc' | 'title-asc' | 'title-desc' | 'year-desc' | 'year-asc' | 'tracks-desc'
 
 export function AlbumsView() {
+  const { t } = useTranslation('library')
   const { albums, loading } = useAlbums()
   const { navigate } = useAppStore()
   const [filterQuery, setFilterQuery] = useState('')
@@ -50,7 +52,7 @@ export function AlbumsView() {
   if (loading) {
     return (
       <div className="page">
-        <div className="loading-state">Loading albums…</div>
+        <div className="loading-state">{t('albums.loading')}</div>
       </div>
     )
   }
@@ -59,9 +61,9 @@ export function AlbumsView() {
     return (
       <div className="page">
         <div className="empty-state">
-          <div className="empty-state-title">No albums yet</div>
+          <div className="empty-state-title">{t('albums.emptyTitle')}</div>
           <div className="empty-state-body">
-            Go to Settings and scan your music library to get started.
+            {t('albums.emptyBody')}
           </div>
         </div>
       </div>
@@ -73,11 +75,11 @@ export function AlbumsView() {
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 className="page-title">Albums</h1>
+            <h1 className="page-title">{t('albums.title')}</h1>
             <p className="page-subtitle">
               {filterQuery
-                ? `Showing ${filteredAndSortedAlbums.length} of ${albums.length} albums`
-                : `${albums.length} albums`}
+                ? t('counts.showingOfAlbums', { shown: filteredAndSortedAlbums.length, total: albums.length })
+                : t('counts.album', { count: albums.length })}
             </p>
           </div>
 
@@ -86,7 +88,7 @@ export function AlbumsView() {
               <Search size={14} className="search-filter-icon" />
               <input
                 type="text"
-                placeholder="Filter albums..."
+                placeholder={t('albums.filterPlaceholder')}
                 value={filterQuery}
                 onChange={(e) => setFilterQuery(e.target.value)}
                 className="search-filter-input"
@@ -98,12 +100,12 @@ export function AlbumsView() {
               onChange={(e) => setSortBy(e.target.value as AlbumSort)}
               className="sort-select"
             >
-              <option value="artist-asc">Sort: Artist</option>
-              <option value="title-asc">Sort: Title (A-Z)</option>
-              <option value="title-desc">Sort: Title (Z-A)</option>
-              <option value="year-desc">Sort: Year (Newest)</option>
-              <option value="year-asc">Sort: Year (Oldest)</option>
-              <option value="tracks-desc">Sort: Most Tracks</option>
+              <option value="artist-asc">{t('albums.sort.artist')}</option>
+              <option value="title-asc">{t('albums.sort.titleAsc')}</option>
+              <option value="title-desc">{t('albums.sort.titleDesc')}</option>
+              <option value="year-desc">{t('albums.sort.yearDesc')}</option>
+              <option value="year-asc">{t('albums.sort.yearAsc')}</option>
+              <option value="tracks-desc">{t('albums.sort.mostTracks')}</option>
             </select>
           </div>
         </div>
@@ -112,8 +114,8 @@ export function AlbumsView() {
       <div className="page-body">
         {filteredAndSortedAlbums.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-title">No matching albums</div>
-            <div className="empty-state-body">No albums match your filter "{filterQuery}".</div>
+            <div className="empty-state-title">{t('albums.noMatchingTitle')}</div>
+            <div className="empty-state-body">{t('albums.noMatchingBody', { query: filterQuery })}</div>
           </div>
         ) : (
           <div className="albums-grid">

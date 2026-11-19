@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   ArrowDown,
   ArrowUp,
@@ -56,6 +57,7 @@ function TrackRow({
   onDragLeave,
   onDrop,
 }: TrackRowProps) {
+  const { t } = useTranslation(['library', 'common', 'playlists'])
   const fmt = useFormatDuration()
   const navigate = useAppStore((s) => s.navigate)
   const { playlists, addTrackToPlaylist, favoriteIds, toggleFavorite } = usePlaybackStore()
@@ -68,7 +70,7 @@ function TrackRow({
   }
 
   function handleCreatePlaylist() {
-    const name = window.prompt('New playlist name', track.title)?.trim()
+    const name = window.prompt(t('playlists:actions.newPlaylistPrompt'), track.title)?.trim()
     if (!name) return
     usePlaybackStore.getState().createPlaylist(name, [track])
     setContextMenu(null)
@@ -100,7 +102,7 @@ function TrackRow({
       >
         <div className={`track-num ${isPlaying ? 'track-num--playing' : ''}`}>
           {draggable ? (
-            <span className="drag-handle" title="Drag to reorder">
+            <span className="drag-handle" title={t('common:actions.dragToReorder')}>
               <GripVertical size={13} />
             </span>
           ) : isPlaying ? (
@@ -116,7 +118,7 @@ function TrackRow({
             e.stopPropagation()
             void toggleFavorite(track)
           }}
-          title={isFav ? 'Remove from Favorites' : 'Add to Favorites'}
+          title={isFav ? t('common:actions.removeFromFavorites') : t('common:actions.addToFavorites')}
         >
           <Heart size={14} fill={isFav ? 'currentColor' : 'none'} />
         </button>
@@ -150,7 +152,7 @@ function TrackRow({
               className="queue-icon-btn"
               disabled={index === 0}
               onClick={onMoveUp}
-              title="Move up"
+              title={t('common:actions.moveUp')}
               style={{ opacity: index === 0 ? 0.3 : 1 }}
             >
               <ArrowUp size={13} />
@@ -159,7 +161,7 @@ function TrackRow({
               className="queue-icon-btn"
               disabled={index === totalTracks - 1}
               onClick={onMoveDown}
-              title="Move down"
+              title={t('common:actions.moveDown')}
               style={{ opacity: index === totalTracks - 1 ? 0.3 : 1 }}
             >
               <ArrowDown size={13} />
@@ -167,7 +169,7 @@ function TrackRow({
             <button
               className="queue-icon-btn queue-icon-btn--danger"
               onClick={onRemove}
-              title="Remove from playlist"
+              title={t('common:actions.removeFromPlaylist')}
             >
               <Trash2 size={13} />
             </button>
@@ -190,7 +192,7 @@ function TrackRow({
                 setContextMenu(null)
               }}
             >
-              {isFav ? 'Remove from Favorites' : 'Add to Favorites'}
+              {isFav ? t('common:actions.removeFromFavorites') : t('common:actions.addToFavorites')}
             </button>
 
             {onRemove && (
@@ -203,13 +205,13 @@ function TrackRow({
                   setContextMenu(null)
                 }}
               >
-                Remove from playlist
+                {t('common:actions.removeFromPlaylist')}
               </button>
             )}
 
-            <div className="context-menu-header">Add to playlist</div>
+            <div className="context-menu-header">{t('playlists:actions.addToPlaylist')}</div>
             {playlists.length === 0 ? (
-              <div className="context-menu-empty">No playlists yet</div>
+              <div className="context-menu-empty">{t('playlists:empty.noPlaylists')}</div>
             ) : (
               playlists.map((playlist) => (
                 <button
@@ -230,7 +232,7 @@ function TrackRow({
               className="context-menu-item context-menu-item--primary"
               onClick={handleCreatePlaylist}
             >
-              New playlist…
+              {t('playlists:actions.newPlaylistEllipsis')}
             </button>
           </div>
         </div>
@@ -254,6 +256,7 @@ export function TracksTable({
   onRemoveTrack,
   onMoveTrack,
 }: TracksTableProps) {
+  const { t } = useTranslation('library')
   const { play, currentTrack, isPlaying } = usePlaybackStore()
   const hasActions = Boolean(onRemoveTrack || onMoveTrack)
   const isDraggable = Boolean(onMoveTrack)
@@ -328,38 +331,38 @@ export function TracksTable({
   return (
     <div className="tracks-table">
       <div className={headerClasses}>
-        <span>#</span>
-        <span title="Favorite">
+        <span>{t('tracks.columns.number')}</span>
+        <span title={t('favorites.title')}>
           <Heart size={12} />
         </span>
         <span
           className={enableSorting ? 'sortable-header' : ''}
           onClick={() => handleHeaderSort('title')}
         >
-          Title {renderSortIndicator('title')}
+          {t('tracks.columns.title')} {renderSortIndicator('title')}
         </span>
         {showAlbum && (
           <span
             className={enableSorting ? 'sortable-header' : ''}
             onClick={() => handleHeaderSort('album')}
           >
-            Album {renderSortIndicator('album')}
+            {t('tracks.columns.album')} {renderSortIndicator('album')}
           </span>
         )}
         <span
           className={enableSorting ? 'sortable-header' : ''}
           onClick={() => handleHeaderSort('year')}
         >
-          Year {renderSortIndicator('year')}
+          {t('tracks.columns.year')} {renderSortIndicator('year')}
         </span>
         <span
           style={{ textAlign: 'right', justifyContent: 'flex-end' }}
           className={enableSorting ? 'sortable-header' : ''}
           onClick={() => handleHeaderSort('duration')}
         >
-          Time {renderSortIndicator('duration')}
+          {t('tracks.columns.time')} {renderSortIndicator('duration')}
         </span>
-        {hasActions && <span style={{ textAlign: 'center' }}>Actions</span>}
+        {hasActions && <span style={{ textAlign: 'center' }}>{t('tracks.columns.actions')}</span>}
       </div>
 
       {sortedTracks.map((track, i) => (
@@ -417,6 +420,7 @@ export function TracksTable({
 // ---------------------------------------------------------------------------
 
 export function TracksView() {
+  const { t } = useTranslation('library')
   const { tracks, loading } = useTracks({ limit: 1000 })
   const [filterQuery, setFilterQuery] = useState('')
   const fmt = useFormatDuration()
@@ -447,7 +451,7 @@ export function TracksView() {
   if (loading) {
     return (
       <div className="page">
-        <div className="loading-state">Loading tracks…</div>
+        <div className="loading-state">{t('tracks.loading')}</div>
       </div>
     )
   }
@@ -456,9 +460,9 @@ export function TracksView() {
     return (
       <div className="page">
         <div className="empty-state">
-          <div className="empty-state-title">No tracks yet</div>
+          <div className="empty-state-title">{t('tracks.emptyTitle')}</div>
           <div className="empty-state-body">
-            Go to Settings and scan your music library to get started.
+            {t('tracks.emptyBody')}
           </div>
         </div>
       </div>
@@ -470,11 +474,11 @@ export function TracksView() {
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 className="page-title">Tracks</h1>
+            <h1 className="page-title">{t('tracks.title')}</h1>
             <p className="page-subtitle">
               {filterQuery
-                ? `Showing ${filteredTracks.length} of ${tracks.length} tracks · ${fmt(totalDuration)}`
-                : `${tracks.length} tracks · ${fmt(totalDuration)}`}
+                ? t('counts.showingOfTracks', { shown: filteredTracks.length, total: tracks.length, duration: fmt(totalDuration) })
+                : t('counts.tracksDuration', { count: tracks.length, duration: fmt(totalDuration) })}
             </p>
           </div>
 
@@ -482,7 +486,7 @@ export function TracksView() {
             <Search size={14} className="search-filter-icon" />
             <input
               type="text"
-              placeholder="Filter tracks..."
+              placeholder={t('tracks.filterPlaceholder')}
               value={filterQuery}
               onChange={(e) => setFilterQuery(e.target.value)}
               className="search-filter-input"
@@ -494,8 +498,8 @@ export function TracksView() {
       <div className="page-body">
         {filteredTracks.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-title">No matching tracks</div>
-            <div className="empty-state-body">No tracks match your filter "{filterQuery}".</div>
+            <div className="empty-state-title">{t('tracks.noMatchingTitle')}</div>
+            <div className="empty-state-body">{t('tracks.noMatchingBody', { query: filterQuery })}</div>
           </div>
         ) : (
           <TracksTable tracks={filteredTracks} showAlbum enableSorting />

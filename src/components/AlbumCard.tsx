@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Disc3 } from 'lucide-react'
 import { useArtwork } from '../hooks/useLibrary'
 import { usePlaybackStore } from '../store'
@@ -10,6 +11,7 @@ interface AlbumCardProps {
 }
 
 function AlbumCard({ album, onClick }: AlbumCardProps) {
+  const { t } = useTranslation(['playlists', 'common'])
   const artworkSrc = useArtwork(album.artwork_id)
   const playlists = usePlaybackStore((s) => s.playlists)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
@@ -28,7 +30,7 @@ function AlbumCard({ album, onClick }: AlbumCardProps) {
   }
 
   async function createPlaylistFromAlbum() {
-    const name = window.prompt('New playlist name', album.title)?.trim()
+    const name = window.prompt(t('actions.newPlaylistPrompt'), album.title)?.trim()
     if (!name) return
 
     const tracks = await window.library.tracks({ albumId: album.id })
@@ -52,7 +54,7 @@ function AlbumCard({ album, onClick }: AlbumCardProps) {
         </div>
         <div className="album-info">
           <div className="album-title">{album.title}</div>
-          <div className="album-artist">{album.artist_name ?? 'Unknown Artist'}</div>
+          <div className="album-artist">{album.artist_name ?? t('common:fallbacks.unknownArtistTitleCase')}</div>
           {album.year && <div className="album-year">{album.year}</div>}
         </div>
       </div>
@@ -64,9 +66,9 @@ function AlbumCard({ album, onClick }: AlbumCardProps) {
             style={{ left: contextMenu.x, top: contextMenu.y }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="context-menu-header">Add album to playlist</div>
+            <div className="context-menu-header">{t('actions.addAlbumToPlaylist')}</div>
             {playlists.length === 0 ? (
-              <div className="context-menu-empty">No playlists yet</div>
+              <div className="context-menu-empty">{t('empty.noPlaylists')}</div>
             ) : (
               playlists.map((playlist) => (
                 <button
@@ -82,7 +84,7 @@ function AlbumCard({ album, onClick }: AlbumCardProps) {
               ))
             )}
             <button type="button" className="context-menu-item context-menu-item--primary" onClick={() => { void createPlaylistFromAlbum() }}>
-              New playlist…
+              {t('actions.newPlaylistEllipsis')}
             </button>
           </div>
         </div>

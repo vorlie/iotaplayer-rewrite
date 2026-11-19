@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Mic2, Play } from 'lucide-react'
 import { AlbumCard } from '../components/AlbumCard'
 import { useAlbums, useArtist, useFormatDuration, useTracks } from '../hooks/useLibrary'
@@ -5,6 +6,7 @@ import { useAppStore, usePlaybackStore } from '../store'
 import '../styles/library.css'
 
 export function ArtistDetailView() {
+  const { t } = useTranslation(['library', 'common'])
   const artistId = useAppStore((s) => s.nav.artistId)
   const { navigate } = useAppStore()
   const { artist, loading } = useArtist(artistId)
@@ -14,13 +16,13 @@ export function ArtistDetailView() {
   const fmt = useFormatDuration()
 
   if (loading) {
-    return <div className="loading-state">Loading…</div>
+    return <div className="loading-state">{t('common:states.loading')}</div>
   }
 
   if (!artist) {
     return (
       <div className="empty-state">
-        <div className="empty-state-title">Artist not found</div>
+        <div className="empty-state-title">{t('artists.notFound')}</div>
       </div>
     )
   }
@@ -37,7 +39,7 @@ export function ArtistDetailView() {
           onClick={() => navigate('artists')}
         >
           <ArrowLeft size={14} />
-          Artists
+          {t('artists.title')}
         </button>
 
         <div
@@ -53,22 +55,22 @@ export function ArtistDetailView() {
         </div>
 
         <div className="detail-info">
-          <div className="detail-kind">Artist</div>
+          <div className="detail-kind">{t('artists.artist')}</div>
           <div className="detail-title">{artist.name}</div>
           <div className="detail-meta">
-            <span>{artist.album_count} albums</span>
+            <span>{t('counts.album', { count: artist.album_count })}</span>
             <span className="detail-meta-dot" />
-            <span>{artist.track_count} tracks</span>
+            <span>{t('counts.track', { count: artist.track_count })}</span>
             <span className="detail-meta-dot" />
             <span>{fmt(totalDuration)}</span>
           </div>
 
           <button
             className="detail-play-btn"
-            onClick={() => tracks.length > 0 && play(tracks[0], tracks, artist?.name ?? 'Artist')} 
+            onClick={() => tracks.length > 0 && play(tracks[0], tracks, artist?.name ?? t('artists.artist'))} 
           >
             <Play size={14} fill="currentColor" />
-            Play All
+            {t('common:actions.playAll')}
           </button>
         </div>
       </div>
@@ -78,7 +80,7 @@ export function ArtistDetailView() {
         {albums.length > 0 && (
           <div style={{ marginBottom: 'var(--space-8)' }}>
             <div className="section-header">
-              <h2 className="section-title">Albums</h2>
+              <h2 className="section-title">{t('albums.title')}</h2>
             </div>
             <div className="albums-grid">
               {albums.map((album) => (

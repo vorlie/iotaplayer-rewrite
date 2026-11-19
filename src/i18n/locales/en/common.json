@@ -18,6 +18,8 @@
   },
   "actions": {
     "save": "Save",
+    "saveChanges": "Save changes",
+    "saving": "Saving…",
     "cancel": "Cancel",
     "reset": "Reset",
     "delete": "Delete",
@@ -25,11 +27,25 @@
     "browse": "Browse",
     "clear": "Clear",
     "close": "Close",
-    "checkAgain": "Check Again"
+    "checkAgain": "Check Again",
+    "play": "Play",
+    "playAll": "Play All",
+    "playAllLower": "Play all",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "removeFromQueue": "Remove from queue",
+    "removeFromPlaylist": "Remove from playlist",
+    "dragToReorder": "Drag to reorder",
+    "addToFavorites": "Add to Favorites",
+    "removeFromFavorites": "Remove from Favorites"
   },
   "fallbacks": {
     "unknownTitle": "Unknown title",
     "unknownArtist": "Unknown artist",
+    "unknownArtistTitleCase": "Unknown Artist",
     "unknownAlbum": "Unknown album"
+  },
+  "states": {
+    "loading": "Loading…"
   }
 }

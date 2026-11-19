@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Heart, Play } from 'lucide-react'
 import { useFormatDuration } from '../hooks/useLibrary'
 import { usePlaybackStore } from '../store'
@@ -7,6 +8,7 @@ import { TracksTable } from './TracksView'
 import '../styles/library.css'
 
 export function FavoritesView() {
+  const { t } = useTranslation(['library', 'common'])
   const [tracks, setTracks] = useState<Track[]>([])
   const [loading, setLoading] = useState(() => typeof window !== 'undefined' && 'library' in window)
   const fmt = useFormatDuration()
@@ -38,7 +40,7 @@ export function FavoritesView() {
   if (loading) {
     return (
       <div className="page">
-        <div className="loading-state">Loading favorites…</div>
+        <div className="loading-state">{t('favorites.loading')}</div>
       </div>
     )
   }
@@ -47,14 +49,14 @@ export function FavoritesView() {
     return (
       <div className="page">
         <div className="page-header">
-          <h1 className="page-title">Favorites</h1>
-          <p className="page-subtitle">Tracks you've starred</p>
+          <h1 className="page-title">{t('favorites.title')}</h1>
+          <p className="page-subtitle">{t('favorites.subtitle')}</p>
         </div>
         <div className="page-body">
           <div className="empty-state">
-            <div className="empty-state-title">No favorites yet</div>
+            <div className="empty-state-title">{t('favorites.emptyTitle')}</div>
             <div className="empty-state-body">
-              Click the heart icon on any track in your library to add it to your favorites.
+              {t('favorites.emptyBody')}
             </div>
           </div>
         </div>
@@ -79,10 +81,10 @@ export function FavoritesView() {
         </div>
 
         <div className="detail-info">
-          <div className="detail-kind">Collection</div>
-          <div className="detail-title">Favorites</div>
+          <div className="detail-kind">{t('favorites.collection')}</div>
+          <div className="detail-title">{t('favorites.title')}</div>
           <div className="detail-meta">
-            <span>{tracks.length} tracks</span>
+            <span>{t('counts.track', { count: tracks.length })}</span>
             <span className="detail-meta-dot" />
             <span>{fmt(totalDuration)}</span>
           </div>
@@ -90,10 +92,10 @@ export function FavoritesView() {
           <div>
             <button
               className="detail-play-btn"
-              onClick={() => playQueue(tracks, undefined, { name: 'Favorites' })}
+              onClick={() => playQueue(tracks, undefined, { name: t('favorites.title') })}
             >
               <Play size={14} fill="currentColor" />
-              Play all
+              {t('common:actions.playAllLower')}
             </button>
           </div>
         </div>

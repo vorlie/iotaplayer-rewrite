@@ -1,9 +1,11 @@
+import { useTranslation } from 'react-i18next'
 import { Heart, Maximize2, Music2, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward, Volume2 } from 'lucide-react'
 import { useAppStore, usePlaybackStore } from '../store'
 import { useArtwork, useFormatDuration } from '../hooks/useLibrary'
 import '../styles/layout.css'
 
 export function PlayerBar() {
+  const { t } = useTranslation(['player', 'common'])
   const toggleFullscreen = useAppStore((s) => s.toggleFullscreenNowPlaying)
   const {
     currentTrack,
@@ -49,7 +51,7 @@ export function PlayerBar() {
         <div
           className="player-artwork"
           onClick={currentTrack ? toggleFullscreen : undefined}
-          title={currentTrack ? 'Open Fullscreen Now Playing (F)' : undefined}
+          title={currentTrack ? t('controls.openFullscreen') : undefined}
           style={{ cursor: currentTrack ? 'pointer' : 'default' }}
         >
           {artworkSrc ? (
@@ -63,7 +65,7 @@ export function PlayerBar() {
             <div
               className="player-track-info"
               onClick={toggleFullscreen}
-              title="Open Fullscreen Now Playing (F)"
+              title={t('controls.openFullscreen')}
               style={{ cursor: 'pointer' }}
             >
               <div className="player-track-title">{currentTrack.title}</div>
@@ -74,7 +76,7 @@ export function PlayerBar() {
             <button
               className={`player-fav-btn ${isFav ? 'is-fav' : ''}`}
               onClick={() => toggleFavorite(currentTrack)}
-              title={isFav ? 'Remove from Favorites' : 'Add to Favorites'}
+              title={isFav ? t('common:actions.removeFromFavorites') : t('common:actions.addToFavorites')}
             >
               <Heart size={16} fill={isFav ? 'currentColor' : 'none'} />
             </button>
@@ -82,7 +84,7 @@ export function PlayerBar() {
         ) : (
           <div className="player-track-info">
             <div className="player-track-title" style={{ color: 'var(--color-text-3)' }}>
-              No track playing
+              {t('status.noTrackPlaying')}
             </div>
           </div>
         )}
@@ -91,22 +93,22 @@ export function PlayerBar() {
       {/* Controls */}
       <div className="player-controls">
         <div className="player-buttons">
-          <button className={`player-btn ${shuffle ? 'is-active' : ''}`} onClick={toggleShuffle} title={shuffle ? 'Shuffle on' : 'Shuffle off'}>
+          <button className={`player-btn ${shuffle ? 'is-active' : ''}`} onClick={toggleShuffle} title={shuffle ? t('controls.shuffleOn') : t('controls.shuffleOff')}>
             <Shuffle size={14} />
           </button>
-          <button className="player-btn" onClick={previous} title="Previous">
+          <button className="player-btn" onClick={previous} title={t('controls.previous')}>
             <SkipBack size={16} />
           </button>
-          <button className="player-btn player-btn--play" onClick={toggle} title="Play/Pause">
+          <button className="player-btn player-btn--play" onClick={toggle} title={t('controls.playPause')}>
             {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
           </button>
-          <button className="player-btn" onClick={next} title="Next">
+          <button className="player-btn" onClick={next} title={t('controls.next')}>
             <SkipForward size={16} />
           </button>
           <button
             className={`player-btn ${repeatMode !== 'off' ? 'is-active' : ''} ${repeatMode === 'one' ? 'is-repeat-one' : ''}`}
             onClick={toggleRepeat}
-            title={repeatMode === 'off' ? 'Repeat off' : repeatMode === 'all' ? 'Repeat all' : 'Repeat one'}
+            title={repeatMode === 'off' ? t('controls.repeatOff') : repeatMode === 'all' ? t('controls.repeatAll') : t('controls.repeatOne')}
           >
             {repeatMode === 'one' ? <Repeat1 size={14} /> : <Repeat size={14} />}
           </button>
@@ -125,7 +127,7 @@ export function PlayerBar() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifySelf: 'end' }}>
         <span
           className={`player-backend-badge player-backend-badge--${activeBackend}`}
-          title={`Active playback backend: ${activeBackend.toUpperCase()}`}
+          title={t('status.backendTitle', { backend: activeBackend.toUpperCase() })}
         >
           {activeBackend}
         </span>
@@ -139,7 +141,7 @@ export function PlayerBar() {
           type="button"
           className="player-btn"
           onClick={toggleFullscreen}
-          title="Fullscreen Now Playing (F)"
+          title={t('controls.openFullscreen')}
           style={{ width: 30, height: 30 }}
         >
           <Maximize2 size={15} />
