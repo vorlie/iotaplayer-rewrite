@@ -7,7 +7,8 @@
   "categories": {
     "playback": "Playback",
     "library": "Library",
-    "integrations": "Integrations"
+    "integrations": "Integrations",
+    "credits": "Credits"
   },
   "language": {
     "title": "Application Language",
@@ -100,6 +101,15 @@
     "eyebrow": "Integrations",
     "heading": "Connected services",
     "publishedBy": "Published by {{publisher}} · Identifier: {{appId}}"
+  },
+  "credits": {
+    "eyebrow": "Credits & Notices",
+    "heading": "Acknowledgements & Licenses",
+    "inspirationsTitle": "Visual & Format Acknowledgements",
+    "stillDesc": "Visual inspiration for the optional Still ambient glass fullscreen style.",
+    "lyricsfileDesc": "Word- and line-synchronized YAML lyrics format specification.",
+    "librariesTitle": "Open-Source Libraries & Runtime",
+    "librariesSubtitle": "Full license notices are available in THIRD_PARTY_NOTICES.md."
   },
   "equalizer": {
     "title": "Equalizer & Speed",

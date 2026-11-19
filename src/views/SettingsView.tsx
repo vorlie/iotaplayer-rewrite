@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AudioLines, ExternalLink, Globe, Library, RefreshCw, ShieldCheck, Sparkles, Trash2 } from 'lucide-react'
+import { AudioLines, ExternalLink, Globe, Info, Library, RefreshCw, ShieldCheck, Sparkles, Trash2 } from 'lucide-react'
 import { applyAppLanguage } from '../i18n'
 import { formatNumber } from '../i18n/format'
 import { notifyLyricsReload } from '../hooks/useLibrary'
@@ -14,6 +14,7 @@ const settingsCategories = [
   { id: 'playback', Icon: AudioLines },
   { id: 'library', Icon: Library },
   { id: 'integrations', Icon: ShieldCheck },
+  { id: 'credits', Icon: Info },
 ] as const
 
 export function SettingsView() {
@@ -455,6 +456,105 @@ export function SettingsView() {
                     <span>vorlie.pl</span>
                     <ExternalLink size={13} />
                   </a>
+                </div>
+              </div>
+            </section>
+
+            <section id="credits" className="settings-section">
+              <header className="settings-section__header">
+                <div>
+                  <p className="settings-section__eyebrow">{t('credits.eyebrow')}</p>
+                  <h2>{t('credits.heading')}</h2>
+                </div>
+                <Info size={16} className="settings-section__icon" />
+              </header>
+
+              <div className="settings-card">
+                <div className="settings-field">
+                  <label>{t('credits.inspirationsTitle')}</label>
+                  <div style={{ display: 'grid', gap: 8, marginTop: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--color-text-1)' }}>
+                          Still — Minimal Wallpaper for Your Focus
+                        </div>
+                        <small>{t('credits.stillDesc')}</small>
+                      </div>
+                      <a
+                        href="https://steamcommunity.com/sharedfiles/filedetails/?id=3829782620"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="settings-button settings-button--secondary"
+                        style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '5px 10px' }}
+                      >
+                        <span>Workshop #3829782620</span>
+                        <ExternalLink size={12} />
+                      </a>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--color-text-1)' }}>
+                          Lyricsfile 1.0 Specification
+                        </div>
+                        <small>{t('credits.lyricsfileDesc')}</small>
+                      </div>
+                      <a
+                        href="https://github.com/tranxuanthang/lyricsfile/blob/main/SPECIFICATION.md"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="settings-button settings-button--secondary"
+                        style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '5px 10px' }}
+                      >
+                        <span>GitHub</span>
+                        <ExternalLink size={12} />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="settings-field" style={{ marginTop: 8 }}>
+                  <label>{t('credits.librariesTitle')}</label>
+                  <small>{t('credits.librariesSubtitle')}</small>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))',
+                      gap: 8,
+                      marginTop: 6,
+                    }}
+                  >
+                    {[
+                      ['Electron', 'MIT'],
+                      ['React & React DOM', 'MIT'],
+                      ['Zustand', 'MIT'],
+                      ['i18next & react-i18next', 'MIT'],
+                      ['Lucide Icons', 'ISC'],
+                      ['better-sqlite3', 'MIT'],
+                      ['music-metadata', 'MIT'],
+                      ['discord-rpc', 'MIT'],
+                      ['mpv (optional)', 'GPL / LGPL'],
+                      ['Outfit Font', 'OFL-1.1'],
+                    ].map(([name, license]) => (
+                      <div
+                        key={name}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 8,
+                          padding: '7px 10px',
+                          borderRadius: 8,
+                          background: 'var(--color-surface-2)',
+                          border: '1px solid var(--color-border-subtle)',
+                          fontSize: 12,
+                        }}
+                      >
+                        <span style={{ fontWeight: 600, color: 'var(--color-text-1)' }}>{name}</span>
+                        <span style={{ color: 'var(--color-text-3)', fontSize: 11 }}>{license}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </section>
