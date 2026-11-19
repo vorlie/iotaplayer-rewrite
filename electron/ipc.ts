@@ -226,8 +226,12 @@ export function registerIpcHandlers(): void {
     if (!track) {
       return { source: null, format: null, syncQuality: 'none', lines: [], synchronized: false }
     }
-    const effectivePreference = preference ?? getAppSettings().lyricsSourcePreference ?? 'embedded'
-    return getLyrics(track.path, effectivePreference)
+    const settings = getAppSettings()
+    const effectivePreference = preference ?? settings.lyricsSourcePreference ?? 'embedded'
+    return getLyrics(track.path, {
+      preference: effectivePreference,
+      ignoreEmbedded: settings.lyricsIgnoreEmbedded,
+    })
   })
 
   ipcMain.handle(IPC.LIBRARY_PLAYLISTS, () => {

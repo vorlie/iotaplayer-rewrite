@@ -47,7 +47,9 @@
       "embedded": "Preferuj teksty osadzone w plikach audio, a w razie braku użyj plików obok utworu.",
       "synchronized": "Preferuj teksty o najwyższej jakości synchronizacji, niezależnie od źródła.",
       "sidecar": "Preferuj zewnętrzne pliki z tekstem, a w razie braku użyj tekstów osadzonych."
-    }
+    },
+    "ignoreEmbeddedLabel": "Ignoruj osadzone teksty",
+    "ignoreEmbeddedHint": "W trybie Zsynchronizowane pomijaj tekst osadzony w pliku audio i używaj wyłącznie plików zewnętrznych."
   },
   "discord": {
     "title": "Discord Rich Presence",

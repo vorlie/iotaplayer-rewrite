@@ -116,6 +116,7 @@ interface AppSettings {
   equalizerPreset: string
   equalizerBands: number[]
   lyricsSourcePreference: LyricsSourcePreference
+  lyricsIgnoreEmbedded: boolean
   playbackRate: number
   preservePitch: boolean
   language: AppLanguage

@@ -25,6 +25,7 @@ export function SettingsView() {
   const [lastResult, setLastResult] = useState<ScanResult | null>(library.lastScanResult)
   const [backendMode, setBackendMode] = useState<PlaybackBackendMode>('auto')
   const [lyricsSourcePreference, setLyricsSourcePreference] = useState<LyricsSourcePreference>('embedded')
+  const [lyricsIgnoreEmbedded, setLyricsIgnoreEmbedded] = useState(false)
   const [language, setLanguage] = useState<AppLanguage>('system')
   const [discordEnabled, setDiscordEnabled] = useState(true)
   const [discordClientId, setDiscordClientId] = useState('')
@@ -43,6 +44,7 @@ export function SettingsView() {
       setImgurClientId(settings.imgurClientId)
       setLibraryRoot(settings.libraryRoot || DEFAULT_LIBRARY_ROOT)
       setLyricsSourcePreference(settings.lyricsSourcePreference ?? 'embedded')
+      setLyricsIgnoreEmbedded(Boolean(settings.lyricsIgnoreEmbedded))
       setLanguage(settings.language ?? 'system')
     })
     void window.appInfo?.getInfo().then((info) => {
@@ -57,6 +59,12 @@ export function SettingsView() {
   async function handleLyricsPreferenceChange(nextPreference: LyricsSourcePreference) {
     setLyricsSourcePreference(nextPreference)
     await window.settings.set({ lyricsSourcePreference: nextPreference })
+    notifyLyricsReload()
+  }
+
+  async function handleLyricsIgnoreEmbeddedChange(ignore: boolean) {
+    setLyricsIgnoreEmbedded(ignore)
+    await window.settings.set({ lyricsIgnoreEmbedded: ignore })
     notifyLyricsReload()
   }
 
@@ -75,6 +83,7 @@ export function SettingsView() {
         imgurClientId,
         libraryRoot,
         lyricsSourcePreference,
+        lyricsIgnoreEmbedded,
         language,
       })
       await window.discord.setEnabled(discordEnabled)
@@ -234,6 +243,20 @@ export function SettingsView() {
                     {lyricsSourcePreference === 'sidecar' && t('lyrics.hints.sidecar')}
                   </small>
                 </div>
+
+                {lyricsSourcePreference === 'synchronized' && (
+                  <div className="settings-toggle-row">
+                    <div>
+                      <h3>{t('lyrics.ignoreEmbeddedLabel')}</h3>
+                      <p>{t('lyrics.ignoreEmbeddedHint')}</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={lyricsIgnoreEmbedded}
+                      onChange={(e) => void handleLyricsIgnoreEmbeddedChange(e.target.checked)}
+                    />
+                  </div>
+                )}
 
                 <div className="settings-toggle-row">
                   <div>

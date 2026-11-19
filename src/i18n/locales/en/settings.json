@@ -47,7 +47,9 @@
       "embedded": "Prefer lyrics embedded in audio files, then fall back to sidecars.",
       "synchronized": "Prefer lyrics with the highest synchronization quality, regardless of source.",
       "sidecar": "Prefer external lyrics files, then fall back to embedded lyrics."
-    }
+    },
+    "ignoreEmbeddedLabel": "Ignore embedded lyrics",
+    "ignoreEmbeddedHint": "When Synchronized mode is active, skip embedded lyrics and use only external sidecar files."
   },
   "discord": {
     "title": "Discord Rich Presence",

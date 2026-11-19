@@ -810,3 +810,29 @@ test('word-level synchronization: works with Enhanced LRC inline word timestamps
   assert.equal(state.words[2].status, 'upcoming')
 })
 
+test('resolveLyricsCandidates ignores embedded lyrics in synchronized mode when ignoreEmbedded is true', () => {
+  const candidates = [
+    {
+      source: 'embedded',
+      format: 'embedded',
+      syncQuality: 'line',
+      synchronized: true,
+      lines: [{ timestamp: 1, text: 'Embedded line' }],
+    },
+    {
+      source: 'sidecar-lrc',
+      format: 'lrc',
+      syncQuality: 'line',
+      synchronized: true,
+      lines: [{ timestamp: 1, text: 'Sidecar line' }],
+    },
+  ]
+
+  const defaultResult = resolveLyricsCandidates(candidates, 'synchronized')
+  assert.equal(defaultResult.source, 'embedded')
+
+  const ignoredResult = resolveLyricsCandidates(candidates, 'synchronized', { ignoreEmbedded: true })
+  assert.equal(ignoredResult.source, 'sidecar-lrc')
+  assert.equal(ignoredResult.lines[0].text, 'Sidecar line')
+})
+

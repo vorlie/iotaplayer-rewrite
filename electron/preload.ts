@@ -504,6 +504,7 @@ const settingsAPI = {
     equalizerPreset: string
     equalizerBands: number[]
     lyricsSourcePreference: LyricsSourcePreference
+    lyricsIgnoreEmbedded: boolean
     playbackRate: number
     preservePitch: boolean
     language: 'system' | 'en' | 'pl'
@@ -518,6 +519,7 @@ const settingsAPI = {
     equalizerPreset?: string
     equalizerBands?: number[]
     lyricsSourcePreference?: LyricsSourcePreference
+    lyricsIgnoreEmbedded?: boolean
     playbackRate?: number
     preservePitch?: boolean
     language?: 'system' | 'en' | 'pl'

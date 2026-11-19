@@ -33,6 +33,7 @@ export interface AppSettings {
   equalizerPreset: string
   equalizerBands: number[]
   lyricsSourcePreference: LyricsSourcePreference
+  lyricsIgnoreEmbedded: boolean
   playbackRate: number
   preservePitch: boolean
   language: AppLanguage
@@ -92,6 +93,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   equalizerPreset: 'Flat',
   equalizerBands: [...DEFAULT_EQUALIZER_BANDS],
   lyricsSourcePreference: 'embedded',
+  lyricsIgnoreEmbedded: false,
   playbackRate: DEFAULT_PLAYBACK_RATE,
   preservePitch: DEFAULT_PRESERVE_PITCH,
   language: 'system',
@@ -137,6 +139,7 @@ export function getAppSettings(): AppSettings {
       equalizerPreset: parsed.equalizerPreset ?? DEFAULT_SETTINGS.equalizerPreset,
       equalizerBands: normalizeEqualizerBands(parsed.equalizerBands),
       lyricsSourcePreference: normalizeLyricsSourcePreference(parsed.lyricsSourcePreference),
+      lyricsIgnoreEmbedded: Boolean(parsed.lyricsIgnoreEmbedded ?? DEFAULT_SETTINGS.lyricsIgnoreEmbedded),
       playbackRate: normalizePlaybackRate(parsed.playbackRate, DEFAULT_SETTINGS.playbackRate),
       preservePitch: normalizePreservePitch(parsed.preservePitch, DEFAULT_SETTINGS.preservePitch),
       language: normalizeAppLanguage(parsed.language),
@@ -157,6 +160,9 @@ export function setAppSettings(nextSettings: Partial<AppSettings>): AppSettings 
     equalizerBands: normalizeEqualizerBands(nextSettings.equalizerBands ?? current.equalizerBands),
     lyricsSourcePreference: normalizeLyricsSourcePreference(
       nextSettings.lyricsSourcePreference ?? current.lyricsSourcePreference,
+    ),
+    lyricsIgnoreEmbedded: Boolean(
+      nextSettings.lyricsIgnoreEmbedded ?? current.lyricsIgnoreEmbedded,
     ),
     playbackRate: normalizePlaybackRate(
       nextSettings.playbackRate ?? current.playbackRate,

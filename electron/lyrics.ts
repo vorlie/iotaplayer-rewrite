@@ -1035,8 +1035,16 @@ function isEmbeddedSource(source: LyricsSource): boolean {
 export function resolveLyricsCandidates(
   candidates: LyricsResult[],
   preference: LyricsSourcePreference = 'embedded',
+  options?: { ignoreEmbedded?: boolean },
 ): LyricsResult {
-  const valid = candidates.filter((c) => c && Array.isArray(c.lines) && c.lines.length > 0)
+  const ignoreEmbedded = preference === 'synchronized' && Boolean(options?.ignoreEmbedded)
+  const valid = candidates.filter(
+    (c) =>
+      c &&
+      Array.isArray(c.lines) &&
+      c.lines.length > 0 &&
+      !(ignoreEmbedded && isEmbeddedSource(c.source)),
+  )
   if (valid.length === 0) {
     return { ...EMPTY_LYRICS }
   }
@@ -1120,14 +1128,21 @@ export function resolveLyricsCandidates(
 
 export async function getLyrics(
   filePath: string,
-  preferenceOrOptions?: LyricsSourcePreference | { preference?: LyricsSourcePreference },
+  preferenceOrOptions?:
+    | LyricsSourcePreference
+    | { preference?: LyricsSourcePreference; ignoreEmbedded?: boolean },
 ): Promise<LyricsResult> {
   const preference: LyricsSourcePreference =
     typeof preferenceOrOptions === 'string'
       ? preferenceOrOptions
       : preferenceOrOptions?.preference ?? 'embedded'
+  const ignoreEmbedded =
+    typeof preferenceOrOptions === 'object' &&
+    preferenceOrOptions !== null &&
+    Boolean(preferenceOrOptions.ignoreEmbedded) &&
+    preference === 'synchronized'
 
-  const embedded = await getEmbeddedLyrics(filePath)
+  const embedded = ignoreEmbedded ? { ...EMPTY_LYRICS } : await getEmbeddedLyrics(filePath)
   if (preference === 'embedded' && embedded.lines.length > 0) {
     return embedded
   }
@@ -1138,5 +1153,5 @@ export async function getLyrics(
     ...sidecars,
   ]
 
-  return resolveLyricsCandidates(allCandidates, preference)
+  return resolveLyricsCandidates(allCandidates, preference, { ignoreEmbedded })
 }
