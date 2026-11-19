@@ -653,30 +653,94 @@ export function FullscreenNowPlaying() {
             {viewMode !== 'artwork' && lyrics.lines.length > 0 && (
               <div className={`still-lyrics-stage ${!isPlaying ? 'is-paused' : ''}`}>
                 {lyrics.synchronized && activeLyricIndex >= 0 ? (
-                  <>
-                    <button
-                      type="button"
-                      className="still-ly-line is-current"
-                      onClick={() => {
-                        const line = lyrics.lines[activeLyricIndex]
-                        if (line?.timestamp != null) seek(line.timestamp)
-                      }}
-                    >
-                      {lyrics.lines[activeLyricIndex]?.text || '•••'}
-                    </button>
-                    {lyrics.lines[activeLyricIndex + 1] && (
+                  [activeLyricIndex, activeLyricIndex + 1].map((lineIdx, slotIdx) => {
+                    const line = lyrics.lines[lineIdx]
+                    if (!line) return null
+                    const isCurrent = slotIdx === 0
+                    const isGap = Boolean(line.isGap || (!line.text && line.timestamp != null))
+
+                    if (isGap) {
+                      return (
+                        <div
+                          key={`still-gap-${lineIdx}`}
+                          className={`still-ly-line ${isCurrent ? 'is-current' : 'is-next'}`}
+                        >
+                          <LyricGapIndicator
+                            index={lineIdx}
+                            isActive={isCurrent}
+                            timestamp={line.timestamp}
+                            onSeek={seek}
+                            formattedTimestamp={line.timestamp != null ? fmt(line.timestamp) : undefined}
+                            variant="fullscreen"
+                          />
+                        </div>
+                      )
+                    }
+
+                    const words = line.words && line.words.length > 0 ? line.words : null
+                    const nextLineTimestamp = lyrics.lines[lineIdx + 1]?.timestamp
+                    const wordStates =
+                      words && isCurrent
+                        ? getLineWordSyncStates(line, syncPosition, nextLineTimestamp)
+                        : null
+                    const hasEmbeddedSpaces = words
+                      ? words.some((w) => /^\s|\s$/.test(w.text))
+                      : false
+                    const hasLineSpaces = words ? /\s/.test(line.text) : false
+
+                    return (
                       <button
+                        key={`still-line-${lineIdx}`}
                         type="button"
-                        className="still-ly-line is-next"
+                        className={`still-ly-line ${isCurrent ? 'is-current' : 'is-next'} ${words ? 'is-word-synced' : ''}`}
                         onClick={() => {
-                          const nextLine = lyrics.lines[activeLyricIndex + 1]
-                          if (nextLine?.timestamp != null) seek(nextLine.timestamp)
+                          if (line.timestamp != null) seek(line.timestamp)
                         }}
+                        title={line.timestamp != null ? t('status.seekTo', { time: fmt(line.timestamp) }) : undefined}
                       >
-                        {lyrics.lines[activeLyricIndex + 1]?.text || '•••'}
+                        {words
+                          ? words.map((word, wIdx) => {
+                              const wordState = wordStates?.[wIdx]
+                              const status = wordState
+                                ? wordState.status
+                                : isCurrent
+                                  ? 'upcoming'
+                                  : 'upcoming'
+                              const visibleText = word.text.trim() || word.text
+                              const needsTrailingSpace =
+                                /\s$/.test(word.text) ||
+                                (!hasEmbeddedSpaces &&
+                                  hasLineSpaces &&
+                                  wIdx < words.length - 1)
+                              const needsLeadingSpace =
+                                /^\s/.test(word.text) &&
+                                wIdx > 0 &&
+                                !/\s$/.test(words[wIdx - 1].text)
+
+                              return (
+                                <span
+                                  key={`${word.timestamp}-${wIdx}`}
+                                  className="fullscreen-lyric-word-group"
+                                >
+                                  {needsLeadingSpace ? ' ' : null}
+                                  <span
+                                    className={`fullscreen-lyric-word is-${status}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      seek(word.timestamp)
+                                    }}
+                                    title={t('status.seekToWord', { word: visibleText, time: fmt(word.timestamp) })}
+                                  >
+                                    {visibleText}
+                                  </span>
+                                  {needsTrailingSpace ? ' ' : null}
+                                </span>
+                              )
+                            })
+                          : line.text}
                       </button>
-                    )}
-                  </>
+                    )
+                  })
                 ) : (
                   <div className="still-ly-line is-current">
                     {lyrics.lines[0]?.text}
