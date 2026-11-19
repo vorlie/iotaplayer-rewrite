@@ -173,3 +173,9 @@ Styling is organized in explicit layers imported via `src/index.css` without ext
 - **Remote Media Sources** - Subsonic / OpenSubsonic server integration alongside the local SQLite library.
 - **Mini-Player Mode** - Compact always-on-top desktop widget for quick transport and lyric display.
 - **Smart Mixes & Scrobbling** - Last.fm / ListenBrainz scrobbling and automatic genre/mood mix generation.
+
+---
+
+## Credits & Third-Party Notices
+
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for open-source dependency licenses, external media backend notices (`mpv`), and design/specification credits (including **Still** for the ambient fullscreen style and **Lyricsfile 1.0**).

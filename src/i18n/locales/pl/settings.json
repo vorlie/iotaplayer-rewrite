@@ -7,7 +7,8 @@
   "categories": {
     "playback": "Odtwarzanie",
     "library": "Biblioteka",
-    "integrations": "Integracje"
+    "integrations": "Integracje",
+    "credits": "Autorzy i licencje"
   },
   "language": {
     "title": "Język aplikacji",
@@ -102,6 +103,15 @@
     "eyebrow": "Integracje",
     "heading": "Połączone usługi",
     "publishedBy": "Wydawca: {{publisher}} · Identyfikator: {{appId}}"
+  },
+  "credits": {
+    "eyebrow": "Autorzy i licencje",
+    "heading": "Podziękowania i licencje",
+    "inspirationsTitle": "Inspiracje wizualne i specyfikacje",
+    "stillDesc": "Inspiracja wizualna dla opcjonalnego stylu pełnoekranowego Still.",
+    "lyricsfileDesc": "Specyfikacja formatu YAML dla tekstów zsynchronizowanych co do słowa i linii.",
+    "librariesTitle": "Biblioteki open-source i środowisko",
+    "librariesSubtitle": "Pełne informacje licencyjne znajdują się w pliku THIRD_PARTY_NOTICES.md."
   },
   "equalizer": {
     "title": "Korektor i prędkość",
