@@ -3,6 +3,11 @@ import { createRequire } from 'node:module'
 import os from 'os'
 import path from 'path'
 import { classifyAudioQuality, formatSampleRate } from './audioQuality'
+import {
+  compileSmartPlaylistQuery,
+  getDefaultSmartPlaylists,
+  normalizeSmartPlaylistRules,
+} from './smartPlaylists'
 import type {
   Album,
   Artist,
@@ -11,6 +16,8 @@ import type {
   LibraryFormatStats,
   LibraryStats,
   QualityTierStat,
+  SmartPlaylist,
+  SmartPlaylistInput,
   Track,
 } from './types'
 
@@ -286,6 +293,59 @@ function runMigrations(db: Database.Database): void {
   if (!tracksSchema.some((column) => column.name === 'added_at')) {
     db.exec('ALTER TABLE tracks ADD COLUMN added_at INTEGER')
     db.exec('UPDATE tracks SET added_at = modified_time WHERE added_at IS NULL')
+  }
+  if (!tracksSchema.some((column) => column.name === 'play_count')) {
+    db.exec('ALTER TABLE tracks ADD COLUMN play_count INTEGER NOT NULL DEFAULT 0')
+  }
+  if (!tracksSchema.some((column) => column.name === 'last_played_at')) {
+    db.exec('ALTER TABLE tracks ADD COLUMN last_played_at INTEGER')
+  }
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS smart_playlists (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      match_mode TEXT NOT NULL DEFAULT 'all',
+      rules_json TEXT NOT NULL,
+      sort_by TEXT NOT NULL DEFAULT 'added_at',
+      sort_order TEXT NOT NULL DEFAULT 'desc',
+      limit_count INTEGER,
+      is_system INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      last_modified INTEGER NOT NULL
+    );
+  `)
+
+  const seededRow = db
+    .prepare("SELECT value FROM playback_state WHERE key = 'smart_playlists_seeded'")
+    .get() as { value: string } | undefined
+
+  if (!seededRow) {
+    const insertSmart = db.prepare(`
+      INSERT OR IGNORE INTO smart_playlists (
+        id, name, description, match_mode, rules_json, sort_by, sort_order,
+        limit_count, is_system, created_at, last_modified
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+    db.transaction(() => {
+      for (const sp of getDefaultSmartPlaylists()) {
+        insertSmart.run(
+          sp.id,
+          sp.name,
+          sp.description,
+          sp.matchMode,
+          JSON.stringify(sp.rules),
+          sp.sortBy,
+          sp.sortOrder,
+          sp.limit,
+          sp.isSystem ? 1 : 0,
+          sp.createdAt,
+          sp.lastModified,
+        )
+      }
+      db.prepare("INSERT OR REPLACE INTO playback_state (key, value) VALUES ('smart_playlists_seeded', '1')").run()
+    })()
   }
 }
 
@@ -971,11 +1031,20 @@ export function dbIsFavorite(trackId: number): boolean {
 // Playback History
 // ---------------------------------------------------------------------------
 
-export function dbRecordPlayback(trackId: number, durationPlayed: number = 0): void {
-  const db = getDatabase()
+export function dbRecordPlayback(
+  trackId: number,
+  durationPlayed: number = 0,
+  targetDb?: Database.Database,
+): void {
+  const db = targetDb ?? getDatabase()
+  const now = Date.now()
   db.prepare(
     'INSERT INTO playback_history (track_id, played_at, duration_played) VALUES (?, ?, ?)',
-  ).run(trackId, Date.now(), durationPlayed)
+  ).run(trackId, now, durationPlayed)
+
+  db.prepare(
+    'UPDATE tracks SET play_count = COALESCE(play_count, 0) + 1, last_played_at = ? WHERE id = ?',
+  ).run(now, trackId)
 
   // Keep history table capped at 500 entries
   db.prepare(
@@ -1064,4 +1133,188 @@ export function dbGetAllPlaybackState(): Record<string, string> {
     result[row.key] = row.value
   }
   return result
+}
+
+// ---------------------------------------------------------------------------
+// Smart Playlists
+// ---------------------------------------------------------------------------
+
+interface SmartPlaylistRow {
+  id: string
+  name: string
+  description: string
+  match_mode: string
+  rules_json: string
+  sort_by: string
+  sort_order: string
+  limit_count: number | null
+  is_system: number
+  created_at: number
+  last_modified: number
+}
+
+function hydrateSmartPlaylistRow(row: SmartPlaylistRow, db: Database.Database, includeTracks = false): SmartPlaylist {
+  let parsedRules: unknown
+  try {
+    parsedRules = JSON.parse(row.rules_json)
+  } catch {
+    parsedRules = []
+  }
+
+  const matchMode = row.match_mode === 'any' ? 'any' : 'all'
+  const rules = normalizeSmartPlaylistRules(parsedRules)
+  const sortBy = (row.sort_by || 'added_at') as SmartPlaylist['sortBy']
+  const sortOrder = row.sort_order === 'asc' ? 'asc' : 'desc'
+  const limit = row.limit_count ?? null
+
+  const { sql, params } = compileSmartPlaylistQuery({
+    matchMode,
+    rules,
+    sortBy,
+    sortOrder,
+    limit,
+  })
+
+  const tracks = db.prepare(sql).all(...params) as Track[]
+
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    matchMode,
+    rules,
+    sortBy,
+    sortOrder,
+    limit,
+    isSystem: row.is_system === 1,
+    createdAt: row.created_at,
+    lastModified: row.last_modified,
+    trackCount: tracks.length,
+    ...(includeTracks ? { tracks } : {}),
+  }
+}
+
+export function dbGetSmartPlaylists(targetDb?: Database.Database): SmartPlaylist[] {
+  const db = targetDb ?? getDatabase()
+  const rows = db
+    .prepare('SELECT * FROM smart_playlists ORDER BY is_system DESC, created_at DESC')
+    .all() as SmartPlaylistRow[]
+
+  return rows.map((row) => hydrateSmartPlaylistRow(row, db, false))
+}
+
+export function dbEvaluateSmartPlaylist(id: string, targetDb?: Database.Database): SmartPlaylist | null {
+  const db = targetDb ?? getDatabase()
+  const row = db.prepare('SELECT * FROM smart_playlists WHERE id = ?').get(id) as SmartPlaylistRow | undefined
+  if (!row) return null
+  return hydrateSmartPlaylistRow(row, db, true)
+}
+
+export function dbPreviewSmartPlaylist(
+  input: Pick<SmartPlaylistInput, 'matchMode' | 'rules' | 'sortBy' | 'sortOrder' | 'limit'>,
+  targetDb?: Database.Database,
+): Track[] {
+  const db = targetDb ?? getDatabase()
+  const { sql, params } = compileSmartPlaylistQuery({
+    matchMode: input.matchMode === 'any' ? 'any' : 'all',
+    rules: normalizeSmartPlaylistRules(input.rules),
+    sortBy: input.sortBy ?? 'added_at',
+    sortOrder: input.sortOrder === 'asc' ? 'asc' : 'desc',
+    limit: input.limit ?? null,
+  })
+  return db.prepare(sql).all(...params) as Track[]
+}
+
+export function dbCreateSmartPlaylist(input: SmartPlaylistInput, targetDb?: Database.Database): SmartPlaylist[] | null {
+  const trimmedName = input.name?.trim()
+  if (!trimmedName) return null
+
+  const db = targetDb ?? getDatabase()
+  const now = Date.now()
+  const id = `smart-${now}-${Math.random().toString(36).slice(2, 8)}`
+  const rules = normalizeSmartPlaylistRules(input.rules)
+
+  db.prepare(`
+    INSERT INTO smart_playlists (
+      id, name, description, match_mode, rules_json, sort_by, sort_order,
+      limit_count, is_system, created_at, last_modified
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+  `).run(
+    id,
+    trimmedName,
+    (input.description ?? '').trim(),
+    input.matchMode === 'any' ? 'any' : 'all',
+    JSON.stringify(rules),
+    input.sortBy ?? 'added_at',
+    input.sortOrder === 'asc' ? 'asc' : 'desc',
+    input.limit != null && input.limit > 0 ? Math.floor(input.limit) : null,
+    now,
+    now,
+  )
+
+  return dbGetSmartPlaylists(db)
+}
+
+export function dbUpdateSmartPlaylist(
+  id: string,
+  updates: Partial<SmartPlaylistInput>,
+  targetDb?: Database.Database,
+): SmartPlaylist[] | null {
+  const db = targetDb ?? getDatabase()
+  const existing = db.prepare('SELECT * FROM smart_playlists WHERE id = ?').get(id) as SmartPlaylistRow | undefined
+  if (!existing) return null
+
+  const nextName = updates.name !== undefined ? updates.name.trim() : existing.name
+  if (!nextName) return null
+
+  const nextDescription =
+    updates.description !== undefined ? updates.description.trim() : existing.description
+  const nextMatchMode =
+    updates.matchMode !== undefined
+      ? updates.matchMode === 'any'
+        ? 'any'
+        : 'all'
+      : existing.match_mode
+  const nextRulesJson =
+    updates.rules !== undefined
+      ? JSON.stringify(normalizeSmartPlaylistRules(updates.rules))
+      : existing.rules_json
+  const nextSortBy = updates.sortBy ?? existing.sort_by
+  const nextSortOrder =
+    updates.sortOrder !== undefined
+      ? updates.sortOrder === 'asc'
+        ? 'asc'
+        : 'desc'
+      : existing.sort_order
+  const nextLimit =
+    updates.limit !== undefined
+      ? updates.limit != null && updates.limit > 0
+        ? Math.floor(updates.limit)
+        : null
+      : existing.limit_count
+
+  db.prepare(`
+    UPDATE smart_playlists
+    SET name = ?, description = ?, match_mode = ?, rules_json = ?,
+        sort_by = ?, sort_order = ?, limit_count = ?, last_modified = ?
+    WHERE id = ?
+  `).run(
+    nextName,
+    nextDescription,
+    nextMatchMode,
+    nextRulesJson,
+    nextSortBy,
+    nextSortOrder,
+    nextLimit,
+    Date.now(),
+    id,
+  )
+
+  return dbGetSmartPlaylists(db)
+}
+
+export function dbDeleteSmartPlaylist(id: string, targetDb?: Database.Database): SmartPlaylist[] {
+  const db = targetDb ?? getDatabase()
+  db.prepare('DELETE FROM smart_playlists WHERE id = ?').run(id)
+  return dbGetSmartPlaylists(db)
 }

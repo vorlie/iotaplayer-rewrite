@@ -27,6 +27,8 @@ export interface Track {
   file_size: number // bytes
   modified_time: number // unix timestamp ms
   added_at?: number | null // unix timestamp ms
+  play_count?: number
+  last_played_at?: number | null
   artwork_id: number | null
 }
 
@@ -165,6 +167,83 @@ export interface Playlist {
   coverMimeType: string | null
   createdAt: number
   tracks: Track[]
+}
+
+export type SmartPlaylistMatchMode = 'all' | 'any'
+
+export type SmartPlaylistField =
+  | 'title'
+  | 'artist'
+  | 'album'
+  | 'genre'
+  | 'year'
+  | 'codec'
+  | 'is_lossless'
+  | 'play_count'
+  | 'last_played_at'
+  | 'added_at'
+  | 'duration'
+  | 'bitrate'
+  | 'sample_rate'
+  | 'is_favorite'
+
+export type SmartPlaylistOperator =
+  | 'equals'
+  | 'not_equals'
+  | 'contains'
+  | 'not_contains'
+  | 'gt'
+  | 'lt'
+  | 'gte'
+  | 'lte'
+  | 'in_last_days'
+  | 'is_true'
+  | 'is_false'
+
+export type SmartPlaylistSortBy =
+  | 'title'
+  | 'artist'
+  | 'album'
+  | 'year'
+  | 'duration'
+  | 'play_count'
+  | 'last_played_at'
+  | 'added_at'
+  | 'bitrate'
+  | 'random'
+
+export type SmartPlaylistSortOrder = 'asc' | 'desc'
+
+export interface SmartPlaylistRule {
+  field: SmartPlaylistField
+  operator: SmartPlaylistOperator
+  value?: string | number | boolean | null
+}
+
+export interface SmartPlaylistInput {
+  name: string
+  description?: string
+  matchMode: SmartPlaylistMatchMode
+  rules: SmartPlaylistRule[]
+  sortBy: SmartPlaylistSortBy
+  sortOrder: SmartPlaylistSortOrder
+  limit?: number | null
+}
+
+export interface SmartPlaylist {
+  id: string
+  name: string
+  description: string
+  matchMode: SmartPlaylistMatchMode
+  rules: SmartPlaylistRule[]
+  sortBy: SmartPlaylistSortBy
+  sortOrder: SmartPlaylistSortOrder
+  limit: number | null
+  isSystem?: boolean
+  createdAt: number
+  lastModified: number
+  trackCount?: number
+  tracks?: Track[]
 }
 
 export interface PlaybackStateEvent {

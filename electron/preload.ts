@@ -19,6 +19,8 @@ import type {
   ScanProgress,
   ScanResult,
   SearchResults,
+  SmartPlaylist,
+  SmartPlaylistInput,
   Track,
 } from './types'
 
@@ -111,6 +113,24 @@ const libraryAPI = {
 
   reorderPlaylist: (playlistId: string, fromIndex: number, toIndex: number): Promise<Playlist[]> =>
     ipcRenderer.invoke('library:reorder-playlist', playlistId, fromIndex, toIndex),
+
+  smartPlaylists: (): Promise<SmartPlaylist[]> =>
+    ipcRenderer.invoke('library:smart-playlists'),
+
+  evaluateSmartPlaylist: (id: string): Promise<SmartPlaylist | null> =>
+    ipcRenderer.invoke('library:evaluate-smart-playlist', id),
+
+  previewSmartPlaylist: (input: SmartPlaylistInput): Promise<Track[]> =>
+    ipcRenderer.invoke('library:preview-smart-playlist', input),
+
+  createSmartPlaylist: (input: SmartPlaylistInput): Promise<SmartPlaylist[] | null> =>
+    ipcRenderer.invoke('library:create-smart-playlist', input),
+
+  updateSmartPlaylist: (id: string, updates: Partial<SmartPlaylistInput>): Promise<SmartPlaylist[] | null> =>
+    ipcRenderer.invoke('library:update-smart-playlist', id, updates),
+
+  deleteSmartPlaylist: (id: string): Promise<SmartPlaylist[]> =>
+    ipcRenderer.invoke('library:delete-smart-playlist', id),
 
   favorites: (): Promise<Track[]> =>
     ipcRenderer.invoke('library:favorites'),
