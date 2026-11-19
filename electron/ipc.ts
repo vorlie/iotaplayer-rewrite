@@ -12,6 +12,7 @@ import {
   dbGetTrack,
   dbGetPlaylists,
   dbGetStats,
+  dbGetLibraryFormatStats,
   dbGetTracks,
   dbRenamePlaylist,
   dbUpdatePlaylistMetadata,
@@ -46,6 +47,7 @@ import type { LyricsSourcePreference, ScanProgress } from './types'
 
 export const IPC = {
   LIBRARY_STATS:    'library:stats',
+  LIBRARY_FORMAT_STATS: 'library:format-stats',
   LIBRARY_SCAN:     'library:scan',
   LIBRARY_ARTISTS:  'library:artists',
   LIBRARY_ARTIST:   'library:artist',
@@ -128,6 +130,10 @@ export function registerIpcHandlers(): void {
   // library.stats()
   ipcMain.handle(IPC.LIBRARY_STATS, () => {
     return dbGetStats()
+  })
+
+  ipcMain.handle(IPC.LIBRARY_FORMAT_STATS, () => {
+    return dbGetLibraryFormatStats()
   })
 
   // library.scan(rootDir)

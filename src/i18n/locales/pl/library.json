@@ -149,5 +149,27 @@
       "modifiedAt": "Zmodyfikowano",
       "addedAt": "Dodano"
     }
+  },
+  "statsView": {
+    "title": "Statystyki biblioteki",
+    "subtitle": "Rozkład formatów, zajętość miejsca i jakość dźwięku",
+    "loading": "Obliczanie statystyk biblioteki…",
+    "emptyTitle": "Brak utworów w bibliotece",
+    "emptyBody": "Przeskanuj folder z muzyką w Ustawieniach, aby zobaczyć statystyki formatów.",
+    "refresh": "Odśwież",
+    "kpis": {
+      "tracks": "Utwory",
+      "albums": "Albumy",
+      "artists": "Wykonawcy",
+      "totalDuration": "Łączny czas",
+      "totalStorage": "Łączny rozmiar"
+    },
+    "sections": {
+      "qualityTiers": "Podział jakości dźwięku",
+      "codecs": "Kodeki i formaty",
+      "sampleRates": "Częstotliwości próbkowania",
+      "bitrates": "Rozkład przepływności",
+      "genres": "Najczęstsze gatunki"
+    }
   }
 }

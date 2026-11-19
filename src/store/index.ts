@@ -35,6 +35,7 @@ export type NavSection =
   | 'now-playing'
   | 'favorites'
   | 'recently-played'
+  | 'library-stats'
   | 'equalizer'
   | 'settings'
   | 'artist-detail'

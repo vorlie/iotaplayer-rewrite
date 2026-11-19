@@ -62,6 +62,29 @@ export interface LibraryStats {
   total_duration: number // seconds
 }
 
+export interface FormatStatBucket {
+  label: string
+  count: number
+  total_size: number
+  total_duration: number
+}
+
+export interface QualityTierStat {
+  tier: 'hi-res' | 'lossless' | 'lossy' | 'unknown'
+  count: number
+  total_size: number
+  total_duration: number
+}
+
+export interface LibraryFormatStats extends LibraryStats {
+  total_file_size: number // bytes
+  quality_tiers: QualityTierStat[]
+  codecs: FormatStatBucket[]
+  sample_rates: FormatStatBucket[]
+  bitrates: FormatStatBucket[]
+  genres: FormatStatBucket[]
+}
+
 export type LyricsSourcePreference = 'embedded' | 'synchronized' | 'sidecar'
 
 export type SyncQuality = 'none' | 'line' | 'word'
