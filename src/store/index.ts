@@ -20,7 +20,16 @@ import {
 } from '../../electron/shuffle'
 import { DEFAULT_VOLUME, normalizeVolume } from '../../electron/volume'
 import i18n from '../i18n'
-import type { Album, Artist, Playlist, ScanProgress, ScanResult, Track } from '../types/electron'
+import type {
+  Album,
+  Artist,
+  Playlist,
+  ScanProgress,
+  ScanResult,
+  SmartPlaylist,
+  SmartPlaylistInput,
+  Track,
+} from '../types/electron'
 
 // ---------------------------------------------------------------------------
 // Navigation types
@@ -32,6 +41,7 @@ export type NavSection =
   | 'tracks'
   | 'playlists'
   | 'playlist-detail'
+  | 'smart-playlist-detail'
   | 'now-playing'
   | 'favorites'
   | 'recently-played'
@@ -223,6 +233,7 @@ export interface PlaybackState {
   playbackRate: number
   preservePitch: boolean
   playlists: Playlist[]
+  smartPlaylists: SmartPlaylist[]
   activeBackend: 'mpv' | 'browser' | 'idle'
   favoriteIds: number[]
 }
@@ -242,6 +253,11 @@ interface PlaybackStore extends PlaybackState {
     },
   ) => void
   deletePlaylist: (playlistId: string) => void
+  loadSmartPlaylists: () => Promise<void>
+  createSmartPlaylist: (input: SmartPlaylistInput) => Promise<void>
+  updateSmartPlaylist: (id: string, updates: Partial<SmartPlaylistInput>) => Promise<void>
+  deleteSmartPlaylist: (id: string) => Promise<void>
+  playSmartPlaylist: (id: string) => Promise<void>
   saveCurrentQueueAsPlaylist: (name?: string) => Playlist | null
   addTrackToPlaylist: (playlistId: string, track: Track) => void
   removeTrackFromPlaylist: (playlistId: string, position: number) => void
@@ -451,6 +467,10 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
       set({ playlists })
     })
 
+    void window.library.smartPlaylists().then((smartPlaylists) => {
+      set({ smartPlaylists })
+    })
+
     void window.library.favoriteIds().then((favoriteIds) => {
       set({ favoriteIds })
     })
@@ -549,6 +569,7 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
     preservePitch: DEFAULT_PRESERVE_PITCH,
     activeBackend: 'mpv',
     favoriteIds: [],
+    smartPlaylists: [],
     playlists: [
       {
         id: 'favorites',
@@ -801,6 +822,41 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
           if (playlists) set({ playlists })
         })
       }
+    },
+
+    loadSmartPlaylists: async () => {
+      if (typeof window !== 'undefined' && 'library' in window) {
+        const smartPlaylists = await window.library.smartPlaylists()
+        set({ smartPlaylists })
+      }
+    },
+
+    createSmartPlaylist: async (input) => {
+      if (typeof window !== 'undefined' && 'library' in window) {
+        const smartPlaylists = await window.library.createSmartPlaylist(input)
+        if (smartPlaylists) set({ smartPlaylists })
+      }
+    },
+
+    updateSmartPlaylist: async (id, updates) => {
+      if (typeof window !== 'undefined' && 'library' in window) {
+        const smartPlaylists = await window.library.updateSmartPlaylist(id, updates)
+        if (smartPlaylists) set({ smartPlaylists })
+      }
+    },
+
+    deleteSmartPlaylist: async (id) => {
+      if (typeof window !== 'undefined' && 'library' in window) {
+        const smartPlaylists = await window.library.deleteSmartPlaylist(id)
+        set({ smartPlaylists })
+      }
+    },
+
+    playSmartPlaylist: async (id) => {
+      if (typeof window === 'undefined' || !('library' in window)) return
+      const evaluated = await window.library.evaluateSmartPlaylist(id)
+      if (!evaluated || !evaluated.tracks || evaluated.tracks.length === 0) return
+      playTrack(evaluated.tracks[0], evaluated.tracks, 0, evaluated.name)
     },
 
     saveCurrentQueueAsPlaylist: (name) => {

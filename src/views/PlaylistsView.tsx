@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ListMusic, Music2, Pencil, Play, Plus, Trash2, X } from 'lucide-react'
+import { ListMusic, Music2, Pencil, Play, Plus, Sparkles, Trash2, X } from 'lucide-react'
+import { SmartPlaylistEditorModal } from '../components/SmartPlaylistEditorModal'
 import { useAppStore, usePlaybackStore } from '../store'
-import type { Playlist } from '../types/electron'
+import type { Playlist, SmartPlaylist } from '../types/electron'
 import '../styles/playlists.css'
 
 type PlaylistModalState =
@@ -14,16 +15,22 @@ export function PlaylistsView() {
   const { t } = useTranslation(['playlists', 'library', 'common'])
   const {
     playlists,
+    smartPlaylists,
     playPlaylist,
     createPlaylist,
     queue,
     saveCurrentQueueAsPlaylist,
     updatePlaylistDetails,
     deletePlaylist,
+    createSmartPlaylist,
+    updateSmartPlaylist,
+    deleteSmartPlaylist,
+    playSmartPlaylist,
   } = usePlaybackStore()
   const navigate = useAppStore((s) => s.navigate)
 
   const [modalState, setModalState] = useState<PlaylistModalState>(null)
+  const [smartModalState, setSmartModalState] = useState<{ mode: 'create' } | { mode: 'edit'; playlist: SmartPlaylist } | null>(null)
   const [nameInput, setNameInput] = useState('')
   const [descriptionInput, setDescriptionInput] = useState('')
 
@@ -73,6 +80,14 @@ export function PlaylistsView() {
 
             <button
               className="secondary-btn playlist-toolbar-btn"
+              onClick={() => setSmartModalState({ mode: 'create' })}
+            >
+              <Sparkles size={14} />
+              {t('smart.newButton')}
+            </button>
+
+            <button
+              className="secondary-btn playlist-toolbar-btn"
               onClick={() => saveCurrentQueueAsPlaylist()}
               disabled={queue.length === 0}
               style={{ opacity: queue.length === 0 ? 0.5 : 1 }}
@@ -85,6 +100,89 @@ export function PlaylistsView() {
       </div>
 
       <div className="page-body">
+        {smartPlaylists.length > 0 && (
+          <section className="smart-playlists-section">
+            <div className="section-header">
+              <h2 className="section-title" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Sparkles size={14} color="var(--color-accent)" />
+                <span>{t('smart.sectionTitle')}</span>
+              </h2>
+            </div>
+
+            <div className="playlist-grid">
+              {smartPlaylists.map((sp) => (
+                <div
+                  key={sp.id}
+                  className="playlist-card playlist-card--smart"
+                  onClick={() => navigate('smart-playlist-detail', { playlistId: sp.id })}
+                >
+                  <div className="playlist-cover">
+                    <div className="playlist-cover-placeholder playlist-cover-placeholder--smart">
+                      <Sparkles size={22} />
+                    </div>
+                  </div>
+
+                  <div className="playlist-card-body">
+                    <div className="playlist-card-header">
+                      <div className="playlist-card-name">{sp.name}</div>
+                      <div className="playlist-card-count">
+                        {t('library:counts.track', { count: sp.trackCount ?? 0 })}
+                      </div>
+                    </div>
+
+                    <div className="playlist-card-description">
+                      {sp.description?.trim() || t('empty.noDescription')}
+                    </div>
+
+                    <div className="playlist-card-actions">
+                      <button
+                        className="detail-play-btn playlist-card-play-btn"
+                        disabled={(sp.trackCount ?? 0) === 0}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          void playSmartPlaylist(sp.id)
+                        }}
+                      >
+                        <Play size={14} fill="currentColor" />
+                        {t('common:actions.play')}
+                      </button>
+
+                      <button
+                        className="player-btn"
+                        title={t('smart.editTitle')}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSmartModalState({ mode: 'edit', playlist: sp })
+                        }}
+                      >
+                        <Pencil size={14} />
+                      </button>
+
+                      <button
+                        className="player-btn"
+                        title={t('actions.deletePlaylist')}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (window.confirm(t('actions.confirmDelete', { name: sp.name }))) {
+                            void deleteSmartPlaylist(sp.id)
+                          }
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {smartPlaylists.length > 0 && (
+          <div className="section-header" style={{ marginTop: 'var(--space-5)' }}>
+            <h2 className="section-title">{t('title')}</h2>
+          </div>
+        )}
         {playlists.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-title">{t('empty.noPlaylists')}</div>
@@ -237,6 +335,20 @@ export function PlaylistsView() {
             </form>
           </div>
         </div>
+      )}
+
+      {smartModalState && (
+        <SmartPlaylistEditorModal
+          initial={smartModalState.mode === 'edit' ? smartModalState.playlist : null}
+          onSave={async (input) => {
+            if (smartModalState.mode === 'create') {
+              await createSmartPlaylist(input)
+            } else {
+              await updateSmartPlaylist(smartModalState.playlist.id, input)
+            }
+          }}
+          onClose={() => setSmartModalState(null)}
+        />
       )}
     </div>
   )

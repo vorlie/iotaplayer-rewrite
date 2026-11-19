@@ -13,6 +13,7 @@ import { LibraryStatsView } from './views/LibraryStatsView'
 import { NowPlayingView } from './views/NowPlayingView'
 import { PlaylistDetailView } from './views/PlaylistDetailView'
 import { PlaylistsView } from './views/PlaylistsView'
+import { SmartPlaylistDetailView } from './views/SmartPlaylistDetailView'
 import { RecentlyPlayedView } from './views/RecentlyPlayedView'
 import { SearchView } from './views/SearchView'
 import { SettingsView } from './views/SettingsView'
@@ -30,6 +31,7 @@ function MainContent() {
     case 'tracks':         return <TracksView />
     case 'playlists':      return <PlaylistsView />
     case 'playlist-detail': return <PlaylistDetailView />
+    case 'smart-playlist-detail': return <SmartPlaylistDetailView />
     case 'now-playing':    return <NowPlayingView />
     case 'artist-detail':  return <ArtistDetailView />
     case 'album-detail':   return <AlbumDetailView />
