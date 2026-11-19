@@ -11,6 +11,12 @@ import {
   dbGetArtwork,
   dbGetTrack,
   dbGetPlaylists,
+  dbGetSmartPlaylists,
+  dbEvaluateSmartPlaylist,
+  dbPreviewSmartPlaylist,
+  dbCreateSmartPlaylist,
+  dbUpdateSmartPlaylist,
+  dbDeleteSmartPlaylist,
   dbGetStats,
   dbGetLibraryFormatStats,
   dbGetTracks,
@@ -39,7 +45,7 @@ import { getAppSettings, setAppSettings } from './settings'
 import { getLyrics } from './lyrics'
 import { normalizePlaybackPreferences, type PlaybackPreferences } from './playbackSpeed'
 import { normalizeVolume } from './volume'
-import type { LyricsSourcePreference, ScanProgress } from './types'
+import type { LyricsSourcePreference, ScanProgress, SmartPlaylistInput } from './types'
 
 // ---------------------------------------------------------------------------
 // IPC channel names (must match preload.ts)
@@ -66,6 +72,12 @@ export const IPC = {
   LIBRARY_ADD_TRACK_TO_PLAYLIST: 'library:add-track-to-playlist',
   LIBRARY_REMOVE_TRACK_FROM_PLAYLIST: 'library:remove-track-from-playlist',
   LIBRARY_REORDER_PLAYLIST: 'library:reorder-playlist',
+  LIBRARY_SMART_PLAYLISTS: 'library:smart-playlists',
+  LIBRARY_EVALUATE_SMART_PLAYLIST: 'library:evaluate-smart-playlist',
+  LIBRARY_PREVIEW_SMART_PLAYLIST: 'library:preview-smart-playlist',
+  LIBRARY_CREATE_SMART_PLAYLIST: 'library:create-smart-playlist',
+  LIBRARY_UPDATE_SMART_PLAYLIST: 'library:update-smart-playlist',
+  LIBRARY_DELETE_SMART_PLAYLIST: 'library:delete-smart-playlist',
   LIBRARY_FAVORITES: 'library:favorites',
   LIBRARY_FAVORITE_IDS: 'library:favorite-ids',
   LIBRARY_TOGGLE_FAVORITE: 'library:toggle-favorite',
@@ -274,6 +286,33 @@ export function registerIpcHandlers(): void {
       return dbReorderPlaylist(playlistId, fromIndex, toIndex)
     },
   )
+
+  ipcMain.handle(IPC.LIBRARY_SMART_PLAYLISTS, () => {
+    return dbGetSmartPlaylists()
+  })
+
+  ipcMain.handle(IPC.LIBRARY_EVALUATE_SMART_PLAYLIST, (_event, id: string) => {
+    return dbEvaluateSmartPlaylist(id)
+  })
+
+  ipcMain.handle(IPC.LIBRARY_PREVIEW_SMART_PLAYLIST, (_event, input: SmartPlaylistInput) => {
+    return dbPreviewSmartPlaylist(input)
+  })
+
+  ipcMain.handle(IPC.LIBRARY_CREATE_SMART_PLAYLIST, (_event, input: SmartPlaylistInput) => {
+    return dbCreateSmartPlaylist(input)
+  })
+
+  ipcMain.handle(
+    IPC.LIBRARY_UPDATE_SMART_PLAYLIST,
+    (_event, id: string, updates: Partial<SmartPlaylistInput>) => {
+      return dbUpdateSmartPlaylist(id, updates)
+    },
+  )
+
+  ipcMain.handle(IPC.LIBRARY_DELETE_SMART_PLAYLIST, (_event, id: string) => {
+    return dbDeleteSmartPlaylist(id)
+  })
 
   ipcMain.handle(IPC.LIBRARY_FAVORITES, () => {
     return dbGetFavorites()

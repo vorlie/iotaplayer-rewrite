@@ -16,6 +16,14 @@ import type {
   ScanProgress,
   ScanResult,
   SearchResults,
+  SmartPlaylist,
+  SmartPlaylistField,
+  SmartPlaylistInput,
+  SmartPlaylistMatchMode,
+  SmartPlaylistOperator,
+  SmartPlaylistRule,
+  SmartPlaylistSortBy,
+  SmartPlaylistSortOrder,
   SyncQuality,
   Track,
   Playlist,
@@ -66,6 +74,12 @@ interface LibraryAPI {
   addTrackToPlaylist: (playlistId: string, trackId: number) => Promise<Playlist[]>
   removeTrackFromPlaylist: (playlistId: string, position: number) => Promise<Playlist[]>
   reorderPlaylist: (playlistId: string, fromIndex: number, toIndex: number) => Promise<Playlist[]>
+  smartPlaylists: () => Promise<SmartPlaylist[]>
+  evaluateSmartPlaylist: (id: string) => Promise<SmartPlaylist | null>
+  previewSmartPlaylist: (input: SmartPlaylistInput) => Promise<Track[]>
+  createSmartPlaylist: (input: SmartPlaylistInput) => Promise<SmartPlaylist[] | null>
+  updateSmartPlaylist: (id: string, updates: Partial<SmartPlaylistInput>) => Promise<SmartPlaylist[] | null>
+  deleteSmartPlaylist: (id: string) => Promise<SmartPlaylist[]>
   favorites: () => Promise<Track[]>
   favoriteIds: () => Promise<number[]>
   toggleFavorite: (trackId: number) => Promise<boolean>
@@ -212,6 +226,14 @@ export type {
   ScanProgress,
   ScanResult,
   SearchResults,
+  SmartPlaylist,
+  SmartPlaylistField,
+  SmartPlaylistInput,
+  SmartPlaylistMatchMode,
+  SmartPlaylistOperator,
+  SmartPlaylistRule,
+  SmartPlaylistSortBy,
+  SmartPlaylistSortOrder,
   SyncQuality,
   Track,
 }
