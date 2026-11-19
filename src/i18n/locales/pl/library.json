@@ -1,0 +1,23 @@
+{
+  "counts": {
+    "track_one": "{{count}} utwór",
+    "track_few": "{{count}} utwory",
+    "track_many": "{{count}} utworów",
+    "track_other": "{{count}} utworów",
+    "album_one": "{{count}} album",
+    "album_few": "{{count}} albumy",
+    "album_many": "{{count}} albumów",
+    "album_other": "{{count}} albumów",
+    "artist_one": "{{count}} wykonawca",
+    "artist_few": "{{count}} wykonawców",
+    "artist_many": "{{count}} wykonawców",
+    "artist_other": "{{count}} wykonawców"
+  },
+  "search": {
+    "placeholder": "Szukaj wykonawców, albumów, utworów, gatunku...",
+    "all": "Wszystko",
+    "tracks": "Utwory",
+    "albums": "Albumy",
+    "artists": "Wykonawcy"
+  }
+}

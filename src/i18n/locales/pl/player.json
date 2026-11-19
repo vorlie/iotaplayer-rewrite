@@ -1,0 +1,25 @@
+{
+  "controls": {
+    "play": "Odtwórz",
+    "pause": "Wstrzymaj",
+    "playPause": "Odtwórz/Wstrzymaj",
+    "previous": "Poprzedni utwór",
+    "next": "Następny utwór",
+    "shuffleOn": "Losowanie włączone",
+    "shuffleOff": "Losowanie wyłączone",
+    "repeatOff": "Powtarzanie wyłączone",
+    "repeatAll": "Powtarzaj wszystkie",
+    "repeatOne": "Powtarzaj jeden",
+    "mute": "Wycisz",
+    "unmute": "Wyłącz wyciszenie",
+    "fullscreen": "Pełny ekran",
+    "exitFullscreen": "Wyjdź z pełnego ekranu"
+  },
+  "status": {
+    "noTrackPlaying": "Brak odtwarzanego utworu",
+    "noTrackSelected": "Nie wybrano utworu",
+    "upNext": "Następne",
+    "lyrics": "Tekst",
+    "loadingLyrics": "Ładowanie tekstu…"
+  }
+}

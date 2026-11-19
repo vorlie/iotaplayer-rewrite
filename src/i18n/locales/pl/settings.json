@@ -1,0 +1,17 @@
+{
+  "title": "Ustawienia",
+  "categories": {
+    "playback": "Odtwarzanie",
+    "library": "Biblioteka",
+    "integrations": "Integracje"
+  },
+  "language": {
+    "title": "Język aplikacji",
+    "description": "Wybierz język interfejsu. Domyślny systemowy dopasowuje się do języka systemu.",
+    "options": {
+      "system": "Domyślny systemowy",
+      "en": "English",
+      "pl": "Polski"
+    }
+  }
+}

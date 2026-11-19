@@ -1,0 +1,17 @@
+{
+  "title": "Settings",
+  "categories": {
+    "playback": "Playback",
+    "library": "Library",
+    "integrations": "Integrations"
+  },
+  "language": {
+    "title": "Application Language",
+    "description": "Choose the interface language. System default follows your OS locale.",
+    "options": {
+      "system": "System default",
+      "en": "English",
+      "pl": "Polski"
+    }
+  }
+}

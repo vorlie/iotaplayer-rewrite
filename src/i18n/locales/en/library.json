@@ -1,0 +1,17 @@
+{
+  "counts": {
+    "track_one": "{{count}} track",
+    "track_other": "{{count}} tracks",
+    "album_one": "{{count}} album",
+    "album_other": "{{count}} albums",
+    "artist_one": "{{count}} artist",
+    "artist_other": "{{count}} artists"
+  },
+  "search": {
+    "placeholder": "Search artists, albums, tracks, genre...",
+    "all": "All",
+    "tracks": "Tracks",
+    "albums": "Albums",
+    "artists": "Artists"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "controls": {
+    "play": "Play",
+    "pause": "Pause",
+    "playPause": "Play/Pause",
+    "previous": "Previous",
+    "next": "Next",
+    "shuffleOn": "Shuffle on",
+    "shuffleOff": "Shuffle off",
+    "repeatOff": "Repeat off",
+    "repeatAll": "Repeat all",
+    "repeatOne": "Repeat one",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit Fullscreen"
+  },
+  "status": {
+    "noTrackPlaying": "No track playing",
+    "noTrackSelected": "No track selected",
+    "upNext": "Up next",
+    "lyrics": "Lyrics",
+    "loadingLyrics": "Loading lyrics…"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "title": "Playlisty",
+  "actions": {
+    "newPlaylist": "Nowa playlista…",
+    "addToPlaylist": "Dodaj do playlisty",
+    "addAlbumToPlaylist": "Dodaj album do playlisty",
+    "renamePlaylist": "Zmień nazwę playlisty",
+    "deletePlaylist": "Usuń playlistę"
+  },
+  "empty": {
+    "noPlaylists": "Brak playlist"
+  }
+}

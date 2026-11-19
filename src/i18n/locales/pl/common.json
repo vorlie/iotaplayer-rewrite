@@ -1,0 +1,35 @@
+{
+  "app": {
+    "name": "IotaPlayer"
+  },
+  "nav": {
+    "library": "Biblioteka",
+    "yourMusic": "Twoja muzyka",
+    "artists": "Wykonawcy",
+    "albums": "Albumy",
+    "tracks": "Utwory",
+    "playlists": "Playlisty",
+    "nowPlaying": "Teraz odtwarzane",
+    "favorites": "Ulubione",
+    "recentlyPlayed": "Ostatnio odtwarzane",
+    "search": "Szukaj",
+    "equalizer": "Korektor",
+    "settings": "Ustawienia"
+  },
+  "actions": {
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "reset": "Resetuj",
+    "delete": "Usuń",
+    "rename": "Zmień nazwę",
+    "browse": "Przeglądaj",
+    "clear": "Wyczyść",
+    "close": "Zamknij",
+    "checkAgain": "Sprawdź ponownie"
+  },
+  "fallbacks": {
+    "unknownTitle": "Nieznany tytuł",
+    "unknownArtist": "Nieznany wykonawca",
+    "unknownAlbum": "Nieznany album"
+  }
+}
