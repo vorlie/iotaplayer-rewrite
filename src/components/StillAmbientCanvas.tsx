@@ -160,10 +160,10 @@ void main() {
 
   vec3 col = oklabToSrgb(mix(u_bg, lab, 0.92));
 
-  // Soft vignette & static film-grain dither
+  // Soft vignette & static 1/255 dither against banding
   float vig = smoothstep(1.3, 0.2, length((uv - 0.5) * vec2(asp * 0.85, 1.0)));
   col *= mix(0.68, 1.0, vig);
-  col += (hash(gl_FragCoord.xy) - 0.5) * 0.022;
+  col += (hash(gl_FragCoord.xy) - 0.5) / 255.0;
 
   gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
@@ -233,6 +233,39 @@ function extractArtworkLabPalette(
   })
 }
 
+let cachedGrainTile: { url: string; sizePx: number } | null = null
+
+function getGrainTile(): { url: string; sizePx: number } | null {
+  if (cachedGrainTile) return cachedGrainTile
+  if (typeof document === 'undefined') return null
+
+  const size = 256
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+
+  const img = ctx.createImageData(size, size)
+  const d = img.data
+  for (let i = 0; i < d.length; i += 4) {
+    // Triangular distribution (two uniforms summed) for film-like grain
+    const v = (Math.random() + Math.random()) * 127.5
+    d[i] = v
+    d[i + 1] = v
+    d[i + 2] = v
+    d[i + 3] = 255
+  }
+  ctx.putImageData(img, 0, 0)
+
+  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
+  cachedGrainTile = {
+    url: canvas.toDataURL('image/png'),
+    sizePx: size / dpr,
+  }
+  return cachedGrainTile
+}
+
 interface StillAmbientCanvasProps {
   artworkSrc: string | null
   active: boolean
@@ -245,6 +278,7 @@ export function StillAmbientCanvas({
   isPlaying,
 }: StillAmbientCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const [grainTile] = useState(() => getGrainTile())
   const targetPaletteRef = useRef<[LabTuple, LabTuple, LabTuple, LabTuple, LabTuple]>(DEFAULT_LAB_PALETTE)
   const currentPaletteRef = useRef<[LabTuple, LabTuple, LabTuple, LabTuple, LabTuple]>([
     [...DEFAULT_LAB_PALETTE[0]],
@@ -409,6 +443,15 @@ export function StillAmbientCanvas({
         <div className="still-bg__fallback" />
       )}
       <div className="still-bg__scrim" />
+      {grainTile && (
+        <div
+          className="still-grain"
+          style={{
+            backgroundImage: `url(${grainTile.url})`,
+            backgroundSize: `${grainTile.sizePx}px`,
+          }}
+        />
+      )}
     </div>
   )
 }
