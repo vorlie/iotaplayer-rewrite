@@ -106,5 +106,48 @@
     "emptyBody": "Odtwórz muzykę z biblioteki, aby zobaczyć tutaj ostatnio słuchane utwory.",
     "clearHistory": "Wyczyść historię",
     "confirmClear": "Wyczyścić całą historię odtwarzania?"
+  },
+  "quality": {
+    "tiers": {
+      "hi-res": "Hi-Res (Bezstratny)",
+      "lossless": "Bezstratny",
+      "lossy": "Stratny",
+      "unknown": "Nieznany"
+    }
+  },
+  "inspector": {
+    "title": "Inspektor pliku",
+    "inspectFile": "Właściwości pliku…",
+    "copyPath": "Kopiuj ścieżkę",
+    "copied": "Skopiowano",
+    "revealInFolder": "Pokaż w folderze",
+    "channelsMono": "1 (Mono)",
+    "channelsStereo": "2 (Stereo)",
+    "channelsCount": "{{count}} kanały",
+    "sections": {
+      "audio": "Format dźwięku",
+      "metadata": "Tagi i daty",
+      "location": "Lokalizacja pliku"
+    },
+    "fields": {
+      "qualityTier": "Poziom jakości",
+      "codec": "Kodek",
+      "container": "Kontener",
+      "bitrate": "Przepływność",
+      "sampleRate": "Częstotliwość próbkowania",
+      "bitDepth": "Głębia bitowa",
+      "channels": "Kanały",
+      "duration": "Czas trwania",
+      "fileSize": "Rozmiar pliku",
+      "artist": "Wykonawca",
+      "albumArtist": "Wykonawca albumu",
+      "album": "Album",
+      "trackNumber": "Nr utworu",
+      "discNumber": "Nr płyty",
+      "year": "Rok",
+      "genre": "Gatunek",
+      "modifiedAt": "Zmodyfikowano",
+      "addedAt": "Dodano"
+    }
   }
 }

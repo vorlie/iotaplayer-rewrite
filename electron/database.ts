@@ -265,6 +265,18 @@ function runMigrations(db: Database.Database): void {
   if (!hasCoverMime) {
     db.exec('ALTER TABLE playlists ADD COLUMN cover_mime TEXT')
   }
+
+  const tracksSchema = db.prepare('PRAGMA table_info(tracks)').all() as Array<{ name: string }>
+  if (!tracksSchema.some((column) => column.name === 'channels')) {
+    db.exec('ALTER TABLE tracks ADD COLUMN channels INTEGER')
+  }
+  if (!tracksSchema.some((column) => column.name === 'is_lossless')) {
+    db.exec('ALTER TABLE tracks ADD COLUMN is_lossless INTEGER')
+  }
+  if (!tracksSchema.some((column) => column.name === 'added_at')) {
+    db.exec('ALTER TABLE tracks ADD COLUMN added_at INTEGER')
+    db.exec('UPDATE tracks SET added_at = modified_time WHERE added_at IS NULL')
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -400,8 +412,8 @@ export function dbGetTracks(opts?: {
          t.id, t.title, t.artist, t.album_artist, t.album, t.album_id, t.artist_id,
          t.track_number, t.track_total, t.disc_number, t.disc_total,
          t.year, t.genre, t.duration, t.bitrate, t.sample_rate,
-         t.bits_per_sample, t.codec, t.format,
-         t.path, t.file_size, t.modified_time, t.artwork_id
+         t.bits_per_sample, t.channels, t.is_lossless, t.codec, t.format,
+         t.path, t.file_size, t.modified_time, t.added_at, t.artwork_id
        FROM tracks t
        ${where}
        ORDER BY LOWER(t.album_artist), LOWER(t.album), t.disc_number, t.track_number, LOWER(t.title)
@@ -417,8 +429,8 @@ export function dbGetTrack(id: number): Track | null {
        t.id, t.title, t.artist, t.album_artist, t.album, t.album_id, t.artist_id,
        t.track_number, t.track_total, t.disc_number, t.disc_total,
        t.year, t.genre, t.duration, t.bitrate, t.sample_rate,
-       t.bits_per_sample, t.codec, t.format,
-       t.path, t.file_size, t.modified_time, t.artwork_id
+       t.bits_per_sample, t.channels, t.is_lossless, t.codec, t.format,
+       t.path, t.file_size, t.modified_time, t.added_at, t.artwork_id
      FROM tracks t WHERE t.id = ?`,
   ).get(id)
   return (row as Track) ?? null
@@ -516,8 +528,8 @@ export function dbSearch(query: string): {
          t.id, t.title, t.artist, t.album_artist, t.album, t.album_id, t.artist_id,
          t.track_number, t.track_total, t.disc_number, t.disc_total,
          t.year, t.genre, t.duration, t.bitrate, t.sample_rate,
-         t.bits_per_sample, t.codec, t.format,
-         t.path, t.file_size, t.modified_time, t.artwork_id
+         t.bits_per_sample, t.channels, t.is_lossless, t.codec, t.format,
+         t.path, t.file_size, t.modified_time, t.added_at, t.artwork_id
        FROM tracks t
        WHERE ${trackWheres.join(' AND ')}
        ORDER BY
@@ -565,8 +577,8 @@ export function dbGetPlaylists(): Array<{
            t.id, t.title, t.artist, t.album_artist, t.album, t.album_id, t.artist_id,
            t.track_number, t.track_total, t.disc_number, t.disc_total,
            t.year, t.genre, t.duration, t.bitrate, t.sample_rate,
-           t.bits_per_sample, t.codec, t.format,
-           t.path, t.file_size, t.modified_time, t.artwork_id
+           t.bits_per_sample, t.channels, t.is_lossless, t.codec, t.format,
+           t.path, t.file_size, t.modified_time, t.added_at, t.artwork_id
          FROM playlist_tracks pt
          JOIN tracks t ON t.id = pt.track_id
          WHERE pt.playlist_id = ?
@@ -777,8 +789,8 @@ export function dbGetFavorites(): Track[] {
          t.id, t.title, t.artist, t.album_artist, t.album, t.album_id, t.artist_id,
          t.track_number, t.track_total, t.disc_number, t.disc_total,
          t.year, t.genre, t.duration, t.bitrate, t.sample_rate,
-         t.bits_per_sample, t.codec, t.format,
-         t.path, t.file_size, t.modified_time, t.artwork_id
+         t.bits_per_sample, t.channels, t.is_lossless, t.codec, t.format,
+         t.path, t.file_size, t.modified_time, t.added_at, t.artwork_id
        FROM tracks t
        JOIN favorites f ON f.track_id = t.id
        ORDER BY f.added_at DESC`,
@@ -836,8 +848,8 @@ export function dbGetRecentlyPlayed(limit: number = 50): Track[] {
          t.id, t.title, t.artist, t.album_artist, t.album, t.album_id, t.artist_id,
          t.track_number, t.track_total, t.disc_number, t.disc_total,
          t.year, t.genre, t.duration, t.bitrate, t.sample_rate,
-         t.bits_per_sample, t.codec, t.format,
-         t.path, t.file_size, t.modified_time, t.artwork_id,
+         t.bits_per_sample, t.channels, t.is_lossless, t.codec, t.format,
+         t.path, t.file_size, t.modified_time, t.added_at, t.artwork_id,
          MAX(ph.played_at) as last_played
        FROM tracks t
        JOIN playback_history ph ON ph.track_id = t.id

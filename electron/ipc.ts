@@ -1,4 +1,5 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { existsSync } from 'node:fs'
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import {
   dbGetAlbum,
   dbGetAlbums,
@@ -69,6 +70,7 @@ export const IPC = {
   LIBRARY_RECENTLY_PLAYED: 'library:recently-played',
   LIBRARY_CLEAR_HISTORY: 'library:clear-history',
   LIBRARY_RECORD_PLAYBACK: 'library:record-playback',
+  LIBRARY_REVEAL_FILE: 'library:reveal-file',
   SCAN_PROGRESS:    'scan:progress',
 
   PLAYBACK_PLAY:    'playback:play',
@@ -191,6 +193,14 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(IPC.LIBRARY_CLEANUP_MISSING, () => {
     return cleanupMissingTracks()
+  })
+
+  ipcMain.handle(IPC.LIBRARY_REVEAL_FILE, (_event, filePath: string) => {
+    if (typeof filePath !== 'string' || !filePath.trim() || !existsSync(filePath)) {
+      return false
+    }
+    shell.showItemInFolder(filePath)
+    return true
   })
 
   ipcMain.handle(IPC.LIBRARY_LYRICS, async (_event, trackId: number, preference?: LyricsSourcePreference) => {

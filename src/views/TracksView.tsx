@@ -10,6 +10,8 @@ import {
   Trash2,
 } from 'lucide-react'
 import { useFormatDuration, useTracks } from '../hooks/useLibrary'
+import { FileInspectorModal } from '../components/FileInspectorModal'
+import { QualityBadge } from '../components/QualityBadge'
 import { useAppStore, usePlaybackStore } from '../store'
 import type { Track } from '../types/electron'
 import '../styles/library.css'
@@ -29,6 +31,7 @@ interface TrackRowProps {
   isDragging?: boolean
   dragOverIndicator?: 'top' | 'bottom' | null
   onClick: () => void
+  onInspect: () => void
   onRemove?: () => void
   onMoveUp?: () => void
   onMoveDown?: () => void
@@ -49,6 +52,7 @@ function TrackRow({
   isDragging = false,
   dragOverIndicator = null,
   onClick,
+  onInspect,
   onRemove,
   onMoveUp,
   onMoveDown,
@@ -63,16 +67,22 @@ function TrackRow({
   const { playlists, addTrackToPlaylist, favoriteIds, toggleFavorite } = usePlaybackStore()
   const isFav = favoriteIds.includes(track.id)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
+  const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false)
+  const [newPlaylistName, setNewPlaylistName] = useState('')
 
   function handleContextMenu(e: React.MouseEvent<HTMLDivElement>) {
     e.preventDefault()
+    setIsCreatingPlaylist(false)
+    setNewPlaylistName(track.title)
     setContextMenu({ x: e.clientX, y: e.clientY })
   }
 
-  function handleCreatePlaylist() {
-    const name = window.prompt(t('playlists:actions.newPlaylistPrompt'), track.title)?.trim()
+  function handleCreatePlaylistSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const name = newPlaylistName.trim()
     if (!name) return
     usePlaybackStore.getState().createPlaylist(name, [track])
+    setIsCreatingPlaylist(false)
     setContextMenu(null)
   }
 
@@ -137,6 +147,7 @@ function TrackRow({
               {track.artist ?? track.album_artist ?? '—'}
             </div>
           </div>
+          <QualityBadge track={track} onClick={onInspect} />
         </div>
 
         {showAlbum && (
@@ -188,6 +199,17 @@ function TrackRow({
               type="button"
               className="context-menu-item"
               onClick={() => {
+                onInspect()
+                setContextMenu(null)
+              }}
+            >
+              {t('inspector.inspectFile')}
+            </button>
+
+            <button
+              type="button"
+              className="context-menu-item"
+              onClick={() => {
                 void toggleFavorite(track)
                 setContextMenu(null)
               }}
@@ -227,13 +249,48 @@ function TrackRow({
                 </button>
               ))
             )}
-            <button
-              type="button"
-              className="context-menu-item context-menu-item--primary"
-              onClick={handleCreatePlaylist}
-            >
-              {t('playlists:actions.newPlaylistEllipsis')}
-            </button>
+            {isCreatingPlaylist ? (
+              <form className="context-menu-inline-form" onSubmit={handleCreatePlaylistSubmit}>
+                <input
+                  type="text"
+                  className="context-menu-inline-input"
+                  value={newPlaylistName}
+                  onChange={(e) => setNewPlaylistName(e.target.value)}
+                  placeholder={t('playlists:actions.newPlaylistPrompt')}
+                  autoFocus
+                  onFocus={(e) => e.currentTarget.select()}
+                />
+                <div className="context-menu-inline-actions">
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    style={{ height: 24, padding: '0 8px', fontSize: 11 }}
+                    onClick={() => setIsCreatingPlaylist(false)}
+                  >
+                    {t('common:actions.cancel')}
+                  </button>
+                  <button
+                    type="submit"
+                    className="detail-play-btn"
+                    style={{ height: 24, padding: '0 8px', fontSize: 11 }}
+                    disabled={!newPlaylistName.trim()}
+                  >
+                    {t('common:actions.save')}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <button
+                type="button"
+                className="context-menu-item context-menu-item--primary"
+                onClick={() => {
+                  setNewPlaylistName(track.title)
+                  setIsCreatingPlaylist(true)
+                }}
+              >
+                {t('playlists:actions.newPlaylistEllipsis')}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -260,6 +317,7 @@ export function TracksTable({
   const { play, currentTrack, isPlaying } = usePlaybackStore()
   const hasActions = Boolean(onRemoveTrack || onMoveTrack)
   const isDraggable = Boolean(onMoveTrack)
+  const [inspectedTrack, setInspectedTrack] = useState<Track | null>(null)
 
   // Drag and drop state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
@@ -378,6 +436,7 @@ export function TracksTable({
           isDragging={draggedIndex === i}
           dragOverIndicator={dragOverInfo?.index === i ? dragOverInfo.position : null}
           onClick={() => play(track, sortedTracks)}
+          onInspect={() => setInspectedTrack(track)}
           onRemove={onRemoveTrack ? () => onRemoveTrack(i) : undefined}
           onMoveUp={onMoveTrack && i > 0 ? () => onMoveTrack(i, i - 1) : undefined}
           onMoveDown={onMoveTrack && i < sortedTracks.length - 1 ? () => onMoveTrack(i, i + 1) : undefined}
@@ -411,6 +470,13 @@ export function TracksTable({
           }}
         />
       ))}
+
+      {inspectedTrack && (
+        <FileInspectorModal
+          track={inspectedTrack}
+          onClose={() => setInspectedTrack(null)}
+        />
+      )}
     </div>
   )
 }

@@ -19,11 +19,14 @@ export interface Track {
   bitrate: number | null // kbps
   sample_rate: number | null // Hz
   bits_per_sample: number | null
+  channels?: number | null
+  is_lossless?: number | null // 1 = lossless, 0 = lossy, null = unknown
   codec: string | null
   format: string | null
   path: string
   file_size: number // bytes
   modified_time: number // unix timestamp ms
+  added_at?: number | null // unix timestamp ms
   artwork_id: number | null
 }
 
