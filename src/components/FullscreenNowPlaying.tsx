@@ -550,7 +550,7 @@ export function FullscreenNowPlaying() {
 
       {/* Main Viewport Body */}
       {fullscreenStyle === 'still' ? (
-        <main className={`still-main ${viewMode !== 'artwork' ? 'has-panel' : ''}`}>
+        <main className="still-main">
           <section className="still-stage">
             <div className="still-artwork">
               {artworkSrc ? (
@@ -579,7 +579,7 @@ export function FullscreenNowPlaying() {
                     onClick={() => toggleFavorite(currentTrack)}
                     title={isFav ? t('common:actions.removeFromFavorites') : t('common:actions.addToFavorites')}
                   >
-                    <Heart size={20} fill={isFav ? 'currentColor' : 'none'} />
+                    <Heart size={18} fill={isFav ? 'currentColor' : 'none'} />
                   </button>
                 )}
               </div>
@@ -588,11 +588,11 @@ export function FullscreenNowPlaying() {
               </div>
             </div>
 
-            <div className="still-pill">
-              <div className="still-pill__progress">
-                <span className="still-pill__time">{fmt(position)}</span>
+            <div className="still-controls-block">
+              <div className="still-progress">
+                <span className="still-progress__time">{fmt(position)}</span>
                 <div
-                  className="still-pill__track"
+                  className="still-progress__track"
                   onClick={handleProgressClick}
                   role="slider"
                   aria-label={t('status.seekProgress')}
@@ -600,85 +600,96 @@ export function FullscreenNowPlaying() {
                   aria-valuemin={0}
                   aria-valuemax={duration}
                 >
-                  <div className="still-pill__fill" style={{ width: `${progress}%` }} />
+                  <div className="still-progress__fill" style={{ width: `${progress}%` }} />
                 </div>
-                <span className="still-pill__time still-pill__time--end">{fmt(duration)}</span>
+                <span className="still-progress__time still-progress__time--end">{fmt(duration)}</span>
               </div>
 
-              <div className="still-pill__controls-row">
-                <div className="still-pill__transport">
-                  <button
-                    type="button"
-                    className={`still-pill__btn ${shuffle ? 'is-active' : ''}`}
-                    title={shuffle ? t('controls.shuffleOn') : t('controls.shuffleOff')}
-                    onClick={toggleShuffle}
-                  >
-                    <Shuffle size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    className="still-pill__btn"
-                    onClick={previous}
-                    title={t('controls.previousTrack')}
-                  >
-                    <SkipBack size={17} />
-                  </button>
-                  <button
-                    type="button"
-                    className="still-pill__btn still-pill__btn--play"
-                    onClick={toggle}
-                    title={t('controls.playPauseShortcut')}
-                  >
-                    {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
-                  </button>
-                  <button
-                    type="button"
-                    className="still-pill__btn"
-                    onClick={next}
-                    title={t('controls.nextTrack')}
-                  >
-                    <SkipForward size={17} />
-                  </button>
-                  <button
-                    type="button"
-                    className={`still-pill__btn ${repeatMode !== 'off' ? 'is-active' : ''}`}
-                    title={repeatLabel}
-                    onClick={toggleRepeat}
-                  >
-                    {repeatMode === 'one' ? <Repeat1 size={15} /> : <Repeat size={15} />}
-                  </button>
-                </div>
-
-                <div className="still-pill__volume">
-                  <button
-                    type="button"
-                    className="player-fav-btn"
-                    onClick={handleToggleMute}
-                    title={volume === 0 ? t('controls.unmute') : t('controls.mute')}
-                    style={{ padding: 4 }}
-                  >
-                    {volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
-                  </button>
-                  <div
-                    className="still-pill__vol-track"
-                    onClick={handleVolumeClick}
-                    role="slider"
-                    aria-label={t('status.volume')}
-                    aria-valuenow={volume}
-                    aria-valuemin={0}
-                    aria-valuemax={1}
-                  >
-                    <div className="still-pill__vol-fill" style={{ width: `${volume * 100}%` }} />
-                  </div>
-                </div>
+              <div className="still-transport">
+                <button
+                  type="button"
+                  className={`still-btn ${shuffle ? 'is-active' : ''}`}
+                  title={shuffle ? t('controls.shuffleOn') : t('controls.shuffleOff')}
+                  onClick={toggleShuffle}
+                >
+                  <Shuffle size={15} />
+                </button>
+                <button
+                  type="button"
+                  className="still-btn"
+                  onClick={previous}
+                  title={t('controls.previousTrack')}
+                >
+                  <SkipBack size={18} />
+                </button>
+                <button
+                  type="button"
+                  className="still-btn still-btn--play"
+                  onClick={toggle}
+                  title={t('controls.playPauseShortcut')}
+                >
+                  {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
+                </button>
+                <button
+                  type="button"
+                  className="still-btn"
+                  onClick={next}
+                  title={t('controls.nextTrack')}
+                >
+                  <SkipForward size={18} />
+                </button>
+                <button
+                  type="button"
+                  className={`still-btn ${repeatMode !== 'off' ? 'is-active' : ''}`}
+                  title={repeatLabel}
+                  onClick={toggleRepeat}
+                >
+                  {repeatMode === 'one' ? <Repeat1 size={15} /> : <Repeat size={15} />}
+                </button>
               </div>
             </div>
+
+            {/* Still-inspired centered lyrics directly below the focus block */}
+            {viewMode !== 'artwork' && lyrics.lines.length > 0 && (
+              <div className={`still-lyrics-stage ${!isPlaying ? 'is-paused' : ''}`}>
+                {lyrics.synchronized && activeLyricIndex >= 0 ? (
+                  <>
+                    <button
+                      type="button"
+                      className="still-ly-line is-current"
+                      onClick={() => {
+                        const line = lyrics.lines[activeLyricIndex]
+                        if (line?.timestamp != null) seek(line.timestamp)
+                      }}
+                    >
+                      {lyrics.lines[activeLyricIndex]?.text || '•••'}
+                    </button>
+                    {lyrics.lines[activeLyricIndex + 1] && (
+                      <button
+                        type="button"
+                        className="still-ly-line is-next"
+                        onClick={() => {
+                          const nextLine = lyrics.lines[activeLyricIndex + 1]
+                          if (nextLine?.timestamp != null) seek(nextLine.timestamp)
+                        }}
+                      >
+                        {lyrics.lines[activeLyricIndex + 1]?.text || '•••'}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <div className="still-ly-line is-current">
+                    {lyrics.lines[0]?.text}
+                  </div>
+                )}
+              </div>
+            )}
           </section>
 
-          {viewMode !== 'artwork' && (
-            <section className="still-secondary-pane">
+          {viewMode !== 'artwork' && secondaryTab === 'queue' && (
+            <aside className="still-queue-drawer">
               {secondaryPaneContent}
-            </section>
+            </aside>
           )}
         </main>
       ) : (

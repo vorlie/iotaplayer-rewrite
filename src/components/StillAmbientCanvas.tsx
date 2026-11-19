@@ -17,7 +17,7 @@ void main() {
 `
 
 const FRAG_SRC = `
-precision mediump float;
+precision highp float;
 uniform vec2 u_res;
 uniform float u_time;
 uniform float u_energy;
@@ -25,6 +25,34 @@ uniform vec3 u_c0;
 uniform vec3 u_c1;
 uniform vec3 u_c2;
 uniform vec3 u_c3;
+
+float hash(vec2 p) {
+  p = fract(p * vec2(234.34, 435.345));
+  p += dot(p, p + 34.23);
+  return fract(p.x * p.y);
+}
+
+float noise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(
+    mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),
+    mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
+    u.y
+  );
+}
+
+float fbm(vec2 p) {
+  float v = 0.0;
+  float a = 0.5;
+  mat2 m = mat2(1.6, 1.2, -1.2, 1.6);
+  for (int i = 0; i < 4; i++) {
+    v += a * noise(p);
+    p = m * p;
+    a *= 0.5;
+  }
+  return v;
+}
 
 float blob(vec2 p, vec2 c, float r) {
   vec2 d = p - c;
@@ -36,28 +64,41 @@ void main() {
   float asp = u_res.x / max(u_res.y, 1.0);
   vec2 p = vec2((uv.x - 0.5) * asp, uv.y - 0.5);
 
-  float t = u_time * 0.14;
-  vec2 c0 = vec2(sin(t * 0.9) * 0.42, cos(t * 0.7) * 0.30);
-  vec2 c1 = vec2(cos(t * 0.6 + 1.8) * 0.48, sin(t * 0.8 + 0.9) * 0.34);
-  vec2 c2 = vec2(sin(t * 0.5 + 3.4) * 0.38, cos(t * 0.9 + 2.4) * 0.28);
-  vec2 c3 = vec2(cos(t * 0.7 + 4.7) * 0.44, sin(t * 0.5 + 3.7) * 0.32);
+  float t = u_time * 0.22;
 
-  float b0 = blob(p, c0, 0.62);
-  float b1 = blob(p, c1, 0.58);
-  float b2 = blob(p, c2, 0.66);
-  float b3 = blob(p, c3, 0.54);
+  // Domain-warped silk folds (inspired by Still's Flow/Field shader)
+  vec2 w = vec2(
+    fbm(p * 1.15 + vec2(t * 0.06, -t * 0.05)),
+    fbm(p * 1.15 + vec2(5.2 - t * 0.04, 1.3 + t * 0.05))
+  );
+  vec2 pw = p + (w - 0.5) * 0.65;
 
-  vec3 base = vec3(0.035, 0.035, 0.055);
+  float foldA = fbm(pw * 1.6 + vec2(t * 0.04, -t * 0.03));
+  float foldB = fbm(pw * 2.2 - vec2(t * 0.03, t * 0.04) + foldA * 0.8);
+  float sheen = smoothstep(0.32, 0.78, foldB);
+
+  vec2 c0 = vec2(sin(t * 0.14) * 0.42 * asp, sin(t * 0.11 + 1.7) * 0.24);
+  vec2 c1 = vec2(sin(t * 0.12 + 2.4) * 0.44 * asp, cos(t * 0.09 + 0.6) * 0.26);
+  vec2 c2 = vec2(cos(t * 0.10 + 4.1) * 0.38 * asp, sin(t * 0.13 + 3.3) * 0.24);
+  vec2 c3 = vec2(cos(t * 0.08 + 1.0) * 0.32 * asp, cos(t * 0.10 + 2.2) * 0.20);
+
+  vec3 base = vec3(0.028, 0.036, 0.058);
   vec3 col = base;
-  col += u_c0 * b0 * (0.58 + u_energy * 0.14);
-  col += u_c1 * b1 * (0.52 + u_energy * 0.12);
-  col += u_c2 * b2 * (0.48 + u_energy * 0.12);
-  col += u_c3 * b3 * (0.44 + u_energy * 0.10);
+  col = mix(col, u_c3 * 0.72, blob(pw, c3, 0.78) * 0.72);
+  col = mix(col, u_c2 * 0.78, blob(pw, c2, 0.56) * 0.82);
+  col = mix(col, u_c1 * 0.85, blob(pw, c1, 0.52) * 0.86);
+  col = mix(col, u_c0 * 0.90, blob(pw, c0, 0.56) * 0.90);
 
-  // Subtle vignette
-  float vig = smoothstep(1.25, 0.25, length(p));
-  col *= mix(0.68, 1.0, vig);
+  // Soft silk-fold highlight
+  vec3 sheenTint = mix(u_c0, u_c2, 0.5) * 0.42 + vec3(0.06, 0.08, 0.11);
+  col += sheenTint * sheen * (0.45 + u_energy * 0.15);
 
+  // Center vignette
+  float v = smoothstep(1.30, 0.15, length((uv - 0.5) * vec2(asp * 0.85, 1.0)));
+  col *= mix(0.48, 1.0, v);
+
+  // Static dither against banding
+  col += (hash(gl_FragCoord.xy) - 0.5) / 255.0;
   gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
 `
