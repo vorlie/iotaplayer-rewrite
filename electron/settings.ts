@@ -21,6 +21,8 @@ function getElectronApp(): typeof import('electron').app | undefined {
   }
 }
 
+export type AppLanguage = 'system' | 'en' | 'pl'
+
 export interface AppSettings {
   discordClientId: string
   imgurClientId: string
@@ -32,6 +34,7 @@ export interface AppSettings {
   lyricsSourcePreference: LyricsSourcePreference
   playbackRate: number
   preservePitch: boolean
+  language: AppLanguage
 }
 
 const DEFAULT_EQUALIZER_BANDS = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -64,6 +67,13 @@ function normalizeLyricsSourcePreference(value: unknown): LyricsSourcePreference
   return 'embedded'
 }
 
+export function normalizeAppLanguage(value: unknown): AppLanguage {
+  if (value === 'en' || value === 'pl' || value === 'system') {
+    return value
+  }
+  return 'system'
+}
+
 const DEFAULT_SETTINGS: AppSettings = {
   discordClientId: '',
   imgurClientId: '',
@@ -75,6 +85,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   lyricsSourcePreference: 'embedded',
   playbackRate: DEFAULT_PLAYBACK_RATE,
   preservePitch: DEFAULT_PRESERVE_PITCH,
+  language: 'system',
 }
 
 function normalizeEqualizerBands(value: unknown): number[] {
@@ -118,6 +129,7 @@ export function getAppSettings(): AppSettings {
       lyricsSourcePreference: normalizeLyricsSourcePreference(parsed.lyricsSourcePreference),
       playbackRate: normalizePlaybackRate(parsed.playbackRate, DEFAULT_SETTINGS.playbackRate),
       preservePitch: normalizePreservePitch(parsed.preservePitch, DEFAULT_SETTINGS.preservePitch),
+      language: normalizeAppLanguage(parsed.language),
     }
   } catch {
     writeFileSync(settingsPath, JSON.stringify(DEFAULT_SETTINGS, null, 2), 'utf8')
@@ -143,6 +155,7 @@ export function setAppSettings(nextSettings: Partial<AppSettings>): AppSettings 
       nextSettings.preservePitch ?? current.preservePitch,
       current.preservePitch,
     ),
+    language: normalizeAppLanguage(nextSettings.language ?? current.language),
   }
   const settingsPath = getSettingsPath()
   writeFileSync(settingsPath, JSON.stringify(merged, null, 2), 'utf8')

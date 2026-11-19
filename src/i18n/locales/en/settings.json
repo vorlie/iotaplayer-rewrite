@@ -1,0 +1,133 @@
+{
+  "title": "Settings",
+  "subtitle": "Manage playback, library, and app integrations.",
+  "navigation": "Navigation",
+  "saveSettings": "Save Settings",
+  "saving": "Saving…",
+  "categories": {
+    "playback": "Playback",
+    "library": "Library",
+    "integrations": "Integrations"
+  },
+  "language": {
+    "title": "Application Language",
+    "description": "Choose the interface language. System default follows your OS locale.",
+    "options": {
+      "system": "System default",
+      "en": "English",
+      "pl": "Polski"
+    }
+  },
+  "playback": {
+    "eyebrow": "Playback",
+    "heading": "Audio settings",
+    "backendLabel": "Audio backend",
+    "backendOptions": {
+      "auto": "Automatic",
+      "mpv": "MPV only",
+      "browser": "Browser fallback only"
+    },
+    "backendHint": ".wav files always use MPV."
+  },
+  "lyrics": {
+    "eyebrow": "Lyrics",
+    "label": "Lyrics source preference",
+    "options": {
+      "embedded": "Embedded (default)",
+      "synchronized": "Synchronized",
+      "sidecar": "Sidecar"
+    },
+    "hints": {
+      "embedded": "Prefer lyrics embedded in audio files, then fall back to sidecars.",
+      "synchronized": "Prefer lyrics with the highest synchronization quality, regardless of source.",
+      "sidecar": "Prefer external lyrics files, then fall back to embedded lyrics."
+    }
+  },
+  "discord": {
+    "title": "Discord Rich Presence",
+    "description": "Shows the current track and audio progress in Discord.",
+    "clientIdLabel": "Discord client ID",
+    "clientIdPlaceholder": "Optional custom Discord application ID",
+    "imgurIdLabel": "Imgur client ID",
+    "imgurIdPlaceholder": "Optional Imgur client ID for cover uploads",
+    "enabledStatus": "Discord presence is enabled",
+    "disabledStatus": "Discord presence is disabled",
+    "imgurConfigured": "Imgur client ID configured",
+    "imgurNotConfigured": "Imgur client ID not configured"
+  },
+  "library": {
+    "eyebrow": "Library",
+    "heading": "Folder & scanning",
+    "rootLabel": "Music folder path",
+    "rootPlaceholder": "Select your music folder",
+    "scan": "Scan Library",
+    "scanning": "Scanning…",
+    "cleanMissing": "Clean missing",
+    "cleaning": "Cleaning…",
+    "progress": {
+      "discovering": "Discovering files…",
+      "scanning": "Scanning {{current}} / {{total}}…",
+      "removing": "Cleaning up…",
+      "done": "Done!"
+    },
+    "summary": {
+      "lastScan": "Last scan",
+      "duration": "{{seconds}}s",
+      "total": "Total",
+      "unchanged": "Unchanged",
+      "added": "Added",
+      "updated": "Updated",
+      "removed": "Removed",
+      "failed": "Failed",
+      "errorsCount_one": "{{count}} error",
+      "errorsCount_other": "{{count}} errors"
+    },
+    "stats": {
+      "tracks": "Tracks",
+      "albums": "Albums",
+      "artists": "Artists"
+    }
+  },
+  "integrations": {
+    "eyebrow": "Integrations",
+    "heading": "Connected services",
+    "publishedBy": "Published by {{publisher}} · Identifier: {{appId}}"
+  },
+  "equalizer": {
+    "title": "Equalizer & Speed",
+    "subtitle": "Shape your sound with 10-band EQ, Nightcore/Daycore presets, and custom speed & pitch controls.",
+    "speedSection": "Speed & Pitch",
+    "speedAria": "Playback Speed and Pitch",
+    "rateTitle": "Current playback rate",
+    "pitchBadge": "Pitch {{shift}}",
+    "pitchTitle": "Calculated pitch shift in semitones (12 × log2(rate))",
+    "presetsAria": "Playback speed presets",
+    "custom": "Custom",
+    "sliderAria": "Playback speed multiplier",
+    "exactSpeed": "Exact speed",
+    "preservePitch": "Preserve pitch",
+    "preservePitchAria": "Preserve original pitch",
+    "resetSpeed": "Reset Speed",
+    "resetSpeedTitle": "Reset speed to 1.00× and enable pitch preservation",
+    "enableEq": "Enable equalizer",
+    "eqPresetAria": "Equalizer preset",
+    "resetEq": "Reset EQ",
+    "bandResponse": "Band response",
+    "bandAria": "{{freq}} Hz band",
+    "presets": {
+      "Normal": { "name": "Normal", "description": "Original tempo and pitch" },
+      "Nightcore": { "name": "Nightcore", "description": "Classic +16% speed and pitch boost" },
+      "Fast Nightcore": { "name": "Fast Nightcore", "description": "High-energy +25% speed and pitch boost" },
+      "Daycore": { "name": "Daycore", "description": "Deep −15% speed and pitch shift" },
+      "Slowed": { "name": "Slowed", "description": "Relaxed −10% speed and pitch shift" }
+    },
+    "eqPresets": {
+      "Flat": "Flat",
+      "Warm": "Warm",
+      "Bright": "Bright",
+      "Bass": "Bass",
+      "Vocal": "Vocal",
+      "Club": "Club"
+    }
+  }
+}

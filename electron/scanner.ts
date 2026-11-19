@@ -4,6 +4,7 @@ import path from 'path'
 import { parseFile } from 'music-metadata'
 import type Database from 'better-sqlite3'
 import { getDatabase } from './database'
+import { getElectronStrings, type ElectronLocale } from './i18n'
 import type { ScanProgress, ScanResult } from './types'
 
 // ---------------------------------------------------------------------------
@@ -174,21 +175,22 @@ export function classifyScanFailure(error: unknown): 'unsupported-codec' | 'miss
   return 'unknown'
 }
 
-export function formatScanError(filePath: string, error: unknown): string {
+export function formatScanError(filePath: string, error: unknown, locale?: ElectronLocale): string {
   const message = error instanceof Error ? error.message : String(error)
   const trimmed = message.replace(/\s+/g, ' ').trim()
   const classification = classifyScanFailure(error)
+  const scanErrors = getElectronStrings(locale).scanErrors
 
   if (classification === 'unsupported-codec') {
-    return `${filePath}: Unsupported or unreadable codec/file format (${trimmed})`
+    return scanErrors.unsupportedCodec(filePath, trimmed)
   }
 
   if (classification === 'missing-file') {
-    return `${filePath}: File is missing or no longer accessible (${trimmed})`
+    return scanErrors.missingFile(filePath, trimmed)
   }
 
   if (classification === 'io') {
-    return `${filePath}: File could not be read (${trimmed})`
+    return scanErrors.io(filePath, trimmed)
   }
 
   return `${filePath}: ${trimmed}`

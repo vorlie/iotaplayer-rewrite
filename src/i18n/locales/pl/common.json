@@ -1,0 +1,51 @@
+{
+  "app": {
+    "name": "IotaPlayer"
+  },
+  "nav": {
+    "library": "Biblioteka",
+    "yourMusic": "Twoja muzyka",
+    "artists": "Wykonawcy",
+    "albums": "Albumy",
+    "tracks": "Utwory",
+    "playlists": "Playlisty",
+    "nowPlaying": "Teraz odtwarzane",
+    "favorites": "Ulubione",
+    "recentlyPlayed": "Ostatnio odtwarzane",
+    "search": "Szukaj",
+    "equalizer": "Korektor",
+    "settings": "Ustawienia"
+  },
+  "actions": {
+    "save": "Zapisz",
+    "saveChanges": "Zapisz zmiany",
+    "saving": "Zapisywanie…",
+    "cancel": "Anuluj",
+    "reset": "Resetuj",
+    "delete": "Usuń",
+    "rename": "Zmień nazwę",
+    "browse": "Przeglądaj",
+    "clear": "Wyczyść",
+    "close": "Zamknij",
+    "checkAgain": "Sprawdź ponownie",
+    "play": "Odtwórz",
+    "playAll": "Odtwórz wszystko",
+    "playAllLower": "Odtwórz wszystko",
+    "moveUp": "Przesuń w górę",
+    "moveDown": "Przesuń w dół",
+    "removeFromQueue": "Usuń z kolejki",
+    "removeFromPlaylist": "Usuń z playlisty",
+    "dragToReorder": "Przeciągnij, aby zmienić kolejność",
+    "addToFavorites": "Dodaj do ulubionych",
+    "removeFromFavorites": "Usuń z ulubionych"
+  },
+  "fallbacks": {
+    "unknownTitle": "Nieznany tytuł",
+    "unknownArtist": "Nieznany wykonawca",
+    "unknownArtistTitleCase": "Nieznany wykonawca",
+    "unknownAlbum": "Nieznany album"
+  },
+  "states": {
+    "loading": "Ładowanie…"
+  }
+}

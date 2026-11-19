@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Search } from 'lucide-react'
 import { useArtists } from '../hooks/useLibrary'
 import { useAppStore } from '../store'
@@ -7,6 +8,7 @@ import '../styles/library.css'
 type ArtistSort = 'name-asc' | 'name-desc' | 'albums-desc' | 'tracks-desc'
 
 export function ArtistsView() {
+  const { t } = useTranslation('library')
   const { artists, loading } = useArtists()
   const { navigate } = useAppStore()
   const [filterQuery, setFilterQuery] = useState('')
@@ -37,7 +39,7 @@ export function ArtistsView() {
   if (loading) {
     return (
       <div className="page">
-        <div className="loading-state">Loading artists…</div>
+        <div className="loading-state">{t('artists.loading')}</div>
       </div>
     )
   }
@@ -46,9 +48,9 @@ export function ArtistsView() {
     return (
       <div className="page">
         <div className="empty-state">
-          <div className="empty-state-title">No artists yet</div>
+          <div className="empty-state-title">{t('artists.emptyTitle')}</div>
           <div className="empty-state-body">
-            Go to Settings and scan your music library to get started.
+            {t('artists.emptyBody')}
           </div>
         </div>
       </div>
@@ -60,11 +62,11 @@ export function ArtistsView() {
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 className="page-title">Artists</h1>
+            <h1 className="page-title">{t('artists.title')}</h1>
             <p className="page-subtitle">
               {filterQuery
-                ? `Showing ${filteredAndSortedArtists.length} of ${artists.length} artists`
-                : `${artists.length} artists`}
+                ? t('counts.showingOfArtists', { shown: filteredAndSortedArtists.length, total: artists.length })
+                : t('counts.artist', { count: artists.length })}
             </p>
           </div>
 
@@ -73,7 +75,7 @@ export function ArtistsView() {
               <Search size={14} className="search-filter-icon" />
               <input
                 type="text"
-                placeholder="Filter artists..."
+                placeholder={t('artists.filterPlaceholder')}
                 value={filterQuery}
                 onChange={(e) => setFilterQuery(e.target.value)}
                 className="search-filter-input"
@@ -85,10 +87,10 @@ export function ArtistsView() {
               onChange={(e) => setSortBy(e.target.value as ArtistSort)}
               className="sort-select"
             >
-              <option value="name-asc">Sort: Name (A-Z)</option>
-              <option value="name-desc">Sort: Name (Z-A)</option>
-              <option value="albums-desc">Sort: Most Albums</option>
-              <option value="tracks-desc">Sort: Most Tracks</option>
+              <option value="name-asc">{t('artists.sort.nameAsc')}</option>
+              <option value="name-desc">{t('artists.sort.nameDesc')}</option>
+              <option value="albums-desc">{t('artists.sort.mostAlbums')}</option>
+              <option value="tracks-desc">{t('artists.sort.mostTracks')}</option>
             </select>
           </div>
         </div>
@@ -97,8 +99,8 @@ export function ArtistsView() {
       <div className="page-body">
         {filteredAndSortedArtists.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-title">No matching artists</div>
-            <div className="empty-state-body">No artists match your filter "{filterQuery}".</div>
+            <div className="empty-state-title">{t('artists.noMatchingTitle')}</div>
+            <div className="empty-state-body">{t('artists.noMatchingBody', { query: filterQuery })}</div>
           </div>
         ) : (
           <div className="artists-list">
@@ -114,8 +116,8 @@ export function ArtistsView() {
                 <div className="artist-info">
                   <div className="artist-name">{artist.name}</div>
                   <div className="artist-meta">
-                    {artist.album_count} {artist.album_count === 1 ? 'album' : 'albums'} ·{' '}
-                    {artist.track_count} {artist.track_count === 1 ? 'track' : 'tracks'}
+                    {t('counts.album', { count: artist.album_count })} ·{' '}
+                    {t('counts.track', { count: artist.track_count })}
                   </div>
                 </div>
               </div>

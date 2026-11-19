@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { FullscreenNowPlaying } from './components/FullscreenNowPlaying'
 import { PlayerBar } from './components/PlayerBar'
 import { Sidebar } from './components/Sidebar'
+import { applyAppLanguage } from './i18n'
 import { useAppStore, usePlaybackStore } from './store'
 import { AlbumDetailView } from './views/AlbumDetailView'
 import { AlbumsView } from './views/AlbumsView'
@@ -43,10 +44,21 @@ function MainContent() {
 export default function App() {
   const { loadStats, loadAlbums } = useAppStore()
 
-  // Load library data on startup
+  // Load library data and persisted language preference on startup
   useEffect(() => {
     loadStats()
     loadAlbums()
+
+    Promise.all([
+      window.settings.get(),
+      window.appInfo?.getInfo() ?? Promise.resolve(null),
+    ])
+      .then(([settings, info]) => {
+        void applyAppLanguage(settings.language ?? 'system', info?.systemLocale)
+      })
+      .catch(() => {
+        // Fallback to browser/system locale already initialized
+      })
   }, [loadStats, loadAlbums])
 
   // Global keyboard shortcuts: F (toggle fullscreen), Escape (exit fullscreen), Space (play/pause)

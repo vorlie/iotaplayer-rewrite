@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { History, Play, Trash2 } from 'lucide-react'
 import { useFormatDuration } from '../hooks/useLibrary'
 import { usePlaybackStore } from '../store'
@@ -7,6 +8,7 @@ import { TracksTable } from './TracksView'
 import '../styles/library.css'
 
 export function RecentlyPlayedView() {
+  const { t } = useTranslation(['library', 'common'])
   const [tracks, setTracks] = useState<Track[]>([])
   const [loading, setLoading] = useState(() => typeof window !== 'undefined' && 'library' in window)
   const fmt = useFormatDuration()
@@ -34,7 +36,7 @@ export function RecentlyPlayedView() {
   }, [currentTrack?.id])
 
   const handleClear = async () => {
-    if (window.confirm('Clear all playback history?')) {
+    if (window.confirm(t('recentlyPlayed.confirmClear'))) {
       if (typeof window !== 'undefined' && 'library' in window) {
         await window.library.clearHistory()
         setTracks([])
@@ -47,7 +49,7 @@ export function RecentlyPlayedView() {
   if (loading) {
     return (
       <div className="page">
-        <div className="loading-state">Loading history…</div>
+        <div className="loading-state">{t('recentlyPlayed.loading')}</div>
       </div>
     )
   }
@@ -56,14 +58,14 @@ export function RecentlyPlayedView() {
     return (
       <div className="page">
         <div className="page-header">
-          <h1 className="page-title">Recently Played</h1>
-          <p className="page-subtitle">Your playback history</p>
+          <h1 className="page-title">{t('recentlyPlayed.title')}</h1>
+          <p className="page-subtitle">{t('recentlyPlayed.subtitle')}</p>
         </div>
         <div className="page-body">
           <div className="empty-state">
-            <div className="empty-state-title">No playback history yet</div>
+            <div className="empty-state-title">{t('recentlyPlayed.emptyTitle')}</div>
             <div className="empty-state-body">
-              Play music from your library and your recently played tracks will appear here.
+              {t('recentlyPlayed.emptyBody')}
             </div>
           </div>
         </div>
@@ -88,10 +90,10 @@ export function RecentlyPlayedView() {
         </div>
 
         <div className="detail-info">
-          <div className="detail-kind">History</div>
-          <div className="detail-title">Recently Played</div>
+          <div className="detail-kind">{t('recentlyPlayed.history')}</div>
+          <div className="detail-title">{t('recentlyPlayed.title')}</div>
           <div className="detail-meta">
-            <span>{tracks.length} tracks</span>
+            <span>{t('counts.track', { count: tracks.length })}</span>
             <span className="detail-meta-dot" />
             <span>{fmt(totalDuration)}</span>
           </div>
@@ -99,16 +101,16 @@ export function RecentlyPlayedView() {
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
             <button
               className="detail-play-btn"
-              onClick={() => playQueue(tracks, undefined, { name: 'Recently Played' })}
+              onClick={() => playQueue(tracks, undefined, { name: t('recentlyPlayed.title') })}
             >
               <Play size={14} fill="currentColor" />
-              Play all
+              {t('common:actions.playAllLower')}
             </button>
 
             <button
               className="player-btn"
               onClick={handleClear}
-              title="Clear playback history"
+              title={t('recentlyPlayed.clearHistory')}
             >
               <Trash2 size={14} />
             </button>

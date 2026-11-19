@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Search } from 'lucide-react'
 import { AlbumCard } from '../components/AlbumCard'
 import { useAppStore } from '../store'
@@ -9,6 +10,7 @@ import '../styles/library.css'
 type SearchFilterCategory = 'all' | 'tracks' | 'albums' | 'artists'
 
 export function SearchView() {
+  const { t } = useTranslation('library')
   const { nav, navigate, setSearch } = useAppStore()
   const [results, setResults] = useState<SearchResults | null>(null)
   const [loading, setLoading] = useState(false)
@@ -42,13 +44,13 @@ export function SearchView() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1 className="page-title">Search</h1>
+        <h1 className="page-title">{t('search.title')}</h1>
         <div style={{ marginTop: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <div className="search-filter-wrapper" style={{ width: '100%', maxWidth: 440 }}>
             <Search size={16} className="search-filter-icon" />
             <input
               type="text"
-              placeholder="Search artists, albums, tracks, genre..."
+              placeholder={t('search.placeholder')}
               value={query}
               onChange={(e) => setSearch(e.target.value)}
               autoFocus
@@ -63,14 +65,14 @@ export function SearchView() {
                 className={`filter-tab ${activeCategory === 'all' ? 'active' : ''}`}
                 onClick={() => setActiveCategory('all')}
               >
-                All ({totalMatches})
+                {t('search.all', { count: totalMatches })}
               </button>
               {activeResults.tracks.length > 0 && (
                 <button
                   className={`filter-tab ${activeCategory === 'tracks' ? 'active' : ''}`}
                   onClick={() => setActiveCategory('tracks')}
                 >
-                  Tracks ({activeResults.tracks.length})
+                  {t('search.tracks', { count: activeResults.tracks.length })}
                 </button>
               )}
               {activeResults.albums.length > 0 && (
@@ -78,7 +80,7 @@ export function SearchView() {
                   className={`filter-tab ${activeCategory === 'albums' ? 'active' : ''}`}
                   onClick={() => setActiveCategory('albums')}
                 >
-                  Albums ({activeResults.albums.length})
+                  {t('search.albums', { count: activeResults.albums.length })}
                 </button>
               )}
               {activeResults.artists.length > 0 && (
@@ -86,7 +88,7 @@ export function SearchView() {
                   className={`filter-tab ${activeCategory === 'artists' ? 'active' : ''}`}
                   onClick={() => setActiveCategory('artists')}
                 >
-                  Artists ({activeResults.artists.length})
+                  {t('search.artists', { count: activeResults.artists.length })}
                 </button>
               )}
             </div>
@@ -95,7 +97,7 @@ export function SearchView() {
       </div>
 
       <div className="page-body">
-        {loading && <div className="loading-state">Searching library…</div>}
+        {loading && <div className="loading-state">{t('search.searching')}</div>}
 
         {!loading && activeResults && query.trim() && (
           <>
@@ -104,9 +106,9 @@ export function SearchView() {
               activeResults.artists.length > 0 && (
                 <div style={{ marginBottom: 'var(--space-6)' }}>
                   <div className="section-header">
-                    <h2 className="section-title">Artists</h2>
+                    <h2 className="section-title">{t('search.sectionArtists')}</h2>
                     <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-3)' }}>
-                      {activeResults.artists.length} found
+                      {activeResults.artists.length}
                     </span>
                   </div>
                   <div className="artists-list">
@@ -122,8 +124,8 @@ export function SearchView() {
                         <div className="artist-info">
                           <div className="artist-name">{artist.name}</div>
                           <div className="artist-meta">
-                            {artist.album_count} {artist.album_count === 1 ? 'album' : 'albums'} ·{' '}
-                            {artist.track_count} {artist.track_count === 1 ? 'track' : 'tracks'}
+                            {t('counts.album', { count: artist.album_count })} ·{' '}
+                            {t('counts.track', { count: artist.track_count })}
                           </div>
                         </div>
                       </div>
@@ -137,9 +139,9 @@ export function SearchView() {
               activeResults.albums.length > 0 && (
                 <div style={{ marginBottom: 'var(--space-6)' }}>
                   <div className="section-header">
-                    <h2 className="section-title">Albums</h2>
+                    <h2 className="section-title">{t('search.sectionAlbums')}</h2>
                     <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-3)' }}>
-                      {activeResults.albums.length} found
+                      {activeResults.albums.length}
                     </span>
                   </div>
                   <div className="albums-grid">
@@ -159,9 +161,9 @@ export function SearchView() {
               activeResults.tracks.length > 0 && (
                 <div style={{ marginBottom: 'var(--space-6)' }}>
                   <div className="section-header">
-                    <h2 className="section-title">Tracks</h2>
+                    <h2 className="section-title">{t('search.sectionTracks')}</h2>
                     <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-3)' }}>
-                      {activeResults.tracks.length} found
+                      {activeResults.tracks.length}
                     </span>
                   </div>
                   <TracksTable tracks={activeResults.tracks} showAlbum />
@@ -170,8 +172,8 @@ export function SearchView() {
 
             {totalMatches === 0 && (
               <div className="empty-state">
-                <div className="empty-state-title">No results</div>
-                <div className="empty-state-body">Nothing in your library matched "{query}"</div>
+                <div className="empty-state-title">{t('search.noResultsTitle')}</div>
+                <div className="empty-state-body">{t('search.noResultsBody')}</div>
               </div>
             )}
           </>
@@ -179,9 +181,9 @@ export function SearchView() {
 
         {!query.trim() && !loading && (
           <div className="empty-state">
-            <div className="empty-state-title">Search your library</div>
+            <div className="empty-state-title">{t('search.emptyTitle')}</div>
             <div className="empty-state-body">
-              Type to search by artist, album, track title, or genre.
+              {t('search.emptyBody')}
             </div>
           </div>
         )}

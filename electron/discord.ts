@@ -1,5 +1,6 @@
 import { Client } from 'discord-rpc'
 import { dbGetArtwork } from './database'
+import { getElectronStrings } from './i18n'
 import { getAppSettings, setAppSettings } from './settings'
 
 const DEFAULT_LARGE_IMAGE_KEY = 'default_image'
@@ -109,21 +110,22 @@ export class DiscordPresence {
           : DEFAULT_SMALL_IMAGE_KEY
       : DEFAULT_PAUSED_IMAGE_KEY
 
+    const strings = getElectronStrings().discord
     const discordActivity: Record<string, unknown> = {
       type: 2,
-      details: activity.details || 'Listening in iotaPlayer',
-      state: activity.state || 'Browsing the library',
+      details: activity.details || strings.listeningInIotaPlayer,
+      state: activity.state || strings.browsingLibrary,
       largeImageKey: DEFAULT_LARGE_IMAGE_KEY,
       largeImageText: activity.album || 'iotaPlayer',
       smallImageKey,
       smallImageText: !activity.isPlaying
-        ? 'Paused'
+        ? strings.paused
         : activity.repeatMode === 'one'
-          ? 'Repeat one'
+          ? strings.repeatOne
           : activity.repeatMode === 'all'
-            ? 'Repeat all'
-            : 'Listening',
-      buttons: [{ label: 'Source code', url: 'https://github.com/vorlie/iotaplayer-rewrite' }],
+            ? strings.repeatAll
+            : strings.listening,
+      buttons: [{ label: strings.sourceCode, url: 'https://github.com/vorlie/iotaplayer-rewrite' }],
       ...(hasProgress ? { startTimestamp, endTimestamp } : { startTimestamp: now }),
       ...(activity.isPlaying ? {} : { endTimestamp: undefined }),
     }
@@ -152,10 +154,11 @@ export class DiscordPresence {
   public async clearActivity(): Promise<void> {
     if (!this.client) return
 
+    const strings = getElectronStrings().discord
     try {
       await this.client.setActivity({
-        details: 'Idle',
-        state: 'Stopped',
+        details: strings.idle,
+        state: strings.stopped,
         largeImageKey: DEFAULT_LARGE_IMAGE_KEY,
         largeImageText: 'iotaPlayer',
         smallImageKey: DEFAULT_STOP_IMAGE_KEY,

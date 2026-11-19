@@ -1,0 +1,110 @@
+{
+  "counts": {
+    "track_one": "{{count}} utwór",
+    "track_few": "{{count}} utwory",
+    "track_many": "{{count}} utworów",
+    "track_other": "{{count}} utworów",
+    "album_one": "{{count}} album",
+    "album_few": "{{count}} albumy",
+    "album_many": "{{count}} albumów",
+    "album_other": "{{count}} albumów",
+    "artist_one": "{{count}} wykonawca",
+    "artist_few": "{{count}} wykonawców",
+    "artist_many": "{{count}} wykonawców",
+    "artist_other": "{{count}} wykonawców",
+    "showingOfAlbums": "Wyświetlono {{shown}} z {{total}} albumów",
+    "showingOfArtists": "Wyświetlono {{shown}} z {{total}} wykonawców",
+    "showingOfTracks": "Wyświetlono {{shown}} z {{total}} utworów · {{duration}}",
+    "tracksDuration_one": "{{count}} utwór · {{duration}}",
+    "tracksDuration_few": "{{count}} utwory · {{duration}}",
+    "tracksDuration_many": "{{count}} utworów · {{duration}}",
+    "tracksDuration_other": "{{count}} utworów · {{duration}}"
+  },
+  "albums": {
+    "title": "Albumy",
+    "album": "Album",
+    "loading": "Ładowanie albumów…",
+    "emptyTitle": "Brak albumów",
+    "emptyBody": "Przejdź do Ustawień i przeskanuj swoją bibliotekę muzyczną, aby rozpocząć.",
+    "filterPlaceholder": "Filtruj albumy...",
+    "noMatchingTitle": "Brak pasujących albumów",
+    "noMatchingBody": "Żaden album nie pasuje do filtra „{{query}}”.",
+    "notFound": "Nie znaleziono albumu",
+    "sort": {
+      "artist": "Sortuj: Wykonawca",
+      "titleAsc": "Sortuj: Tytuł (A–Z)",
+      "titleDesc": "Sortuj: Tytuł (Z–A)",
+      "yearDesc": "Sortuj: Rok (najnowsze)",
+      "yearAsc": "Sortuj: Rok (najstarsze)",
+      "mostTracks": "Sortuj: Najwięcej utworów"
+    }
+  },
+  "artists": {
+    "title": "Wykonawcy",
+    "artist": "Wykonawca",
+    "loading": "Ładowanie wykonawców…",
+    "emptyTitle": "Brak wykonawców",
+    "emptyBody": "Przejdź do Ustawień i przeskanuj swoją bibliotekę muzyczną, aby rozpocząć.",
+    "filterPlaceholder": "Filtruj wykonawców...",
+    "noMatchingTitle": "Brak pasujących wykonawców",
+    "noMatchingBody": "Żaden wykonawca nie pasuje do filtra „{{query}}”.",
+    "notFound": "Nie znaleziono wykonawcy",
+    "sort": {
+      "nameAsc": "Sortuj: Nazwa (A–Z)",
+      "nameDesc": "Sortuj: Nazwa (Z–A)",
+      "mostAlbums": "Sortuj: Najwięcej albumów",
+      "mostTracks": "Sortuj: Najwięcej utworów"
+    }
+  },
+  "tracks": {
+    "title": "Utwory",
+    "loading": "Ładowanie utworów…",
+    "emptyTitle": "Brak utworów",
+    "emptyBody": "Przejdź do Ustawień i przeskanuj swoją bibliotekę muzyczną, aby rozpocząć.",
+    "filterPlaceholder": "Filtruj utwory...",
+    "noMatchingTitle": "Brak pasujących utworów",
+    "noMatchingBody": "Żaden utwór nie pasuje do filtra „{{query}}”.",
+    "columns": {
+      "number": "#",
+      "title": "Tytuł",
+      "album": "Album",
+      "year": "Rok",
+      "time": "Czas",
+      "actions": "Akcje"
+    }
+  },
+  "search": {
+    "title": "Szukaj",
+    "placeholder": "Szukaj wykonawców, albumów, utworów, gatunku...",
+    "all": "Wszystko ({{count}})",
+    "tracks": "Utwory ({{count}})",
+    "albums": "Albumy ({{count}})",
+    "artists": "Wykonawcy ({{count}})",
+    "searching": "Wyszukiwanie…",
+    "noResultsTitle": "Brak wyników",
+    "noResultsBody": "Spróbuj użyć innego słowa kluczowego lub sprawdź pisownię.",
+    "emptyTitle": "Przeszukaj bibliotekę",
+    "emptyBody": "Znajdź utwory, albumy, wykonawców, gatunki i lata wydania.",
+    "sectionArtists": "Wykonawcy",
+    "sectionAlbums": "Albumy",
+    "sectionTracks": "Utwory"
+  },
+  "favorites": {
+    "title": "Ulubione",
+    "subtitle": "Polubione utwory",
+    "collection": "Kolekcja",
+    "loading": "Ładowanie ulubionych…",
+    "emptyTitle": "Brak ulubionych",
+    "emptyBody": "Kliknij ikonę serca przy dowolnym utworze w bibliotece, aby dodać go do ulubionych."
+  },
+  "recentlyPlayed": {
+    "title": "Ostatnio odtwarzane",
+    "subtitle": "Twoja historia odtwarzania",
+    "history": "Historia",
+    "loading": "Ładowanie historii…",
+    "emptyTitle": "Brak historii odtwarzania",
+    "emptyBody": "Odtwórz muzykę z biblioteki, aby zobaczyć tutaj ostatnio słuchane utwory.",
+    "clearHistory": "Wyczyść historię",
+    "confirmClear": "Wyczyścić całą historię odtwarzania?"
+  }
+}

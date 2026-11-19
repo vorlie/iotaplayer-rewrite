@@ -2,7 +2,7 @@
   "name": "iotaplayer",
   "productName": "IotaPlayer",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "A modern desktop music player focused on local music libraries, seamless playback and a native-feeling interface.",
   "author": {
     "name": "vorlie",
@@ -29,10 +29,12 @@
     "better-sqlite3": "^13.0.3",
     "discord-rpc": "^4.0.1",
     "esbuild": "^0.28.2",
+    "i18next": "^27.2.1",
     "lucide-react": "^1.48.0",
     "music-metadata": "^11.16.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-i18next": "^18.0.3",
     "zustand": "^5.0.15"
   },
   "devDependencies": {

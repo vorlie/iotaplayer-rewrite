@@ -1,8 +1,10 @@
+import { useTranslation } from 'react-i18next'
 import { ListMusic, Music2, Pencil, Play, Plus, Trash2 } from 'lucide-react'
 import { useAppStore, usePlaybackStore } from '../store'
 import '../styles/playlists.css'
 
 export function PlaylistsView() {
+  const { t } = useTranslation(['playlists', 'library', 'common'])
   const {
     playlists,
     playPlaylist,
@@ -16,7 +18,7 @@ export function PlaylistsView() {
   const navigate = useAppStore((s) => s.navigate)
 
   function handleCreateDefault() {
-    const name = `My Playlist ${playlists.length + 1}`
+    const name = t('defaultName', { number: playlists.length + 1 })
     createPlaylist(name, queue.length > 0 ? queue : currentTrack ? [currentTrack] : [])
   }
 
@@ -25,14 +27,14 @@ export function PlaylistsView() {
       <div className="page-header">
         <div className="playlist-header-row">
           <div>
-            <h1 className="page-title">Playlists</h1>
-            <p className="page-subtitle">Saved queues and listening sessions</p>
+            <h1 className="page-title">{t('title')}</h1>
+            <p className="page-subtitle">{t('subtitle')}</p>
           </div>
 
           <div className="playlist-header-actions">
             <button className="detail-play-btn playlist-toolbar-btn" onClick={handleCreateDefault}>
               <Plus size={14} />
-              New playlist
+              {t('actions.newPlaylist')}
             </button>
 
             <button
@@ -42,7 +44,7 @@ export function PlaylistsView() {
               style={{ opacity: queue.length === 0 ? 0.5 : 1 }}
             >
               <ListMusic size={14} />
-              Save current queue
+              {t('actions.saveCurrentQueue')}
             </button>
           </div>
         </div>
@@ -51,8 +53,8 @@ export function PlaylistsView() {
       <div className="page-body">
         {playlists.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-title">No playlists yet</div>
-            <div className="empty-state-body">Create one from the current queue or your favorite tracks.</div>
+            <div className="empty-state-title">{t('empty.noPlaylists')}</div>
+            <div className="empty-state-body">{t('empty.noPlaylistsBody')}</div>
           </div>
         ) : (
           <div className="playlist-grid">
@@ -80,11 +82,11 @@ export function PlaylistsView() {
                   <div className="playlist-card-body">
                     <div className="playlist-card-header">
                       <div className="playlist-card-name">{playlist.name}</div>
-                      <div className="playlist-card-count">{playlist.tracks.length} tracks</div>
+                      <div className="playlist-card-count">{t('library:counts.track', { count: playlist.tracks.length })}</div>
                     </div>
 
                     <div className="playlist-card-description">
-                      {playlist.description?.trim() || 'No description yet'}
+                      {playlist.description?.trim() || t('empty.noDescription')}
                     </div>
 
                     <div className="playlist-card-actions">
@@ -96,15 +98,15 @@ export function PlaylistsView() {
                         }}
                       >
                         <Play size={14} fill="currentColor" />
-                        Play
+                        {t('common:actions.play')}
                       </button>
 
                       <button
                         className="player-btn"
-                        title="Rename playlist"
+                        title={t('actions.renamePlaylist')}
                         onClick={(e) => {
                           e.stopPropagation()
-                          const nextName = window.prompt('Rename playlist', playlist.name)?.trim()
+                          const nextName = window.prompt(t('actions.renamePlaylist'), playlist.name)?.trim()
                           if (nextName) {
                             renamePlaylist(playlist.id, nextName)
                           }
@@ -115,10 +117,10 @@ export function PlaylistsView() {
 
                       <button
                         className="player-btn"
-                        title="Delete playlist"
+                        title={t('actions.deletePlaylist')}
                         onClick={(e) => {
                           e.stopPropagation()
-                          if (window.confirm(`Delete playlist "${playlist.name}"?`)) {
+                          if (window.confirm(t('actions.confirmDelete', { name: playlist.name }))) {
                             deletePlaylist(playlist.id)
                           }
                         }}

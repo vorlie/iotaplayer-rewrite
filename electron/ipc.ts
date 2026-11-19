@@ -30,6 +30,7 @@ import {
   dbGetAllPlaybackState,
 } from './database'
 import { discordPresence } from './discord'
+import { getElectronStrings } from './i18n'
 import { getMpv } from './mpv'
 import { cleanupMissingTracks, scanLibrary } from './scanner'
 import { getAppSettings, setAppSettings } from './settings'
@@ -295,6 +296,7 @@ export function registerIpcHandlers(): void {
       publisher: 'vorlie',
       websiteUrl: 'https://vorlie.pl',
       projectUrl: 'https://vorlie.pl/projects/iotaplayer',
+      systemLocale: app.getLocale(),
     }
   })
 
@@ -326,8 +328,9 @@ export function registerIpcHandlers(): void {
   })
 
   ipcMain.handle('settings:pick-library-root', async () => {
+    const strings = getElectronStrings()
     const result = await dialog.showOpenDialog({
-      title: 'Select your music library folder',
+      title: strings.pickLibraryRootTitle,
       properties: ['openDirectory', 'createDirectory', 'promptToCreate'],
     })
 

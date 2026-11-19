@@ -1,0 +1,37 @@
+{
+  "title": "Playlisty",
+  "subtitle": "Zapisane kolejki i sesje odsłuchu",
+  "kind": "Playlista",
+  "defaultName": "Moja playlista {{number}}",
+  "actions": {
+    "newPlaylist": "Nowa playlista",
+    "newPlaylistEllipsis": "Nowa playlista…",
+    "newPlaylistPrompt": "Nazwa nowej playlisty",
+    "saveCurrentQueue": "Zapisz bieżącą kolejkę",
+    "addToPlaylist": "Dodaj do playlisty",
+    "addAlbumToPlaylist": "Dodaj album do playlisty",
+    "renamePlaylist": "Zmień nazwę playlisty",
+    "deletePlaylist": "Usuń playlistę",
+    "editDetails": "Edytuj szczegóły playlisty",
+    "changeCover": "Zmień okładkę",
+    "confirmDelete": "Usunąć playlistę „{{name}}”?"
+  },
+  "editor": {
+    "name": "Nazwa playlisty",
+    "description": "Opis",
+    "descriptionPlaceholder": "Dodaj krótki opis..."
+  },
+  "empty": {
+    "noPlaylists": "Brak playlist",
+    "noPlaylistsBody": "Utwórz playlistę z bieżącej kolejki lub ulubionych utworów.",
+    "noDescription": "Brak opisu",
+    "noDescriptionDetail": "Brak opisu. Dodaj go, aby nadać playliście charakteru.",
+    "notFoundTitle": "Nie znaleziono playlisty",
+    "notFoundBody": "Ta playlista mogła zostać usunięta lub nie jest już dostępna.",
+    "noTracksTitle": "Brak utworów na playliście",
+    "noTracksBody": "Kliknij prawym przyciskiem myszy dowolny utwór lub album w bibliotece, aby dodać go tutaj."
+  },
+  "meta": {
+    "minutes": "{{count}} min"
+  }
+}

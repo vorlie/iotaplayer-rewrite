@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   ArrowDown,
   ArrowUp,
@@ -18,10 +19,10 @@ import {
   X,
 } from 'lucide-react'
 import {
-  formatLyricsSourceLabel,
   getActiveLyricIndex,
   getLineWordSyncStates,
 } from '../../electron/lyricsSync'
+import { getLocalizedLyricsSourceLabel } from '../i18n/lyricsSource'
 import {
   useArtwork,
   useFormatDuration,
@@ -33,6 +34,7 @@ import { LyricGapIndicator } from '../components/LyricGapIndicator'
 import '../styles/now-playing.css'
 
 export function NowPlayingView() {
+  const { t } = useTranslation(['player', 'common', 'playlists'])
   const setFullscreen = useAppStore((s) => s.setFullscreenNowPlaying)
   const fmt = useFormatDuration()
   const {
@@ -111,7 +113,7 @@ export function NowPlayingView() {
     playbackRate,
   )
   const activeLyricIndex = getActiveLyricIndex(lyrics, syncPosition)
-  const lyricsSource = formatLyricsSourceLabel(lyrics)
+  const lyricsSource = getLocalizedLyricsSourceLabel(lyrics)
 
   useEffect(() => {
     if (activeLyricIndex < 0 || isLyricsPointerDown.current || Date.now() < userScrolledLyricsUntil.current) return
@@ -147,7 +149,12 @@ export function NowPlayingView() {
     setContextMenu({ track, x: e.clientX, y: e.clientY })
   }
 
-  const repeatLabel = repeatMode === 'off' ? 'Repeat off' : repeatMode === 'all' ? 'Repeat all' : 'Repeat one'
+  const repeatLabel =
+    repeatMode === 'off'
+      ? t('controls.repeatOff')
+      : repeatMode === 'all'
+        ? t('controls.repeatAll')
+        : t('controls.repeatOne')
 
   const nowPlayingStyle = {
     ['--queue-panel-width' as string]: `${queuePanelWidth}px`,
@@ -166,7 +173,7 @@ export function NowPlayingView() {
     <div className="page">
       <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <h1 className="page-title">Now Playing</h1>
+          <h1 className="page-title">{t('common:nav.nowPlaying')}</h1>
           <p className="page-subtitle">{playlistName}</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -174,15 +181,15 @@ export function NowPlayingView() {
             type="button"
             className="queue-action-btn"
             onClick={() => setFullscreen(true)}
-            title="Open Immersive Fullscreen Now Playing (F)"
+            title={t('controls.openImmersiveFullscreen')}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px' }}
           >
             <Maximize2 size={13} />
-            Fullscreen
+            {t('controls.fullscreen')}
           </button>
           <span
             className={`player-backend-badge player-backend-badge--${activeBackend}`}
-            title={`Active playback backend: ${activeBackend.toUpperCase()}`}
+            title={t('status.backendTitle', { backend: activeBackend.toUpperCase() })}
           >
             {activeBackend}
           </span>
@@ -193,7 +200,7 @@ export function NowPlayingView() {
         <aside className="now-playing-panel now-playing-main-panel">
           <div className="now-playing-artwork">
             {artworkSrc ? (
-              <img src={artworkSrc} alt={currentTrack?.title ?? 'Album art'} />
+              <img src={artworkSrc} alt={currentTrack?.title ?? t('status.albumArt')} />
             ) : (
               <div className="now-playing-artwork-placeholder">♫</div>
             )}
@@ -201,20 +208,20 @@ export function NowPlayingView() {
 
           <div className="now-playing-meta">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div className="now-playing-section-label">Now playing</div>
+              <div className="now-playing-section-label">{t('status.nowPlaying')}</div>
               {currentTrack && (
                 <button
                   className={`player-fav-btn ${isFav ? 'is-fav' : ''}`}
                   onClick={() => toggleFavorite(currentTrack)}
-                  title={isFav ? 'Remove from Favorites' : 'Add to Favorites'}
+                  title={isFav ? t('common:actions.removeFromFavorites') : t('common:actions.addToFavorites')}
                 >
                   <Heart size={18} fill={isFav ? 'currentColor' : 'none'} />
                 </button>
               )}
             </div>
-            <div className="now-playing-title">{currentTrack?.title ?? 'No track selected'}</div>
-            <div className="now-playing-subtitle">{currentTrack?.artist ?? currentTrack?.album_artist ?? 'Unknown artist'}</div>
-            <div className="now-playing-subtitle">{currentTrack?.album ?? 'Unknown album'}</div>
+            <div className="now-playing-title">{currentTrack?.title ?? t('status.noTrackSelected')}</div>
+            <div className="now-playing-subtitle">{currentTrack?.artist ?? currentTrack?.album_artist ?? t('common:fallbacks.unknownArtist')}</div>
+            <div className="now-playing-subtitle">{currentTrack?.album ?? t('common:fallbacks.unknownAlbum')}</div>
           </div>
 
           <div className="now-playing-progress-block">
@@ -228,16 +235,16 @@ export function NowPlayingView() {
           </div>
 
           <div className="now-playing-controls">
-            <button className={`player-btn ${shuffle ? 'is-active' : ''}`} title={shuffle ? 'Shuffle on' : 'Shuffle off'} onClick={toggleShuffle}>
+            <button className={`player-btn ${shuffle ? 'is-active' : ''}`} title={shuffle ? t('controls.shuffleOn') : t('controls.shuffleOff')} onClick={toggleShuffle}>
               <Shuffle size={16} />
             </button>
-            <button className="player-btn" onClick={previous} title="Previous">
+            <button className="player-btn" onClick={previous} title={t('controls.previous')}>
               <ChevronLeft size={18} />
             </button>
-            <button className="player-btn player-btn--play" onClick={toggle} title="Play/Pause">
+            <button className="player-btn player-btn--play" onClick={toggle} title={t('controls.playPause')}>
               {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
             </button>
-            <button className="player-btn" onClick={next} title="Next">
+            <button className="player-btn" onClick={next} title={t('controls.next')}>
               <ChevronRight size={18} />
             </button>
             <button
@@ -260,23 +267,23 @@ export function NowPlayingView() {
         <section className="now-playing-panel now-playing-queue-panel" style={{ minWidth: 0 }}>
           <div className="now-playing-queue-top">
             <div>
-              <div className="now-playing-queue-header" style={{ margin: 0, padding: 0 }}>Up next</div>
-              <span style={{ fontSize: 12, color: 'var(--color-text-3)' }}>{queue.length} tracks · Drag to reorder</span>
+              <div className="now-playing-queue-header" style={{ margin: 0, padding: 0 }}>{t('status.upNext')}</div>
+              <span style={{ fontSize: 12, color: 'var(--color-text-3)' }}>{t('status.queueMeta', { count: queue.length })}</span>
             </div>
             {queue.length > 0 && (
               <button
                 className="queue-action-btn"
                 onClick={clearQueue}
-                title="Clear all tracks except currently playing"
+                title={t('status.clearQueue')}
               >
                 <Trash2 size={12} />
-                Clear
+                {t('common:actions.clear')}
               </button>
             )}
           </div>
 
           {queue.length === 0 ? (
-            <div className="now-playing-empty-state">No tracks in the queue yet.</div>
+            <div className="now-playing-empty-state">{t('status.emptyQueue')}</div>
           ) : (
             <div className="now-playing-queue-list">
               {queue.map((track, index) => {
@@ -330,7 +337,7 @@ export function NowPlayingView() {
                     <span className={`now-playing-track-index ${isCurrent ? 'is-current' : ''}`}>{index + 1}</span>
                     <div className="now-playing-track-text" style={{ flex: 1, minWidth: 0 }}>
                       <div className="now-playing-track-name">{track.title}</div>
-                      <div className="now-playing-track-artist">{track.artist ?? track.album_artist ?? 'Unknown artist'}</div>
+                      <div className="now-playing-track-artist">{track.artist ?? track.album_artist ?? t('common:fallbacks.unknownArtist')}</div>
                     </div>
                     <span className="now-playing-track-duration" style={{ marginRight: 8 }}>{fmt(track.duration)}</span>
                     <div className="queue-item-controls" onClick={(e) => e.stopPropagation()}>
@@ -338,7 +345,7 @@ export function NowPlayingView() {
                         className="queue-icon-btn"
                         disabled={index === 0}
                         onClick={() => moveQueueItem(index, index - 1)}
-                        title="Move up"
+                        title={t('common:actions.moveUp')}
                         style={{ opacity: index === 0 ? 0.3 : 1 }}
                       >
                         <ArrowUp size={13} />
@@ -347,7 +354,7 @@ export function NowPlayingView() {
                         className="queue-icon-btn"
                         disabled={index === queue.length - 1}
                         onClick={() => moveQueueItem(index, index + 1)}
-                        title="Move down"
+                        title={t('common:actions.moveDown')}
                         style={{ opacity: index === queue.length - 1 ? 0.3 : 1 }}
                       >
                         <ArrowDown size={13} />
@@ -355,7 +362,7 @@ export function NowPlayingView() {
                       <button
                         className="queue-icon-btn queue-icon-btn--danger"
                         onClick={() => removeFromQueue(index)}
-                        title="Remove from queue"
+                        title={t('common:actions.removeFromQueue')}
                       >
                         <X size={13} />
                       </button>
@@ -367,13 +374,13 @@ export function NowPlayingView() {
           )}
         </section>
 
-        <div className="now-playing-splitter" onPointerDown={beginResize} aria-label="Resize queue panel" />
+        <div className="now-playing-splitter" onPointerDown={beginResize} aria-label={t('status.resizeQueue')} />
 
 
         <section className="now-playing-panel now-playing-lyrics-panel">
           <div className="now-playing-lyrics-top" style={{ justifyContent: 'space-between', gap: 8 }}>
             <div>
-              <div className="now-playing-queue-header" style={{ margin: 0, padding: 0 }}>Lyrics</div>
+              <div className="now-playing-queue-header" style={{ margin: 0, padding: 0 }}>{t('status.lyrics')}</div>
               {lyricsSource && <span className="now-playing-lyrics-source">{lyricsSource}</span>}
             </div>
             {currentTrack && (
@@ -381,11 +388,11 @@ export function NowPlayingView() {
                 type="button"
                 className="queue-action-btn"
                 onClick={reloadLyrics}
-                title="Search for lyrics again"
+                title={t('status.searchLyricsAgain')}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}
               >
                 <RotateCcw size={12} />
-                Check Again
+                {t('common:actions.checkAgain')}
               </button>
             )}
           </div>
@@ -404,7 +411,7 @@ export function NowPlayingView() {
           >
             <div className="now-playing-lyrics-list">
               {lyricsLoading ? (
-                <div className="now-playing-empty-state">Loading lyrics…</div>
+                <div className="now-playing-empty-state">{t('status.loadingLyrics')}</div>
               ) : lyrics.lines.length ? (
                 lyrics.lines.map((line, index) => {
                   const isActive = index === activeLyricIndex
@@ -443,7 +450,7 @@ export function NowPlayingView() {
                       className={`lyric-line ${isActive ? 'is-active' : ''} ${words ? 'is-word-synced' : ''}`}
                       disabled={line.timestamp == null || !line.text}
                       onClick={() => line.timestamp != null && seek(line.timestamp)}
-                      title={line.timestamp != null ? `Seek to ${fmt(line.timestamp)}` : undefined}
+                      title={line.timestamp != null ? t('status.seekTo', { time: fmt(line.timestamp) }) : undefined}
                     >
                       {words
                         ? words.map((word, wIdx) => {
@@ -471,7 +478,7 @@ export function NowPlayingView() {
                                     e.stopPropagation()
                                     seek(word.timestamp)
                                   }}
-                                  title={`Seek to "${visibleText}" (${fmt(word.timestamp)})`}
+                                  title={t('status.seekToWord', { word: visibleText, time: fmt(word.timestamp) })}
                                 >
                                   {visibleText}
                                 </span>
@@ -487,19 +494,19 @@ export function NowPlayingView() {
                 <div className="now-playing-lyrics-empty">
                   <div>
                     {currentTrack
-                      ? 'No lyrics found. Add a matching .lrc, .lyricsfile.yaml, or .txt file, or use embedded lyrics.'
-                      : 'Choose a track to see its lyrics.'}
+                      ? t('status.noLyricsFound')
+                      : t('status.chooseTrackLyrics')}
                   </div>
                   {currentTrack && (
                     <button
                       type="button"
                       className="queue-action-btn"
                       onClick={reloadLyrics}
-                      title="Search for lyrics file again"
+                      title={t('status.searchLyricsFileAgain')}
                       style={{ marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
                     >
                       <RotateCcw size={12} />
-                      Check Again
+                      {t('common:actions.checkAgain')}
                     </button>
                   )}
                 </div>
@@ -516,9 +523,9 @@ export function NowPlayingView() {
             style={{ left: contextMenu.x, top: contextMenu.y }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="context-menu-header">Add to playlist</div>
+            <div className="context-menu-header">{t('playlists:actions.addToPlaylist')}</div>
             {usePlaybackStore.getState().playlists.length === 0 ? (
-              <div className="context-menu-empty">No playlists yet</div>
+              <div className="context-menu-empty">{t('playlists:empty.noPlaylists')}</div>
             ) : (
               usePlaybackStore.getState().playlists.map((playlist) => (
                 <button
@@ -538,13 +545,13 @@ export function NowPlayingView() {
               type="button"
               className="context-menu-item context-menu-item--primary"
               onClick={() => {
-                const name = window.prompt('New playlist name', contextMenu.track.title)?.trim()
+                const name = window.prompt(t('playlists:actions.newPlaylistPrompt'), contextMenu.track.title)?.trim()
                 if (!name) return
                 usePlaybackStore.getState().createPlaylist(name, [contextMenu.track])
                 setContextMenu(null)
               }}
             >
-              New playlist…
+              {t('playlists:actions.newPlaylistEllipsis')}
             </button>
           </div>
         </div>

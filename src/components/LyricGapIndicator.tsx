@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { useTranslation } from 'react-i18next'
 import '../styles/lyric-gap.css'
 
 export interface LyricGapIndicatorProps {
@@ -22,7 +23,9 @@ export function LyricGapIndicator({
   className = '',
   style,
 }: LyricGapIndicatorProps) {
+  const { t } = useTranslation('player')
   const isClickable = timestamp != null && onSeek != null
+  const displayTime = formattedTimestamp ?? (timestamp != null ? String(timestamp) : '')
 
   return (
     <button
@@ -35,8 +38,8 @@ export function LyricGapIndicator({
           onSeek(timestamp)
         }
       }}
-      title={isClickable ? `Seek to gap at ${formattedTimestamp ?? timestamp}` : undefined}
-      aria-label={timestamp != null ? `Instrumental gap at ${formattedTimestamp ?? timestamp}` : 'Instrumental gap'}
+      title={isClickable ? t('status.seekToGap', { time: displayTime }) : undefined}
+      aria-label={timestamp != null ? t('status.instrumentalGapAt', { time: displayTime }) : t('status.instrumentalGap')}
       style={style}
     >
       <span className="lyric-gap-dots" aria-hidden="true">
