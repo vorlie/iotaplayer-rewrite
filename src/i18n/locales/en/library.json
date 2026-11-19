@@ -9,7 +9,8 @@
     "showingOfAlbums": "Showing {{shown}} of {{total}} albums",
     "showingOfArtists": "Showing {{shown}} of {{total}} artists",
     "showingOfTracks": "Showing {{shown}} of {{total}} tracks · {{duration}}",
-    "tracksDuration": "{{count}} tracks · {{duration}}"
+    "tracksDuration_one": "{{count}} track · {{duration}}",
+    "tracksDuration_other": "{{count}} tracks · {{duration}}"
   },
   "albums": {
     "title": "Albums",

@@ -79,7 +79,8 @@
       "updated": "Updated",
       "removed": "Removed",
       "failed": "Failed",
-      "errorsCount": "{{count}} errors"
+      "errorsCount_one": "{{count}} error",
+      "errorsCount_other": "{{count}} errors"
     },
     "stats": {
       "tracks": "Tracks",
