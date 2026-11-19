@@ -19,6 +19,7 @@ import {
   type ShuffleState,
 } from '../../electron/shuffle'
 import { DEFAULT_VOLUME, normalizeVolume } from '../../electron/volume'
+import i18n from '../i18n'
 import type { Album, Artist, Playlist, ScanProgress, ScanResult, Track } from '../types/electron'
 
 // ---------------------------------------------------------------------------
@@ -290,9 +291,9 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
     }
 
     const snapshot = normalizeMediaControlSnapshot({
-      title: currentTrack?.title ?? 'Unknown title',
-      artist: currentTrack?.artist ?? currentTrack?.album_artist ?? 'Unknown artist',
-      album: currentTrack?.album ?? 'Unknown album',
+      title: currentTrack?.title ?? i18n.t('common:fallbacks.unknownTitle'),
+      artist: currentTrack?.artist ?? currentTrack?.album_artist ?? i18n.t('common:fallbacks.unknownArtist'),
+      album: currentTrack?.album ?? i18n.t('common:fallbacks.unknownAlbum'),
       artworkUrl: cachedArtworkUrl,
       duration: currentTrack?.duration ?? 0,
       position,
@@ -330,9 +331,9 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
       getSnapshot: () => {
         const { currentTrack, position, isPlaying } = get()
         return normalizeMediaControlSnapshot({
-          title: currentTrack?.title ?? 'Unknown title',
-          artist: currentTrack?.artist ?? currentTrack?.album_artist ?? 'Unknown artist',
-          album: currentTrack?.album ?? 'Unknown album',
+          title: currentTrack?.title ?? i18n.t('common:fallbacks.unknownTitle'),
+          artist: currentTrack?.artist ?? currentTrack?.album_artist ?? i18n.t('common:fallbacks.unknownArtist'),
+          album: currentTrack?.album ?? i18n.t('common:fallbacks.unknownAlbum'),
           artworkUrl: cachedArtworkUrl,
           duration: currentTrack?.duration ?? 0,
           position,
@@ -476,10 +477,10 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
 
     void window.discord.setActivity({
       details: track.title,
-      state: `${track.artist ?? track.album_artist ?? 'Unknown artist'} • ${track.album ?? 'Unknown album'}`,
+      state: `${track.artist ?? track.album_artist ?? i18n.t('common:fallbacks.unknownArtist')} • ${track.album ?? i18n.t('common:fallbacks.unknownAlbum')}`,
       isPlaying,
       album: track.album,
-      artist: track.artist ?? track.album_artist ?? 'Unknown artist',
+      artist: track.artist ?? track.album_artist ?? i18n.t('common:fallbacks.unknownArtist'),
       artworkId: track.artwork_id,
       position: get().position,
       duration: track.duration,

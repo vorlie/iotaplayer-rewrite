@@ -22,10 +22,10 @@ import {
   X,
 } from 'lucide-react'
 import {
-  formatLyricsSourceLabel,
   getActiveLyricIndex,
   getLineWordSyncStates,
 } from '../../electron/lyricsSync'
+import { getLocalizedLyricsSourceLabel } from '../i18n/lyricsSource'
 import {
   useArtwork,
   useFormatDuration,
@@ -161,7 +161,7 @@ export function FullscreenNowPlaying() {
         : t('controls.repeatOne')
 
   // Lyrics source human-readable tag
-  const lyricsSource = formatLyricsSourceLabel(lyrics)
+  const lyricsSource = getLocalizedLyricsSourceLabel(lyrics)
 
   return (
     <div

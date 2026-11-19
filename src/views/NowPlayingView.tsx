@@ -19,10 +19,10 @@ import {
   X,
 } from 'lucide-react'
 import {
-  formatLyricsSourceLabel,
   getActiveLyricIndex,
   getLineWordSyncStates,
 } from '../../electron/lyricsSync'
+import { getLocalizedLyricsSourceLabel } from '../i18n/lyricsSource'
 import {
   useArtwork,
   useFormatDuration,
@@ -113,7 +113,7 @@ export function NowPlayingView() {
     playbackRate,
   )
   const activeLyricIndex = getActiveLyricIndex(lyrics, syncPosition)
-  const lyricsSource = formatLyricsSourceLabel(lyrics)
+  const lyricsSource = getLocalizedLyricsSourceLabel(lyrics)
 
   useEffect(() => {
     if (activeLyricIndex < 0 || isLyricsPointerDown.current || Date.now() < userScrolledLyricsUntil.current) return
