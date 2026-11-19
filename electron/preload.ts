@@ -10,6 +10,7 @@ import { DEFAULT_VOLUME, VolumeController, normalizeVolume } from './volume'
 import type {
   Album,
   Artist,
+  LibraryFormatStats,
   LibraryStats,
   LyricsResult,
   LyricsSourcePreference,
@@ -34,6 +35,9 @@ interface ArtworkResponse {
 const libraryAPI = {
   stats: (): Promise<LibraryStats> =>
     ipcRenderer.invoke('library:stats'),
+
+  formatStats: (): Promise<LibraryFormatStats> =>
+    ipcRenderer.invoke('library:format-stats'),
 
   scan: (rootDir: string): Promise<ScanResult> =>
     ipcRenderer.invoke('library:scan', rootDir),

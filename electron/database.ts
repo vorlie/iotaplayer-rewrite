@@ -2,7 +2,17 @@ import Database from 'better-sqlite3'
 import { createRequire } from 'node:module'
 import os from 'os'
 import path from 'path'
-import type { Album, Artist, Artwork, LibraryStats, Track } from './types'
+import { classifyAudioQuality, formatSampleRate } from './audioQuality'
+import type {
+  Album,
+  Artist,
+  Artwork,
+  FormatStatBucket,
+  LibraryFormatStats,
+  LibraryStats,
+  QualityTierStat,
+  Track,
+} from './types'
 
 const nodeRequire = createRequire(__filename)
 
@@ -296,6 +306,141 @@ export function dbGetStats(): LibraryStats {
     )
     .get() as LibraryStats
   return row
+}
+
+function addBucket(
+  map: Map<string, FormatStatBucket>,
+  label: string,
+  count: number,
+  size: number,
+  duration: number,
+): void {
+  const existing = map.get(label)
+  if (existing) {
+    existing.count += count
+    existing.total_size += size
+    existing.total_duration += duration
+  } else {
+    map.set(label, {
+      label,
+      count,
+      total_size: size,
+      total_duration: duration,
+    })
+  }
+}
+
+export function dbGetLibraryFormatStats(targetDb?: Database.Database): LibraryFormatStats {
+  const db = targetDb ?? getDatabase()
+  const totals = db
+    .prepare(
+      `SELECT
+         (SELECT COUNT(*) FROM tracks)                    AS track_count,
+         (SELECT COUNT(*) FROM albums)                    AS album_count,
+         (SELECT COUNT(*) FROM artists)                   AS artist_count,
+         (SELECT COALESCE(SUM(duration), 0) FROM tracks)  AS total_duration,
+         (SELECT COALESCE(SUM(file_size), 0) FROM tracks) AS total_file_size`,
+    )
+    .get() as LibraryStats & { total_file_size: number }
+
+  const groupedRows = db
+    .prepare(
+      `SELECT
+         codec,
+         format,
+         is_lossless,
+         sample_rate,
+         bits_per_sample,
+         bitrate,
+         MAX(path) AS sample_path,
+         COUNT(*) AS count,
+         COALESCE(SUM(file_size), 0) AS total_size,
+         COALESCE(SUM(duration), 0) AS total_duration
+       FROM tracks
+       GROUP BY codec, format, is_lossless, sample_rate, bits_per_sample, bitrate`,
+    )
+    .all() as Array<{
+    codec: string | null
+    format: string | null
+    is_lossless: number | null
+    sample_rate: number | null
+    bits_per_sample: number | null
+    bitrate: number | null
+    sample_path: string | null
+    count: number
+    total_size: number
+    total_duration: number
+  }>
+
+  const tierMap = new Map<QualityTierStat['tier'], QualityTierStat>([
+    ['hi-res', { tier: 'hi-res', count: 0, total_size: 0, total_duration: 0 }],
+    ['lossless', { tier: 'lossless', count: 0, total_size: 0, total_duration: 0 }],
+    ['lossy', { tier: 'lossy', count: 0, total_size: 0, total_duration: 0 }],
+    ['unknown', { tier: 'unknown', count: 0, total_size: 0, total_duration: 0 }],
+  ])
+
+  const codecMap = new Map<string, FormatStatBucket>()
+  const sampleRateMap = new Map<string, FormatStatBucket>()
+  const bitrateMap = new Map<string, FormatStatBucket>()
+
+  for (const row of groupedRows) {
+    const quality = classifyAudioQuality({
+      codec: row.codec,
+      format: row.format,
+      bitrate: row.bitrate,
+      sample_rate: row.sample_rate,
+      bits_per_sample: row.bits_per_sample,
+      path: row.sample_path ?? '',
+      is_lossless: row.is_lossless,
+    })
+
+    const tierEntry = tierMap.get(quality.tier)!
+    tierEntry.count += row.count
+    tierEntry.total_size += row.total_size
+    tierEntry.total_duration += row.total_duration
+
+    addBucket(codecMap, quality.codecLabel, row.count, row.total_size, row.total_duration)
+
+    const srLabel = formatSampleRate(row.sample_rate) ?? 'Unknown'
+    addBucket(sampleRateMap, srLabel, row.count, row.total_size, row.total_duration)
+
+    let brLabel = 'Unknown'
+    if (quality.isLossless) {
+      brLabel = 'Lossless'
+    } else if (row.bitrate != null && row.bitrate > 0) {
+      if (row.bitrate < 192) brLabel = '< 192 kbps'
+      else if (row.bitrate < 256) brLabel = '192–255 kbps'
+      else if (row.bitrate < 320) brLabel = '256–319 kbps'
+      else brLabel = '320+ kbps'
+    }
+    addBucket(bitrateMap, brLabel, row.count, row.total_size, row.total_duration)
+  }
+
+  const genres = db
+    .prepare(
+      `SELECT
+         TRIM(genre) AS label,
+         COUNT(*) AS count,
+         COALESCE(SUM(file_size), 0) AS total_size,
+         COALESCE(SUM(duration), 0) AS total_duration
+       FROM tracks
+       WHERE genre IS NOT NULL AND TRIM(genre) != ''
+       GROUP BY LOWER(TRIM(genre))
+       ORDER BY count DESC
+       LIMIT 8`,
+    )
+    .all() as FormatStatBucket[]
+
+  const sortByCountDesc = (a: FormatStatBucket, b: FormatStatBucket) => b.count - a.count
+
+  return {
+    ...totals,
+    quality_tiers: Array.from(tierMap.values()).filter((t) => t.count > 0),
+    codecs: Array.from(codecMap.values()).sort(sortByCountDesc),
+    sample_rates: Array.from(sampleRateMap.values()).sort(sortByCountDesc),
+    bitrates: Array.from(bitrateMap.values()).sort(sortByCountDesc),
+    genres,
+  }
 }
 
 export function dbGetArtists(): Artist[] {

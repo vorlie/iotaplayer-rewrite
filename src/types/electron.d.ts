@@ -4,6 +4,7 @@
 import type {
   Album,
   Artist,
+  LibraryFormatStats,
   LibraryStats,
   LyricLine,
   LyricsFormat,
@@ -27,6 +28,7 @@ interface ArtworkResponse {
 
 interface LibraryAPI {
   stats: () => Promise<LibraryStats>
+  formatStats: () => Promise<LibraryFormatStats>
   scan: (rootDir: string) => Promise<ScanResult>
   artists: () => Promise<Artist[]>
   artist: (id: number) => Promise<Artist | null>
@@ -192,7 +194,9 @@ export type {
   ArtworkResponse,
   DiscordAPI,
   DiscordActivityInput,
+  FormatStatBucket,
   LibraryAPI,
+  LibraryFormatStats,
   LibraryStats,
   LyricLine,
   LyricsFormat,

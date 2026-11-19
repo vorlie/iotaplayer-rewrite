@@ -141,5 +141,27 @@
       "modifiedAt": "Modified",
       "addedAt": "Added"
     }
+  },
+  "statsView": {
+    "title": "Library Statistics",
+    "subtitle": "Format breakdown, storage usage, and audio quality distribution",
+    "loading": "Calculating library statistics…",
+    "emptyTitle": "No tracks in library",
+    "emptyBody": "Scan your music folder in Settings to see format and quality statistics.",
+    "refresh": "Refresh",
+    "kpis": {
+      "tracks": "Tracks",
+      "albums": "Albums",
+      "artists": "Artists",
+      "totalDuration": "Total duration",
+      "totalStorage": "Total storage"
+    },
+    "sections": {
+      "qualityTiers": "Audio Quality Breakdown",
+      "codecs": "Codecs & Formats",
+      "sampleRates": "Sample Rates",
+      "bitrates": "Bitrate Distribution",
+      "genres": "Top Genres"
+    }
   }
 }

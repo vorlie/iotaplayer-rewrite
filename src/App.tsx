@@ -9,6 +9,7 @@ import { AlbumsView } from './views/AlbumsView'
 import { ArtistDetailView } from './views/ArtistDetailView'
 import { ArtistsView } from './views/ArtistsView'
 import { FavoritesView } from './views/FavoritesView'
+import { LibraryStatsView } from './views/LibraryStatsView'
 import { NowPlayingView } from './views/NowPlayingView'
 import { PlaylistDetailView } from './views/PlaylistDetailView'
 import { PlaylistsView } from './views/PlaylistsView'
@@ -37,6 +38,7 @@ function MainContent() {
     case 'settings':       return <SettingsView />
     case 'favorites':      return <FavoritesView />
     case 'recently-played': return <RecentlyPlayedView />
+    case 'library-stats':  return <LibraryStatsView />
     default:               return <AlbumsView />
   }
 }

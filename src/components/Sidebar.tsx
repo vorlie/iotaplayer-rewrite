@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import {
+  BarChart3,
   Disc3,
   Heart,
   History,
@@ -25,6 +26,7 @@ interface NavItem {
     | 'nav.nowPlaying'
     | 'nav.favorites'
     | 'nav.recentlyPlayed'
+    | 'nav.statistics'
   icon: React.ReactNode
 }
 
@@ -39,6 +41,7 @@ const LIBRARY_ITEMS: NavItem[] = [
 const YOUR_MUSIC_ITEMS: NavItem[] = [
   { id: 'favorites', labelKey: 'nav.favorites', icon: <Heart size={15} /> },
   { id: 'recently-played', labelKey: 'nav.recentlyPlayed', icon: <History size={15} /> },
+  { id: 'library-stats', labelKey: 'nav.statistics', icon: <BarChart3 size={15} /> },
 ]
 
 export function Sidebar() {
