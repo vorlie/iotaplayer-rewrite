@@ -146,11 +146,14 @@ interface RawTrack {
   bitrate: number | null
   sample_rate: number | null
   bits_per_sample: number | null
+  channels: number | null
+  is_lossless: number | null
   codec: string | null
   format: string | null
   path: string
   file_size: number
   modified_time: number
+  added_at: number
   artwork_id: number | null
   artist_id: number | null
   album_id: number | null
@@ -292,11 +295,14 @@ async function processFile(
       bitrate: format.bitrate != null ? Math.round(format.bitrate / 1000) : null,
       sample_rate: format.sampleRate ?? null,
       bits_per_sample: format.bitsPerSample ?? null,
+      channels: format.numberOfChannels ?? null,
+      is_lossless: format.lossless === true ? 1 : format.lossless === false ? 0 : null,
       codec: format.codec ?? null,
       format: format.container ?? null,
       path: filePath,
       file_size: fileSize,
       modified_time: modifiedTime,
+      added_at: Date.now(),
       artwork_id: artworkId,
       artist_id: artistId,
       album_id: albumId,
@@ -307,12 +313,12 @@ async function processFile(
          title, artist, album_artist, album, album_id, artist_id,
          track_number, track_total, disc_number, disc_total,
          year, genre, duration, bitrate, sample_rate, bits_per_sample,
-         codec, format, path, file_size, modified_time, artwork_id
+         channels, is_lossless, codec, format, path, file_size, modified_time, added_at, artwork_id
        ) VALUES(
          @title, @artist, @album_artist, @album, @album_id, @artist_id,
          @track_number, @track_total, @disc_number, @disc_total,
          @year, @genre, @duration, @bitrate, @sample_rate, @bits_per_sample,
-         @codec, @format, @path, @file_size, @modified_time, @artwork_id
+         @channels, @is_lossless, @codec, @format, @path, @file_size, @modified_time, @added_at, @artwork_id
        )
        ON CONFLICT(path) DO UPDATE SET
          title          = excluded.title,
@@ -331,10 +337,13 @@ async function processFile(
          bitrate        = excluded.bitrate,
          sample_rate    = excluded.sample_rate,
          bits_per_sample = excluded.bits_per_sample,
+         channels       = excluded.channels,
+         is_lossless    = excluded.is_lossless,
          codec          = excluded.codec,
          format         = excluded.format,
          file_size      = excluded.file_size,
          modified_time  = excluded.modified_time,
+         added_at       = COALESCE(tracks.added_at, excluded.added_at),
          artwork_id     = excluded.artwork_id
     `,
     ).run(track)
