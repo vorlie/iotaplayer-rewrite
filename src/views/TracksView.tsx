@@ -10,6 +10,8 @@ import {
   Trash2,
 } from 'lucide-react'
 import { useFormatDuration, useTracks } from '../hooks/useLibrary'
+import { FileInspectorModal } from '../components/FileInspectorModal'
+import { QualityBadge } from '../components/QualityBadge'
 import { useAppStore, usePlaybackStore } from '../store'
 import type { Track } from '../types/electron'
 import '../styles/library.css'
@@ -29,6 +31,7 @@ interface TrackRowProps {
   isDragging?: boolean
   dragOverIndicator?: 'top' | 'bottom' | null
   onClick: () => void
+  onInspect: () => void
   onRemove?: () => void
   onMoveUp?: () => void
   onMoveDown?: () => void
@@ -49,6 +52,7 @@ function TrackRow({
   isDragging = false,
   dragOverIndicator = null,
   onClick,
+  onInspect,
   onRemove,
   onMoveUp,
   onMoveDown,
@@ -143,6 +147,7 @@ function TrackRow({
               {track.artist ?? track.album_artist ?? '—'}
             </div>
           </div>
+          <QualityBadge track={track} onClick={onInspect} />
         </div>
 
         {showAlbum && (
@@ -190,6 +195,17 @@ function TrackRow({
             style={{ left: contextMenu.x, top: contextMenu.y }}
             onClick={(e) => e.stopPropagation()}
           >
+            <button
+              type="button"
+              className="context-menu-item"
+              onClick={() => {
+                onInspect()
+                setContextMenu(null)
+              }}
+            >
+              {t('inspector.inspectFile')}
+            </button>
+
             <button
               type="button"
               className="context-menu-item"
@@ -301,6 +317,7 @@ export function TracksTable({
   const { play, currentTrack, isPlaying } = usePlaybackStore()
   const hasActions = Boolean(onRemoveTrack || onMoveTrack)
   const isDraggable = Boolean(onMoveTrack)
+  const [inspectedTrack, setInspectedTrack] = useState<Track | null>(null)
 
   // Drag and drop state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
@@ -419,6 +436,7 @@ export function TracksTable({
           isDragging={draggedIndex === i}
           dragOverIndicator={dragOverInfo?.index === i ? dragOverInfo.position : null}
           onClick={() => play(track, sortedTracks)}
+          onInspect={() => setInspectedTrack(track)}
           onRemove={onRemoveTrack ? () => onRemoveTrack(i) : undefined}
           onMoveUp={onMoveTrack && i > 0 ? () => onMoveTrack(i, i - 1) : undefined}
           onMoveDown={onMoveTrack && i < sortedTracks.length - 1 ? () => onMoveTrack(i, i + 1) : undefined}
@@ -452,6 +470,13 @@ export function TracksTable({
           }}
         />
       ))}
+
+      {inspectedTrack && (
+        <FileInspectorModal
+          track={inspectedTrack}
+          onClose={() => setInspectedTrack(null)}
+        />
+      )}
     </div>
   )
 }

@@ -126,6 +126,9 @@ const libraryAPI = {
   recordPlayback: (trackId: number, durationPlayed?: number): Promise<void> =>
     ipcRenderer.invoke('library:record-playback', trackId, durationPlayed),
 
+  revealFile: (filePath: string): Promise<boolean> =>
+    ipcRenderer.invoke('library:reveal-file', filePath),
+
   onScanProgress: (
     cb: (progress: ScanProgress) => void,
   ): (() => void) => {

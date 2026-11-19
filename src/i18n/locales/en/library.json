@@ -98,5 +98,48 @@
     "emptyBody": "Play music from your library and your recently played tracks will appear here.",
     "clearHistory": "Clear History",
     "confirmClear": "Clear all playback history?"
+  },
+  "quality": {
+    "tiers": {
+      "hi-res": "Hi-Res Lossless",
+      "lossless": "Lossless",
+      "lossy": "Lossy",
+      "unknown": "Unknown"
+    }
+  },
+  "inspector": {
+    "title": "File Inspector",
+    "inspectFile": "Inspect file…",
+    "copyPath": "Copy path",
+    "copied": "Copied",
+    "revealInFolder": "Reveal in folder",
+    "channelsMono": "1 (Mono)",
+    "channelsStereo": "2 (Stereo)",
+    "channelsCount": "{{count}} channels",
+    "sections": {
+      "audio": "Audio Format",
+      "metadata": "Tags & Dates",
+      "location": "File Location"
+    },
+    "fields": {
+      "qualityTier": "Quality tier",
+      "codec": "Codec",
+      "container": "Container",
+      "bitrate": "Bitrate",
+      "sampleRate": "Sample rate",
+      "bitDepth": "Bit depth",
+      "channels": "Channels",
+      "duration": "Duration",
+      "fileSize": "File size",
+      "artist": "Artist",
+      "albumArtist": "Album artist",
+      "album": "Album",
+      "trackNumber": "Track #",
+      "discNumber": "Disc #",
+      "year": "Year",
+      "genre": "Genre",
+      "modifiedAt": "Modified",
+      "addedAt": "Added"
+    }
   }
 }

@@ -70,6 +70,7 @@ interface LibraryAPI {
   recentlyPlayed: (limit?: number) => Promise<Track[]>
   clearHistory: () => Promise<void>
   recordPlayback: (trackId: number, durationPlayed?: number) => Promise<void>
+  revealFile: (filePath: string) => Promise<boolean>
   onScanProgress: (cb: (progress: ScanProgress) => void) => () => void
 }
 
