@@ -1,12 +1,43 @@
 import { useEffect, useRef, useState } from 'react'
 
 type RgbTuple = [number, number, number]
+type LabTuple = [number, number, number]
 
-const DEFAULT_PALETTE: [RgbTuple, RgbTuple, RgbTuple, RgbTuple] = [
-  [0.14, 0.12, 0.24],
-  [0.36, 0.22, 0.34],
-  [0.24, 0.32, 0.48],
-  [0.52, 0.30, 0.36],
+// Calm default deep-navy / teal / rose palette in sRGB (converted to OKLab for the shader)
+const DEFAULT_RGB_PALETTE: [RgbTuple, RgbTuple, RgbTuple, RgbTuple, RgbTuple] = [
+  [0.10, 0.24, 0.46],
+  [0.14, 0.42, 0.44],
+  [0.24, 0.34, 0.58],
+  [0.16, 0.30, 0.48],
+  [0.32, 0.26, 0.46],
+]
+
+function srgbToLinear(c: number): number {
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+}
+
+function rgbToOklab([rIn, gIn, bIn]: RgbTuple): LabTuple {
+  const r = srgbToLinear(rIn)
+  const g = srgbToLinear(gIn)
+  const b = srgbToLinear(bIn)
+
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
+
+  return [
+    0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s,
+  ]
+}
+
+const DEFAULT_LAB_PALETTE: [LabTuple, LabTuple, LabTuple, LabTuple, LabTuple] = [
+  rgbToOklab(DEFAULT_RGB_PALETTE[0]),
+  rgbToOklab(DEFAULT_RGB_PALETTE[1]),
+  rgbToOklab(DEFAULT_RGB_PALETTE[2]),
+  rgbToOklab(DEFAULT_RGB_PALETTE[3]),
+  rgbToOklab(DEFAULT_RGB_PALETTE[4]),
 ]
 
 const VERT_SRC = `
@@ -21,10 +52,12 @@ precision highp float;
 uniform vec2 u_res;
 uniform float u_time;
 uniform float u_energy;
+uniform vec3 u_bg;
 uniform vec3 u_c0;
 uniform vec3 u_c1;
 uniform vec3 u_c2;
 uniform vec3 u_c3;
+uniform vec3 u_c4;
 
 float hash(vec2 p) {
   p = fract(p * vec2(234.34, 435.345));
@@ -32,82 +65,113 @@ float hash(vec2 p) {
   return fract(p.x * p.y);
 }
 
-float noise(vec2 p) {
-  vec2 i = floor(p), f = fract(p);
-  vec2 u = f * f * (3.0 - 2.0 * f);
-  return mix(
-    mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),
-    mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
-    u.y
+vec3 m289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+vec2 m289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+vec3 perm(vec3 x) { return m289(((x * 34.0) + 1.0) * x); }
+
+float sn(vec2 v) {
+  const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+  vec2 i = floor(v + dot(v, C.yy));
+  vec2 x0 = v - i + dot(i, C.xx);
+  vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+  vec4 x12 = x0.xyxy + C.xxzz;
+  x12.xy -= i1;
+  i = m289(i);
+  vec3 p = perm(perm(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
+  vec3 m = max(0.5 - vec3(dot(x0, x0), dot(x12.xy, x12.xy), dot(x12.zw, x12.zw)), 0.0);
+  m = m * m;
+  m = m * m;
+  vec3 x = 2.0 * fract(p * C.www) - 1.0;
+  vec3 h = abs(x) - 0.5;
+  vec3 ox = floor(x + 0.5);
+  vec3 a0 = x - ox;
+  m *= 1.79284291400159 - 0.85373472095314 * (a0 * a0 + h * h);
+  vec3 g;
+  g.x = a0.x * x0.x + h.x * x0.y;
+  g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+  return 130.0 * dot(m, g);
+}
+
+vec3 oklabToSrgb(vec3 c) {
+  float l = c.x + 0.3963377774 * c.y + 0.2158037573 * c.z;
+  float m = c.x - 0.1055613458 * c.y - 0.0638541728 * c.z;
+  float s = c.x - 0.0894841775 * c.y - 1.291485548 * c.z;
+  l = l * l * l;
+  m = m * m * m;
+  s = s * s * s;
+  vec3 v = clamp(
+    vec3(
+      4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+      -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+      -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s
+    ),
+    0.0,
+    1.0
   );
+  return mix(v * 12.92, 1.055 * pow(v, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, v));
 }
 
-float fbm(vec2 p) {
-  float v = 0.0;
-  float a = 0.5;
-  mat2 m = mat2(1.6, 1.2, -1.2, 1.6);
-  for (int i = 0; i < 3; i++) {
-    v += a * noise(p);
-    p = m * p;
-    a *= 0.5;
-  }
-  return v;
-}
-
-float blob(vec2 p, vec2 c, float r) {
+float blobWeight(vec2 p, vec2 c, float r, float w) {
   vec2 d = p - c;
-  return exp(-dot(d, d) / (r * r));
+  return w * exp(-dot(d, d) / (r * r));
 }
 
 void main() {
   vec2 uv = gl_FragCoord.xy / u_res;
   float asp = u_res.x / max(u_res.y, 1.0);
-  vec2 p = vec2((uv.x - 0.5) * asp, uv.y - 0.5);
+  vec2 st = vec2(uv.x, 1.0 - uv.y);
+  vec2 p = vec2(st.x * asp, st.y);
 
-  float t = u_time * 0.22;
+  float t = u_time;
 
-  // Domain-warped silk folds (inspired by Still's Flow/Field shader)
-  vec2 w = vec2(
-    fbm(p * 1.15 + vec2(t * 0.06, -t * 0.05)),
-    fbm(p * 1.15 + vec2(5.2 - t * 0.04, 1.3 + t * 0.05))
-  );
-  vec2 pw = p + (w - 0.5) * 0.65;
+  // Flow: space bent along a slow, tilted current
+  const mat2 R = mat2(0.906, -0.423, 0.423, 0.906);
+  vec2 q = (R * p) * vec2(0.55, 1.5);
+  vec2 w = vec2(sn(q + vec2(t * 0.05, 0.0)), sn(q + vec2(3.1, 7.7) - vec2(0.0, t * 0.04)));
+  vec2 w2 = vec2(sn(q * 2.0 + w * 1.6 + 11.0), sn(q * 2.0 + w * 1.6 + 23.0));
+  p += 0.22 * (w + 0.4 * w2);
 
-  float foldA = fbm(pw * 1.6 + vec2(t * 0.04, -t * 0.03));
-  float foldB = fbm(pw * 2.2 - vec2(t * 0.03, t * 0.04) + foldA * 0.8);
-  float sheen = smoothstep(0.32, 0.78, foldB);
+  float e = u_energy;
+  vec3 acc = u_bg;
+  float W = 1.0;
+  float rs = clamp(sqrt(asp / 1.4), 0.5, 1.0);
 
-  vec2 c0 = vec2(sin(t * 0.14) * 0.42 * asp, sin(t * 0.11 + 1.7) * 0.24);
-  vec2 c1 = vec2(sin(t * 0.12 + 2.4) * 0.44 * asp, cos(t * 0.09 + 0.6) * 0.26);
-  vec2 c2 = vec2(cos(t * 0.10 + 4.1) * 0.38 * asp, sin(t * 0.13 + 3.3) * 0.24);
-  vec2 c3 = vec2(cos(t * 0.08 + 1.0) * 0.32 * asp, cos(t * 0.10 + 2.2) * 0.20);
+  vec2 c0 = vec2(0.22 * asp, 0.28) + 0.06 * vec2(sin(t * 0.21), cos(t * 0.17));
+  vec2 c1 = vec2(0.78 * asp, 0.24) + 0.06 * vec2(sin(t * 0.26 + 1.7), cos(t * 0.21 + 2.9));
+  vec2 c2 = vec2(0.50 * asp, 0.52) + 0.06 * vec2(sin(t * 0.31 + 3.4), cos(t * 0.25 + 5.8));
+  vec2 c3 = vec2(0.18 * asp, 0.78) + 0.06 * vec2(sin(t * 0.36 + 5.1), cos(t * 0.29 + 8.7));
+  vec2 c4 = vec2(0.82 * asp, 0.76) + 0.06 * vec2(sin(t * 0.41 + 6.8), cos(t * 0.33 + 11.6));
 
-  vec3 base = vec3(0.028, 0.036, 0.058);
-  vec3 col = base;
-  col = mix(col, u_c3 * 0.72, blob(pw, c3, 0.78) * 0.72);
-  col = mix(col, u_c2 * 0.78, blob(pw, c2, 0.56) * 0.82);
-  col = mix(col, u_c1 * 0.85, blob(pw, c1, 0.52) * 0.86);
-  col = mix(col, u_c0 * 0.90, blob(pw, c0, 0.56) * 0.90);
+  float k0 = blobWeight(p, c0, 0.58 * rs * (1.0 + e * 0.08), 1.6 * (1.0 + e * 0.25));
+  float k1 = blobWeight(p, c1, 0.56 * rs * (1.0 + e * 0.08), 1.5 * (1.0 + e * 0.25));
+  float k2 = blobWeight(p, c2, 0.62 * rs * (1.0 + e * 0.08), 1.3 * (1.0 + e * 0.25));
+  float k3 = blobWeight(p, c3, 0.58 * rs * (1.0 + e * 0.08), 1.4 * (1.0 + e * 0.25));
+  float k4 = blobWeight(p, c4, 0.56 * rs * (1.0 + e * 0.08), 1.3 * (1.0 + e * 0.25));
 
-  // Soft silk-fold highlight
-  vec3 sheenTint = mix(u_c0, u_c2, 0.5) * 0.42 + vec3(0.06, 0.08, 0.11);
-  col += sheenTint * sheen * (0.45 + u_energy * 0.15);
+  acc += k0 * u_c0 + k1 * u_c1 + k2 * u_c2 + k3 * u_c3 + k4 * u_c4;
+  W += k0 + k1 + k2 + k3 + k4;
 
-  // Center vignette
-  float v = smoothstep(1.30, 0.15, length((uv - 0.5) * vec2(asp * 0.85, 1.0)));
-  col *= mix(0.48, 1.0, v);
+  vec3 lab = acc / W;
+  float cov = 1.0 - 1.0 / W;
 
-  // Subtle saturation boost & static film grain directly in shader (avoids CSS filter/mix-blend passes)
-  float luma = dot(col, vec3(0.299, 0.587, 0.114));
-  col = mix(vec3(luma), col, 1.18);
-  col += (hash(gl_FragCoord.xy) - 0.5) * 0.025;
+  // Sheen: long, soft silk folds of light where the colour is
+  float fold = sn((R * p) * vec2(0.8, 3.2) + w * 0.9 + vec2(t * 0.03, 0.0)) * 0.5 + 0.5;
+  lab.x += (0.14 * fold * fold * fold + e * 0.02) * cov;
+
+  vec3 col = oklabToSrgb(mix(u_bg, lab, 0.92));
+
+  // Soft vignette & static film-grain dither
+  float vig = smoothstep(1.3, 0.2, length((uv - 0.5) * vec2(asp * 0.85, 1.0)));
+  col *= mix(0.68, 1.0, vig);
+  col += (hash(gl_FragCoord.xy) - 0.5) * 0.022;
+
   gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
 `
 
-function extractArtworkPalette(
+function extractArtworkLabPalette(
   src: string,
-): Promise<[RgbTuple, RgbTuple, RgbTuple, RgbTuple]> {
+): Promise<[LabTuple, LabTuple, LabTuple, LabTuple, LabTuple]> {
   return new Promise((resolve) => {
     const img = new Image()
     img.crossOrigin = 'anonymous'
@@ -119,13 +183,13 @@ function extractArtworkPalette(
         offscreen.height = size
         const ctx = offscreen.getContext('2d')
         if (!ctx) {
-          resolve(DEFAULT_PALETTE)
+          resolve(DEFAULT_LAB_PALETTE)
           return
         }
         ctx.drawImage(img, 0, 0, size, size)
         const { data } = ctx.getImageData(0, 0, size, size)
 
-        const buckets: Array<{ r: number; g: number; b: number; sat: number }> = []
+        const buckets: Array<{ rgb: RgbTuple; sat: number }> = []
         for (let i = 0; i < data.length; i += 16) {
           const r = data[i] / 255
           const g = data[i + 1] / 255
@@ -134,29 +198,37 @@ function extractArtworkPalette(
           const min = Math.min(r, g, b)
           const sat = max > 0 ? (max - min) / max : 0
           const lum = 0.299 * r + 0.587 * g + 0.114 * b
-          if (lum > 0.08 && lum < 0.92) {
-            buckets.push({ r, g, b, sat })
+          if (lum > 0.07 && lum < 0.90) {
+            buckets.push({ rgb: [r, g, b], sat })
           }
         }
 
-        if (buckets.length < 4) {
-          resolve(DEFAULT_PALETTE)
+        if (buckets.length < 5) {
+          resolve(DEFAULT_LAB_PALETTE)
           return
         }
 
         buckets.sort((a, b) => b.sat - a.sat)
-        const pick = (idx: number): RgbTuple => {
+        const pickLab = (idx: number): LabTuple => {
           const item = buckets[Math.min(idx, buckets.length - 1)]
-          return [item.r, item.g, item.b]
+          const lab = rgbToOklab(item.rgb)
+          // Keep lightness calm and rich so white text remains crisp
+          return [Math.min(0.58, Math.max(0.24, lab[0])), lab[1], lab[2]]
         }
 
-        const step = Math.max(1, Math.floor(buckets.length / 4))
-        resolve([pick(0), pick(step), pick(step * 2), pick(step * 3)])
+        const step = Math.max(1, Math.floor(buckets.length / 5))
+        resolve([
+          pickLab(0),
+          pickLab(step),
+          pickLab(step * 2),
+          pickLab(step * 3),
+          pickLab(step * 4),
+        ])
       } catch {
-        resolve(DEFAULT_PALETTE)
+        resolve(DEFAULT_LAB_PALETTE)
       }
     }
-    img.onerror = () => resolve(DEFAULT_PALETTE)
+    img.onerror = () => resolve(DEFAULT_LAB_PALETTE)
     img.src = src
   })
 }
@@ -173,12 +245,13 @@ export function StillAmbientCanvas({
   isPlaying,
 }: StillAmbientCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const targetPaletteRef = useRef<[RgbTuple, RgbTuple, RgbTuple, RgbTuple]>(DEFAULT_PALETTE)
-  const currentPaletteRef = useRef<[RgbTuple, RgbTuple, RgbTuple, RgbTuple]>([
-    [...DEFAULT_PALETTE[0]],
-    [...DEFAULT_PALETTE[1]],
-    [...DEFAULT_PALETTE[2]],
-    [...DEFAULT_PALETTE[3]],
+  const targetPaletteRef = useRef<[LabTuple, LabTuple, LabTuple, LabTuple, LabTuple]>(DEFAULT_LAB_PALETTE)
+  const currentPaletteRef = useRef<[LabTuple, LabTuple, LabTuple, LabTuple, LabTuple]>([
+    [...DEFAULT_LAB_PALETTE[0]],
+    [...DEFAULT_LAB_PALETTE[1]],
+    [...DEFAULT_LAB_PALETTE[2]],
+    [...DEFAULT_LAB_PALETTE[3]],
+    [...DEFAULT_LAB_PALETTE[4]],
   ])
   const isPlayingRef = useRef(isPlaying)
   const [webglUnsupported, setWebglUnsupported] = useState(false)
@@ -190,11 +263,11 @@ export function StillAmbientCanvas({
   useEffect(() => {
     let cancelled = false
     if (!artworkSrc) {
-      targetPaletteRef.current = DEFAULT_PALETTE
+      targetPaletteRef.current = DEFAULT_LAB_PALETTE
       return
     }
 
-    void extractArtworkPalette(artworkSrc).then((palette) => {
+    void extractArtworkLabPalette(artworkSrc).then((palette) => {
       if (!cancelled) {
         targetPaletteRef.current = palette
       }
@@ -271,29 +344,33 @@ export function StillAmbientCanvas({
     const uRes = gl.getUniformLocation(program, 'u_res')
     const uTime = gl.getUniformLocation(program, 'u_time')
     const uEnergy = gl.getUniformLocation(program, 'u_energy')
+    const uBg = gl.getUniformLocation(program, 'u_bg')
     const uC0 = gl.getUniformLocation(program, 'u_c0')
     const uC1 = gl.getUniformLocation(program, 'u_c1')
     const uC2 = gl.getUniformLocation(program, 'u_c2')
     const uC3 = gl.getUniformLocation(program, 'u_c3')
+    const uC4 = gl.getUniformLocation(program, 'u_c4')
 
-    canvas.width = 240
-    canvas.height = 135
+    const bgLab = rgbToOklab([0.03, 0.04, 0.065])
+
+    canvas.width = 256
+    canvas.height = 144
     gl.viewport(0, 0, canvas.width, canvas.height)
 
     let rafId = 0
     let lastTs = performance.now()
     let elapsed = 0
-    let energy = isPlayingRef.current ? 1 : 0.2
+    let energy = isPlayingRef.current ? 0.45 : 0.1
 
     const render = (now: number) => {
       const dt = Math.min(0.1, (now - lastTs) / 1000)
       lastTs = now
-      elapsed += dt * (isPlayingRef.current ? 1 : 0.35)
-      energy += ((isPlayingRef.current ? 1 : 0.2) - energy) * 0.05
+      elapsed += dt * (isPlayingRef.current ? 1 : 0.3)
+      energy += ((isPlayingRef.current ? 0.45 : 0.1) - energy) * 0.05
 
       const curr = currentPaletteRef.current
       const target = targetPaletteRef.current
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 5; i++) {
         for (let ch = 0; ch < 3; ch++) {
           curr[i][ch] += (target[i][ch] - curr[i][ch]) * 0.04
         }
@@ -302,10 +379,12 @@ export function StillAmbientCanvas({
       gl.uniform2f(uRes, canvas.width, canvas.height)
       gl.uniform1f(uTime, elapsed)
       gl.uniform1f(uEnergy, energy)
+      gl.uniform3fv(uBg, bgLab)
       gl.uniform3fv(uC0, curr[0])
       gl.uniform3fv(uC1, curr[1])
       gl.uniform3fv(uC2, curr[2])
       gl.uniform3fv(uC3, curr[3])
+      gl.uniform3fv(uC4, curr[4])
 
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
       rafId = requestAnimationFrame(render)
