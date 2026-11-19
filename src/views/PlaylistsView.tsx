@@ -1,7 +1,14 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ListMusic, Music2, Pencil, Play, Plus, Trash2 } from 'lucide-react'
+import { ListMusic, Music2, Pencil, Play, Plus, Trash2, X } from 'lucide-react'
 import { useAppStore, usePlaybackStore } from '../store'
+import type { Playlist } from '../types/electron'
 import '../styles/playlists.css'
+
+type PlaylistModalState =
+  | { mode: 'create' }
+  | { mode: 'edit'; playlist: Playlist }
+  | null
 
 export function PlaylistsView() {
   const { t } = useTranslation(['playlists', 'library', 'common'])
@@ -9,17 +16,44 @@ export function PlaylistsView() {
     playlists,
     playPlaylist,
     createPlaylist,
-    currentTrack,
     queue,
     saveCurrentQueueAsPlaylist,
-    renamePlaylist,
+    updatePlaylistDetails,
     deletePlaylist,
   } = usePlaybackStore()
   const navigate = useAppStore((s) => s.navigate)
 
-  function handleCreateDefault() {
-    const name = t('defaultName', { number: playlists.length + 1 })
-    createPlaylist(name, queue.length > 0 ? queue : currentTrack ? [currentTrack] : [])
+  const [modalState, setModalState] = useState<PlaylistModalState>(null)
+  const [nameInput, setNameInput] = useState('')
+  const [descriptionInput, setDescriptionInput] = useState('')
+
+  function openCreateModal() {
+    setNameInput(t('defaultName', { number: playlists.length + 1 }))
+    setDescriptionInput('')
+    setModalState({ mode: 'create' })
+  }
+
+  function openEditModal(playlist: Playlist) {
+    setNameInput(playlist.name)
+    setDescriptionInput(playlist.description ?? '')
+    setModalState({ mode: 'edit', playlist })
+  }
+
+  function handleModalSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const trimmedName = nameInput.trim()
+    if (!trimmedName || !modalState) return
+
+    if (modalState.mode === 'create') {
+      createPlaylist(trimmedName, [], descriptionInput.trim())
+    } else {
+      updatePlaylistDetails(modalState.playlist.id, {
+        name: trimmedName,
+        description: descriptionInput.trim(),
+      })
+    }
+
+    setModalState(null)
   }
 
   return (
@@ -32,7 +66,7 @@ export function PlaylistsView() {
           </div>
 
           <div className="playlist-header-actions">
-            <button className="detail-play-btn playlist-toolbar-btn" onClick={handleCreateDefault}>
+            <button className="detail-play-btn playlist-toolbar-btn" onClick={openCreateModal}>
               <Plus size={14} />
               {t('actions.newPlaylist')}
             </button>
@@ -103,13 +137,10 @@ export function PlaylistsView() {
 
                       <button
                         className="player-btn"
-                        title={t('actions.renamePlaylist')}
+                        title={t('actions.editDetails')}
                         onClick={(e) => {
                           e.stopPropagation()
-                          const nextName = window.prompt(t('actions.renamePlaylist'), playlist.name)?.trim()
-                          if (nextName) {
-                            renamePlaylist(playlist.id, nextName)
-                          }
+                          openEditModal(playlist)
                         }}
                       >
                         <Pencil size={14} />
@@ -135,6 +166,78 @@ export function PlaylistsView() {
           </div>
         )}
       </div>
+
+      {modalState && (
+        <div
+          className="playlist-modal-backdrop"
+          onClick={() => setModalState(null)}
+        >
+          <div
+            className="playlist-modal"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="playlist-modal__header">
+              <h2 className="playlist-modal__title">
+                {modalState.mode === 'create'
+                  ? t('actions.newPlaylist')
+                  : t('actions.editDetails')}
+              </h2>
+              <button
+                type="button"
+                className="player-btn"
+                title={t('common:actions.close')}
+                onClick={() => setModalState(null)}
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <form className="playlist-modal__form" onSubmit={handleModalSubmit}>
+              <label className="playlist-field">
+                <span>{t('editor.name')}</span>
+                <input
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  autoFocus
+                  onFocus={(e) => e.currentTarget.select()}
+                  required
+                />
+              </label>
+
+              <label className="playlist-field">
+                <span>{t('editor.description')}</span>
+                <textarea
+                  value={descriptionInput}
+                  onChange={(e) => setDescriptionInput(e.target.value)}
+                  rows={3}
+                  placeholder={t('editor.descriptionPlaceholder')}
+                />
+              </label>
+
+              <div className="playlist-editor-actions">
+                <button
+                  type="submit"
+                  className="detail-play-btn playlist-toolbar-btn"
+                  disabled={!nameInput.trim()}
+                >
+                  {modalState.mode === 'create'
+                    ? t('actions.newPlaylist')
+                    : t('common:actions.saveChanges')}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-btn playlist-toolbar-btn"
+                  onClick={() => setModalState(null)}
+                >
+                  {t('common:actions.cancel')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

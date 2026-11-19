@@ -229,7 +229,7 @@ export interface PlaybackState {
 interface PlaybackStore extends PlaybackState {
   play: (track: Track, queue?: Track[], playlistName?: string) => void
   playQueue: (tracks: Track[], startTrackId?: number, opts?: { name?: string }) => void
-  createPlaylist: (name: string, tracks?: Track[]) => Playlist | null
+  createPlaylist: (name: string, tracks?: Track[], description?: string) => Playlist | null
   renamePlaylist: (playlistId: string, newName: string) => void
   updatePlaylistDetails: (
     playlistId: string,
@@ -739,19 +739,20 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => {
       set({ queue: nextQueue, queueEntryIds: nextEntryIds, queueIndex: nextQueueIndex })
     },
 
-    createPlaylist: (name, tracks = []) => {
+    createPlaylist: (name, tracks = [], description = '') => {
       const trimmed = name.trim()
       if (!trimmed) return null
 
+      const trimmedDescription = description.trim()
       const persisted = typeof window !== 'undefined' && 'library' in window
-        ? window.library.createPlaylist(trimmed, tracks.map((track) => track.id))
+        ? window.library.createPlaylist(trimmed, tracks.map((track) => track.id), trimmedDescription)
         : null
 
       if (!persisted) {
         const playlist: Playlist = {
           id: `playlist-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           name: trimmed,
-          description: '',
+          description: trimmedDescription,
           coverData: null,
           coverMimeType: null,
           tracks,

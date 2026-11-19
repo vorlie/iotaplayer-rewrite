@@ -63,16 +63,22 @@ function TrackRow({
   const { playlists, addTrackToPlaylist, favoriteIds, toggleFavorite } = usePlaybackStore()
   const isFav = favoriteIds.includes(track.id)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
+  const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false)
+  const [newPlaylistName, setNewPlaylistName] = useState('')
 
   function handleContextMenu(e: React.MouseEvent<HTMLDivElement>) {
     e.preventDefault()
+    setIsCreatingPlaylist(false)
+    setNewPlaylistName(track.title)
     setContextMenu({ x: e.clientX, y: e.clientY })
   }
 
-  function handleCreatePlaylist() {
-    const name = window.prompt(t('playlists:actions.newPlaylistPrompt'), track.title)?.trim()
+  function handleCreatePlaylistSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const name = newPlaylistName.trim()
     if (!name) return
     usePlaybackStore.getState().createPlaylist(name, [track])
+    setIsCreatingPlaylist(false)
     setContextMenu(null)
   }
 
@@ -227,13 +233,48 @@ function TrackRow({
                 </button>
               ))
             )}
-            <button
-              type="button"
-              className="context-menu-item context-menu-item--primary"
-              onClick={handleCreatePlaylist}
-            >
-              {t('playlists:actions.newPlaylistEllipsis')}
-            </button>
+            {isCreatingPlaylist ? (
+              <form className="context-menu-inline-form" onSubmit={handleCreatePlaylistSubmit}>
+                <input
+                  type="text"
+                  className="context-menu-inline-input"
+                  value={newPlaylistName}
+                  onChange={(e) => setNewPlaylistName(e.target.value)}
+                  placeholder={t('playlists:actions.newPlaylistPrompt')}
+                  autoFocus
+                  onFocus={(e) => e.currentTarget.select()}
+                />
+                <div className="context-menu-inline-actions">
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    style={{ height: 24, padding: '0 8px', fontSize: 11 }}
+                    onClick={() => setIsCreatingPlaylist(false)}
+                  >
+                    {t('common:actions.cancel')}
+                  </button>
+                  <button
+                    type="submit"
+                    className="detail-play-btn"
+                    style={{ height: 24, padding: '0 8px', fontSize: 11 }}
+                    disabled={!newPlaylistName.trim()}
+                  >
+                    {t('common:actions.save')}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <button
+                type="button"
+                className="context-menu-item context-menu-item--primary"
+                onClick={() => {
+                  setNewPlaylistName(track.title)
+                  setIsCreatingPlaylist(true)
+                }}
+              >
+                {t('playlists:actions.newPlaylistEllipsis')}
+              </button>
+            )}
           </div>
         </div>
       )}
