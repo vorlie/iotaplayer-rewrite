@@ -283,7 +283,7 @@ export function useInterpolatedPosition(
   playbackRate = DEFAULT_PLAYBACK_RATE,
 ): number {
   const safeRate = normalizePlaybackRate(playbackRate, DEFAULT_PLAYBACK_RATE)
-  const isWordSynced = enabled && lyrics.synchronized && lyrics.syncQuality === 'word'
+  const isSynced = enabled && lyrics.synchronized && lyrics.lines.length > 0
   const [syncPosition, setSyncPosition] = useState(position)
   const anchorRef = useRef<{
     position: number
@@ -292,6 +292,7 @@ export function useInterpolatedPosition(
     lastLineIdx: number
     lastWordIdx: number
     lastRate: number
+    lastLyrics: LyricsResult
   }>({
     position,
     timestamp: 0,
@@ -299,43 +300,45 @@ export function useInterpolatedPosition(
     lastLineIdx: -1,
     lastWordIdx: -1,
     lastRate: safeRate,
+    lastLyrics: lyrics,
   })
 
   useEffect(() => {
     const now = performance.now()
     const prev = anchorRef.current
+    const lyricsChanged = prev.lastLyrics !== lyrics
     const forwardThreshold = 0.6 * Math.max(1, safeRate)
     const isBackwardSeek = position < prev.position - 0.25 || position < prev.highWaterMark - 0.6
     const isForwardSeek = position > prev.highWaterMark + forwardThreshold
 
     // If only playbackRate changed mid-playback without a new position tick, re-anchor from highWaterMark
-    const rateChangedOnly = prev.lastRate !== safeRate && position === prev.position
+    const rateChangedOnly = !lyricsChanged && prev.lastRate !== safeRate && position === prev.position
     const basePosition = rateChangedOnly ? prev.highWaterMark : position
     const nextHighWater =
-      isBackwardSeek || isForwardSeek ? position : Math.max(prev.highWaterMark, basePosition)
-
-    const lineIdx = isWordSynced ? getActiveLyricIndex(lyrics, nextHighWater) : -1
-    const line = lineIdx >= 0 ? lyrics.lines[lineIdx] : null
-    const nextLineTs = lineIdx >= 0 ? lyrics.lines[lineIdx + 1]?.timestamp : undefined
-    const wordIdx = line ? getActiveWordIndex(line, nextHighWater, nextLineTs) : -1
+      lyricsChanged || isBackwardSeek || isForwardSeek
+        ? position
+        : Math.max(prev.highWaterMark, basePosition)
 
     anchorRef.current = {
       position: basePosition,
       timestamp: now,
       highWaterMark: nextHighWater,
-      lastLineIdx: lineIdx,
-      lastWordIdx: wordIdx,
+      // Keep lastLineIdx/lastWordIdx from the last rendered syncPosition (reset on seek/track change)
+      // so the rAF loop never skips emitting setSyncPosition for a newly entered line.
+      lastLineIdx: lyricsChanged || isBackwardSeek || isForwardSeek ? -1 : prev.lastLineIdx,
+      lastWordIdx: lyricsChanged || isBackwardSeek || isForwardSeek ? -1 : prev.lastWordIdx,
       lastRate: safeRate,
+      lastLyrics: lyrics,
     }
-  }, [position, isPlaying, isWordSynced, lyrics, safeRate])
+  }, [position, isPlaying, isSynced, lyrics, safeRate])
 
   useEffect(() => {
-    if (!isWordSynced || !isPlaying) return
+    if (!isSynced || !isPlaying) return
 
     let frameId = 0
     const tick = (now: number) => {
       const anchor = anchorRef.current
-      const clampedNext = interpolateMediaPosition({
+      const rawNext = interpolateMediaPosition({
         anchorPosition: anchor.position,
         anchorTimestampMs: anchor.timestamp,
         nowMs: now,
@@ -343,6 +346,9 @@ export function useInterpolatedPosition(
         playbackRate: safeRate,
         duration,
       })
+      // Bound interpolation drift ahead of the last reported audio position so brief stalls never skip lines
+      const maxDriftAhead = 0.35 * Math.max(1, safeRate)
+      const clampedNext = Math.min(rawNext, anchor.position + maxDriftAhead)
       anchor.highWaterMark = clampedNext
 
       const lineIdx = getActiveLyricIndex(lyrics, clampedNext)
@@ -363,15 +369,15 @@ export function useInterpolatedPosition(
     return () => {
       window.cancelAnimationFrame(frameId)
     }
-  }, [isWordSynced, isPlaying, lyrics, duration, safeRate])
+  }, [isSynced, isPlaying, lyrics, duration, safeRate])
 
-  if (!isWordSynced || !isPlaying) {
+  if (!isSynced || !isPlaying) {
     return position
   }
 
-  const maxAhead = 1.0 * Math.max(1, safeRate)
-  // Only snap backward if the user explicitly sought backward or changed tracks
-  if (position < syncPosition - 0.6 || position > syncPosition + maxAhead) {
+  const maxAhead = 0.4 * Math.max(1, safeRate)
+  // Snap to real position if we sought backward, changed tracks, or drifted ahead
+  if (position < syncPosition - 0.35 || position > syncPosition + maxAhead) {
     return position
   }
 

@@ -741,6 +741,18 @@ export function FullscreenNowPlaying() {
                       </button>
                     )
                   })
+                ) : lyrics.synchronized ? (
+                  lyrics.lines[0] && !lyrics.lines[0].isGap && (
+                    <button
+                      type="button"
+                      className="still-ly-line is-next"
+                      onClick={() => {
+                        if (lyrics.lines[0]?.timestamp != null) seek(lyrics.lines[0].timestamp)
+                      }}
+                    >
+                      {lyrics.lines[0].text}
+                    </button>
+                  )
                 ) : (
                   <div className="still-ly-line is-current">
                     {lyrics.lines[0]?.text}
