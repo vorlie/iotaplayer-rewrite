@@ -2,18 +2,28 @@
 
 A local-first desktop music player built with **Electron**, **React 19**, **TypeScript**, **SQLite**, and **MPV**.
 
-IotaPlayer indexes your local audio library into a fast SQLite database and pairs high-compatibility native playback (via MPV with an automatic Web Audio fallback) with an intentional, cohesive desktop interface-complete with word- and line-synchronized lyrics, a 10-band parametric equalizer, drag-and-drop queue and playlist management, and Discord Rich Presence.
+IotaPlayer indexes your local audio library into a fast SQLite database and pairs high-compatibility native playback (via MPV with an automatic Web Audio fallback) with an intentional, cohesive desktop interface—complete with word- and line-synchronized lyrics, a 10-band parametric equalizer, playback speed & pitch presets, smart playlists, library statistics, localization, and Discord Rich Presence.
 
 ---
 
 ## Highlights
 
-- **Dual Playback Engine** - Uses **MPV** over IPC as the primary high-format-compatibility backend, with a seamless **Browser / Web Audio** fallback supporting a live frequency spectrum visualizer and a 10-band parametric equalizer.
-- **Race-Free Volume & Playback Persistence** - Restores persisted volume, repeat, shuffle, and per-track playback positions on launch, hydrating the active audio backend before playback becomes audible to prevent startup volume spikes.
-- **Word- & Line-Synchronized Lyrics Engine** - Supports **Lyricsfile 1.0** (`.lyricsfile.yaml` / `.lyricsfile.yml`), **Enhanced LRC** (`<mm:ss.xx>`), standard **LRC**, **embedded tags** (`SYLT`, `USLT`, Vorbis/FLAC `LYRICS`), and plain `.txt` sidecars with configurable source priority, word-by-word highlighting, click-to-word/line seeking, and animated instrumental break indicators.
-- **Immersive Now Playing Experiences** - Switch between the 3-pane resizable **Now Playing** workspace and the **Fullscreen Now Playing** overlay (`Split`, `Artwork`, and `Lyrics` focus modes over a dynamic blurred album-art backdrop).
-- **Fast SQLite Library & Playlists** - Indexes tracks, albums, artists, and embedded artwork with `music-metadata` and `better-sqlite3`. Includes multi-field search, in-view filtering/sorting, missing-file cleanup, favorites, playback history, and drag-and-drop playlists with custom cover art.
-- **Desktop & OS Integration** - Hardware media key support via OS Media Session, frameless custom window chrome, and Discord Rich Presence with native `"Listening to"` activity status.
+- **Dual Playback Engine & Speed/Pitch Control** - Uses **MPV** over IPC as the primary high-format-compatibility backend, with a seamless **Browser / Web Audio** fallback supporting a live frequency spectrum visualizer, a 10-band parametric equalizer, and configurable playback speed & pitch presets (**Normal**, **Nightcore**, **Fast Nightcore**, **Daycore**, **Slowed**, **Custom**).
+- **Race-Free Volume, Shuffle & Playback Persistence** - Restores persisted volume, repeat, shuffle, and per-track playback positions on launch, hydrating the active audio backend before playback becomes audible to prevent startup volume spikes, paired with history-preserving Fisher-Yates shuffle.
+- **Word- & Line-Synchronized Lyrics Engine** - Supports **Lyricsfile 1.0** (`.lyricsfile.yaml` / `.lyricsfile.yml`), **Enhanced LRC** (`<mm:ss.xx>`), standard **LRC**, **embedded tags** (`SYLT`, `USLT`, Vorbis/FLAC `LYRICS`), and plain `.txt` sidecars with configurable source priority (including an **Ignore embedded lyrics** option in `Best synchronized` mode), word-by-word highlighting, click-to-word/line seeking, and animated instrumental break indicators.
+- **Immersive Now Playing Experiences** - Switch between the 3-pane resizable **Now Playing** workspace and the **Fullscreen Now Playing** overlay with **Classic** (blurred album-art backdrop with `Split`, `Artwork`, and `Lyrics` modes) and **Still** (editorial dark-glass ambient mesh with subtle film grain) styles.
+- **Fast SQLite Library, Smart Playlists & Insights** - Indexes tracks, albums, artists, and embedded artwork with `music-metadata` and `better-sqlite3`. Includes multi-field search, **Media Quality Badges** (`Hi-Res`, `Lossless`, lossy codecs) & **Track File Inspector**, **Smart Playlists** (`ALL` / `ANY` rule builder), **Library Format Statistics**, missing-file cleanup, favorites, playback history, and drag-and-drop playlists with custom cover art.
+- **Internationalization & Desktop Integration** - Full **English** and **Polish** localization (with automatic system locale detection), hardware media key support via OS Media Session, frameless custom window chrome, and Discord Rich Presence with native `"Listening to"` activity status.
+
+---
+
+## Screenshots
+
+| Now Playing | Fullscreen (Still Ambient) |
+| :---: | :---: |
+| ![Now Playing](docs/images/nowplaying-page.png) | ![Fullscreen Still](docs/images/fullscreen-still.png) |
+
+Browse all 14 screenshots (Library, Smart Playlists, Statistics, Equalizer & Speed, Settings, and more) in the **[Visual Gallery & Documentation](docs/README.md)**.
 
 ---
 
@@ -58,39 +68,48 @@ npm run package
 
 ## Feature Guide
 
-### 1. Playback & Audio Engine
+### 1. Playback, Speed & Audio Engine
 - **Backends**: Choose between **MPV** (primary native backend) and **Browser** (`HTMLAudioElement` + Web Audio API) in Settings, with a live backend badge in the player bar and Now Playing headers.
 - **Startup Volume Synchronization**: Persists normalized volume (`0..1`) in user settings and coordinates startup hydration with both MPV IPC socket readiness and `HTMLAudioElement` creation so audio never spikes to 100% on cold launch.
-- **Queue & Transport Controls**:
-  - Play, pause, seek, volume, mute toggle, shuffle, and repeat (`off`, `all`, `one`).
+- **Queue, Shuffle & Transport Controls**:
+  - Play, pause, seek, volume, mute toggle, Fisher-Yates shuffle (with playback history navigation and cycle management), and repeat (`off`, `all`, `one`).
   - Smart previous-track behavior (restarts current track if playback is past 3 seconds; otherwise jumps to the previous track).
   - Resizable **Up Next** queue panel with drag-and-drop reordering, move up/down actions, per-track removal, queue clearing, and **Save Queue as Playlist**.
+- **Playback Speed & Pitch Control**:
+  - Built-in presets (**Normal**, **Nightcore**, **Fast Nightcore**, **Daycore**, **Slowed**, **Custom**) with fine-grained speed adjustment and a **Preserve Pitch** toggle across both MPV and Browser backends.
+  - Speed-aware lyrics and word-level interpolation stay synchronized at any playback rate.
 - **10-Band Parametric Equalizer & Visualizer**:
   - 10 frequency bands (`31 Hz` – `16 kHz`) with `−12 dB` to `+12 dB` gain range.
   - Built-in presets (`Flat`, `Warm`, `Bright`, `Bass`, `Vocal`, `Club`) plus custom curve persistence.
   - Real-time canvas spectrum visualizer in the bottom player bar (active on the Browser audio backend).
 
-### 2. Lyrics System
+### 2. Lyrics System & Fullscreen Now Playing
 - **Supported Formats & Sources**:
   - **Sidecar files** next to the audio file: `.lyricsfile.yaml` / `.lyricsfile.yml` ([Lyricsfile 1.0 Specification](https://github.com/tranxuanthang/lyricsfile/blob/main/SPECIFICATION.md)), `.lrc` (standard and Enhanced LRC), and `.txt`.
   - **Embedded metadata**: ID3v2 `SYLT` / `USLT` and Vorbis/FLAC `LYRICS` / `UNSYNCEDLYRICS` tags (automatically detecting embedded LRC or Lyricsfile YAML content).
 - **Resolution Modes** (configurable in **Settings → Lyrics**):
   - `Embedded first` *(default)*: Embedded → `.lyricsfile.yaml` → `.lrc` → `.txt`
-  - `Best synchronized`: Ranks candidates by actual parsed sync quality (`word` > `line` > `none`), breaking ties by `Lyricsfile` → `LRC` → `Embedded` → `Plain`
+  - `Best synchronized`: Ranks candidates by actual parsed sync quality (`word` > `line` > `none`), breaking ties by `Lyricsfile` → `LRC` → `Embedded` → `Plain` (includes an **Ignore embedded lyrics** toggle to prefer downloaded sidecar files)
   - `Sidecar files first`: `.lyricsfile.yaml` → `.lrc` → `.txt` → Embedded
 - **Playback Synchronization**:
   - **Word-level sync**: Highlights words as they are sung with sub-16ms `requestAnimationFrame` boundary detection and allows clicking any individual word to seek directly to its timestamp.
   - **Line-level sync**: Auto-scrolls the active lyric line into center view (pausing auto-scroll temporarily when the user scrolls manually) and seeks on line click.
   - **Instrumental gaps**: Renders an animated three-dot `LyricGapIndicator` for explicit empty timestamped lines, intro gaps (`≥ 6s`), and outro gaps (`≥ 8s`).
+- **Fullscreen Styles**:
+  - **Classic**: Dynamic blurred album-art backdrop with `Split`, `Artwork`, and `Lyrics` focus modes.
+  - **Still**: Editorial dark-glass ambient mesh extracted from cover art with subtle film grain and GPU-composited transitions.
 
-### 3. Library, Playlists & Discovery
-- **Library Indexing**: Scans a configured root folder recursively, extracting track metadata, durations, and album artwork into SQLite.
+### 3. Library, Playlists, Smart Playlists & Statistics
+- **Library Indexing**: Scans a configured root folder recursively, extracting track metadata, audio format details, durations, and album artwork into SQLite.
+- **Media Quality Badges & File Inspector**: Displays `Hi-Res`, `Lossless`, and lossy codec badges (`AAC`, `MP3`, `Opus`, etc.) alongside a **Track File Inspector** for detailed codec, sample rate, bit depth, bitrate, channel, and file path info.
+- **Smart Playlists**: Create dynamic playlists using configurable `ALL` / `ANY` rule groups across track fields (title, artist, album, genre, codec, play count, favorite status, duration, and more).
+- **Library Statistics**: Dedicated **Statistics** view with SQL-aggregated totals, quality tier distribution, codecs, sample rates, and top genres.
 - **Library Maintenance**: Includes a **Clean Up Missing Files** tool in Settings to prune moved or deleted files and orphaned album/artist records, plus classification of unsupported codecs vs missing files.
 - **Views**:
-  - **Tracks**, **Albums**, **Album Detail**, **Artists**, **Artist Detail**, **Search**
-  - **Playlists** & **Playlist Detail** (create, rename, edit description, upload custom cover image, reorder tracks via drag-and-drop)
+  - **Tracks**, **Albums**, **Album Detail**, **Artists**, **Artist Detail**, **Search**, **Statistics**
+  - **Playlists** & **Playlist Detail** (standard and smart playlists, custom cover image upload, drag-and-drop track reordering)
   - **Favorites** & **Recently Played** (with one-click history clearing)
-  - **Now Playing**, **Fullscreen Now Playing**, **Equalizer**, and **Settings**
+  - **Now Playing**, **Fullscreen Now Playing**, **Equalizer**, and **Settings** (including **Language** and **Credits & Notices**)
 
 ### 4. Keyboard Shortcuts & OS Media Controls
 
@@ -139,7 +158,8 @@ iotaplayer-rewrite/
 │   ├── hooks/                 # Data fetching, artwork cache, lyrics loading & 60fps word-sync hooks
 │   ├── store/                 # Zustand stores for navigation, playback, queue, playlists, and EQ
 │   ├── styles/                # Layered CSS architecture (tokens, base, layout, components, views)
-│   └── views/                 # Application views (NowPlaying, Tracks, Albums, Playlists, Settings, etc.)
+│   └── views/                 # Application views (NowPlaying, Tracks, Albums, Playlists, Statistics, Settings, etc.)
+├── docs/                      # Visual gallery, i18n guide, platform support & release checklist
 ├── scripts/
 │   └── patch-discord-rpc.js   # Postinstall patch enabling Discord "Listening to" activity type
 └── tests/                     # Node test runner suites (tests/*.test.mjs)
@@ -173,6 +193,15 @@ Styling is organized in explicit layers imported via `src/index.css` without ext
 - **Remote Media Sources** - Subsonic / OpenSubsonic server integration alongside the local SQLite library.
 - **Mini-Player Mode** - Compact always-on-top desktop widget for quick transport and lyric display.
 - **Smart Mixes & Scrobbling** - Last.fm / ListenBrainz scrobbling and automatic genre/mood mix generation.
+
+---
+
+## Documentation
+
+- [Visual Gallery & Docs Index](docs/README.md) — Screenshots of all views and fullscreen styles
+- [Internationalization Guide](docs/I18N.md) — Localization architecture and translation guide (`en`, `pl`)
+- [Platform Support](docs/PLATFORM-SUPPORT.md) — Windows, macOS, and Linux support & packaging details
+- [Release Checklist](docs/RELEASE-CHECKLIST.md) — Release preparation and verification steps
 
 ---
 
