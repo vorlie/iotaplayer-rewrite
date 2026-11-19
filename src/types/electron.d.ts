@@ -105,6 +105,7 @@ interface DiscordActivityInput {
 }
 
 type AppLanguage = 'system' | 'en' | 'pl'
+type FullscreenStyle = 'classic' | 'still'
 
 interface AppSettings {
   discordClientId: string
@@ -118,6 +119,7 @@ interface AppSettings {
   playbackRate: number
   preservePitch: boolean
   language: AppLanguage
+  fullscreenStyle: FullscreenStyle
 }
 
 interface PlaybackPreferences {
@@ -209,6 +211,7 @@ export type {
   DiscordAPI,
   DiscordActivityInput,
   FormatStatBucket,
+  FullscreenStyle,
   LibraryAPI,
   LibraryFormatStats,
   LibraryStats,

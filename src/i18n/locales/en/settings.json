@@ -27,7 +27,13 @@
       "mpv": "MPV only",
       "browser": "Browser fallback only"
     },
-    "backendHint": ".wav files always use MPV."
+    "backendHint": ".wav files always use MPV.",
+    "fullscreenStyleLabel": "Fullscreen Now Playing style",
+    "fullscreenStyleOptions": {
+      "classic": "Classic",
+      "still": "Still (Ambient Glass)"
+    },
+    "fullscreenStyleHint": "Choose between the classic split layout and the ambient glass Still style."
   },
   "lyrics": {
     "eyebrow": "Lyrics",

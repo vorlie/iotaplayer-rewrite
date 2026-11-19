@@ -34,12 +34,15 @@ import {
 } from '../hooks/useLibrary'
 import { useAppStore, usePlaybackStore } from '../store'
 import { LyricGapIndicator } from './LyricGapIndicator'
+import { StillAmbientCanvas } from './StillAmbientCanvas'
 import '../styles/fullscreen-now-playing.css'
 
 export function FullscreenNowPlaying() {
   const { t } = useTranslation(['player', 'library', 'common'])
   const isFullscreen = useAppStore((s) => s.isFullscreenNowPlaying)
   const setFullscreen = useAppStore((s) => s.setFullscreenNowPlaying)
+  const fullscreenStyle = useAppStore((s) => s.fullscreenStyle)
+  const setFullscreenStyle = useAppStore((s) => s.setFullscreenStyle)
 
   const {
     currentTrack,
@@ -163,23 +166,291 @@ export function FullscreenNowPlaying() {
   // Lyrics source human-readable tag
   const lyricsSource = getLocalizedLyricsSourceLabel(lyrics)
 
+  const secondaryPaneContent = secondaryTab === 'lyrics' ? (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, width: '100%', minWidth: 0, overflow: 'hidden' }}>
+      {(lyricsSource || currentTrack) && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '16px clamp(20px, 3vw, 28px) 0',
+            flexShrink: 0,
+            gap: 12,
+          }}
+        >
+          <span
+            style={{
+              fontSize: '11px',
+              fontWeight: 600,
+              letterSpacing: '0.04em',
+              color: 'var(--color-text-3)',
+            }}
+          >
+            {lyricsSource ?? t('status.lyrics')}
+          </span>
+          {currentTrack && lyrics.lines.length > 0 && (
+            <button
+              type="button"
+              className="fullscreen-reload-btn"
+              onClick={reloadLyrics}
+              title={t('status.searchLyricsFileAgain')}
+              style={{ padding: '4px 10px' }}
+            >
+              <RotateCcw size={11} />
+              {t('common:actions.checkAgain')}
+            </button>
+          )}
+        </div>
+      )}
+      <div
+        ref={lyricsListRef}
+        className={`fullscreen-lyrics-container ${lyrics.synchronized ? 'is-synced' : ''}`}
+        onWheel={() => {
+          userScrolledLyricsUntil.current = Date.now() + 3500
+        }}
+        onTouchMove={() => {
+          userScrolledLyricsUntil.current = Date.now() + 3500
+        }}
+        onPointerDown={() => {
+          isLyricsPointerDown.current = true
+        }}
+        onPointerUp={() => {
+          isLyricsPointerDown.current = false
+          userScrolledLyricsUntil.current = Date.now() + 3500
+        }}
+        onPointerCancel={() => {
+          isLyricsPointerDown.current = false
+        }}
+      >
+        {lyricsLoading ? (
+          <div className="fullscreen-lyrics-empty">
+            <div className="fullscreen-lyrics-empty__title">{t('status.loadingLyrics')}</div>
+          </div>
+        ) : lyrics.lines.length > 0 ? (
+          <div className="fullscreen-lyrics-list">
+            {lyrics.lines.map((line, index) => {
+              const isActive = index === activeLyricIndex
+              const isGap = Boolean(line.isGap || (!line.text && line.timestamp != null))
+
+              if (isGap) {
+                return (
+                  <LyricGapIndicator
+                    key={`${line.timestamp ?? 'gap'}-${index}`}
+                    index={index}
+                    isActive={isActive}
+                    timestamp={line.timestamp}
+                    onSeek={seek}
+                    formattedTimestamp={line.timestamp != null ? fmt(line.timestamp) : undefined}
+                    variant="fullscreen"
+                  />
+                )
+              }
+
+              const isClickable = line.timestamp != null && Boolean(line.text)
+              const words = line.words && line.words.length > 0 ? line.words : null
+              const nextLineTimestamp = lyrics.lines[index + 1]?.timestamp
+              const wordStates =
+                words && isActive
+                  ? getLineWordSyncStates(line, syncPosition, nextLineTimestamp)
+                  : null
+              const hasEmbeddedSpaces = words
+                ? words.some((w) => /^\s|\s$/.test(w.text))
+                : false
+              const hasLineSpaces = words ? /\s/.test(line.text) : false
+
+              return (
+                <button
+                  key={`${line.timestamp ?? 'text'}-${index}`}
+                  type="button"
+                  data-lyric-index={index}
+                  className={`fullscreen-lyric-line ${isActive ? 'is-active' : ''} ${words ? 'is-word-synced' : ''}`}
+                  disabled={!isClickable}
+                  onClick={() => {
+                    if (line.timestamp != null) {
+                      seek(line.timestamp)
+                    }
+                  }}
+                  title={line.timestamp != null ? t('status.seekTo', { time: fmt(line.timestamp) }) : undefined}
+                >
+                  {words
+                    ? words.map((word, wIdx) => {
+                        const wordState = wordStates?.[wIdx]
+                        const status = wordState
+                          ? wordState.status
+                          : activeLyricIndex >= 0 && index < activeLyricIndex
+                            ? 'past'
+                            : 'upcoming'
+                        const visibleText = word.text.trim() || word.text
+                        const needsTrailingSpace =
+                          /\s$/.test(word.text) ||
+                          (!hasEmbeddedSpaces &&
+                            hasLineSpaces &&
+                            wIdx < words.length - 1)
+                        const needsLeadingSpace =
+                          /^\s/.test(word.text) &&
+                          wIdx > 0 &&
+                          !/\s$/.test(words[wIdx - 1].text)
+
+                        return (
+                          <span
+                            key={`${word.timestamp}-${wIdx}`}
+                            className="fullscreen-lyric-word-group"
+                          >
+                            {needsLeadingSpace ? ' ' : null}
+                            <span
+                              className={`fullscreen-lyric-word is-${status}`}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                seek(word.timestamp)
+                              }}
+                              title={t('status.seekToWord', { word: visibleText, time: fmt(word.timestamp) })}
+                            >
+                              {visibleText}
+                            </span>
+                            {needsTrailingSpace ? ' ' : null}
+                          </span>
+                        )
+                      })
+                    : line.text}
+                </button>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="fullscreen-lyrics-empty">
+            <Mic2 size={36} className="fullscreen-lyrics-empty__icon" />
+            <div className="fullscreen-lyrics-empty__title">{t('status.noLyricsAvailable')}</div>
+            <div className="fullscreen-lyrics-empty__desc">
+              {currentTrack
+                ? t('status.noLyricsDetail', { title: currentTrack.title })
+                : t('status.selectTrackLyricsDetail')}
+            </div>
+            {currentTrack && (
+              <button
+                type="button"
+                className="fullscreen-reload-btn"
+                onClick={reloadLyrics}
+                title={t('status.searchLyricsFileAgain')}
+              >
+                <RotateCcw size={13} />
+                {t('common:actions.checkAgain')}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  ) : (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, width: '100%', minWidth: 0, overflow: 'hidden' }}>
+      <div className="fullscreen-queue-header">
+        <div>
+          <div className="fullscreen-queue-title">{t('status.upNextTitle')}</div>
+          <div className="fullscreen-queue-subtitle">
+            {t('library:counts.track', { count: queue.length })}
+          </div>
+        </div>
+        {queue.length > 0 && (
+          <button
+            type="button"
+            className="fullscreen-reload-btn"
+            onClick={clearQueue}
+            title={t('status.clearQueueShort')}
+            style={{ padding: '4px 10px' }}
+          >
+            <Trash2 size={12} />
+            {t('common:actions.clear')}
+          </button>
+        )}
+      </div>
+
+      <div className="fullscreen-queue-list">
+        {queue.length === 0 ? (
+          <div className="fullscreen-lyrics-empty">
+            <div className="fullscreen-lyrics-empty__desc">{t('status.noTracksInQueue')}</div>
+          </div>
+        ) : (
+          queue.map((track, idx) => {
+            const isCurrent = idx === queueIndex
+
+            return (
+              <div
+                key={`${track.id}-${idx}`}
+                className={`fullscreen-queue-item ${isCurrent ? 'is-current' : ''}`}
+                onClick={() => play(track, queue)}
+              >
+                <span className="fullscreen-queue-index">{idx + 1}</span>
+                <div style={{ minWidth: 0 }}>
+                  <div className="fullscreen-queue-item-title">{track.title}</div>
+                  <div className="fullscreen-queue-item-artist">
+                    {track.artist ?? track.album_artist ?? t('common:fallbacks.unknownArtist')}
+                  </div>
+                </div>
+                <span className="fullscreen-queue-item-duration">{fmt(track.duration)}</span>
+                <div
+                  className="fullscreen-queue-actions"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    className="queue-icon-btn"
+                    disabled={idx === 0}
+                    onClick={() => moveQueueItem(idx, idx - 1)}
+                    title={t('common:actions.moveUp')}
+                  >
+                    <ChevronUp size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    className="queue-icon-btn"
+                    disabled={idx === queue.length - 1}
+                    onClick={() => moveQueueItem(idx, idx + 1)}
+                    title={t('common:actions.moveDown')}
+                  >
+                    <ChevronDown size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    className="queue-icon-btn queue-icon-btn--danger"
+                    onClick={() => removeFromQueue(idx)}
+                    title={t('common:actions.removeFromQueue')}
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
+    </div>
+  )
+
   return (
     <div
       className={`fullscreen-now-playing ${isFullscreen ? 'is-active' : ''}`}
       aria-hidden={!isFullscreen}
     >
-      {/* Dynamic blurred artwork background */}
-      <div className="fullscreen-bg">
-        {artworkSrc ? (
-          <div
-            className="fullscreen-bg__image"
-            style={{ backgroundImage: `url("${artworkSrc}")` }}
-          />
-        ) : (
-          <div className="fullscreen-bg__fallback" />
-        )}
-        <div className="fullscreen-bg__scrim" />
-      </div>
+      {/* Background: Still ambient light field or Classic blurred artwork */}
+      {fullscreenStyle === 'still' ? (
+        <StillAmbientCanvas
+          artworkSrc={artworkSrc}
+          active={isFullscreen}
+          isPlaying={isPlaying}
+        />
+      ) : (
+        <div className="fullscreen-bg">
+          {artworkSrc ? (
+            <div
+              className="fullscreen-bg__image"
+              style={{ backgroundImage: `url("${artworkSrc}")` }}
+            />
+          ) : (
+            <div className="fullscreen-bg__fallback" />
+          )}
+          <div className="fullscreen-bg__scrim" />
+        </div>
+      )}
 
       {/* Top Header */}
       <header className="fullscreen-header">
@@ -228,6 +499,23 @@ export function FullscreenNowPlaying() {
         </div>
 
         <div className="fullscreen-header__right">
+          <div className="fullscreen-style-switch" role="group" aria-label={t('fullscreen.styleTitle')}>
+            <button
+              type="button"
+              className={`fullscreen-style-btn ${fullscreenStyle === 'classic' ? 'is-active' : ''}`}
+              onClick={() => setFullscreenStyle('classic')}
+            >
+              {t('fullscreen.styleClassic')}
+            </button>
+            <button
+              type="button"
+              className={`fullscreen-style-btn ${fullscreenStyle === 'still' ? 'is-active' : ''}`}
+              onClick={() => setFullscreenStyle('still')}
+            >
+              {t('fullscreen.styleStill')}
+            </button>
+          </div>
+
           {viewMode !== 'artwork' && (
             <>
               <button
@@ -261,7 +549,140 @@ export function FullscreenNowPlaying() {
       </header>
 
       {/* Main Viewport Body */}
-      <main className={`fullscreen-body mode-${viewMode}`}>
+      {fullscreenStyle === 'still' ? (
+        <main className={`still-main ${viewMode !== 'artwork' ? 'has-panel' : ''}`}>
+          <section className="still-stage">
+            <div className="still-artwork">
+              {artworkSrc ? (
+                <img
+                  src={artworkSrc}
+                  alt={currentTrack?.title ?? t('status.albumArt')}
+                />
+              ) : (
+                <div className="still-artwork__placeholder">♫</div>
+              )}
+            </div>
+
+            <div className="still-meta">
+              <div className="still-meta__eyebrow">
+                {currentTrack?.album ?? t('common:fallbacks.unknownAlbum')}
+                {currentTrack?.year != null && currentTrack.year > 0 ? ` · ${currentTrack.year}` : ''}
+              </div>
+              <div className="still-meta__title-row">
+                <h1 className="still-meta__title">
+                  {currentTrack?.title ?? t('status.noTrackSelected')}
+                </h1>
+                {currentTrack && (
+                  <button
+                    type="button"
+                    className={`player-fav-btn ${isFav ? 'is-fav' : ''}`}
+                    onClick={() => toggleFavorite(currentTrack)}
+                    title={isFav ? t('common:actions.removeFromFavorites') : t('common:actions.addToFavorites')}
+                  >
+                    <Heart size={20} fill={isFav ? 'currentColor' : 'none'} />
+                  </button>
+                )}
+              </div>
+              <div className="still-meta__artist">
+                {currentTrack?.artist ?? currentTrack?.album_artist ?? t('common:fallbacks.unknownArtist')}
+              </div>
+            </div>
+
+            <div className="still-pill">
+              <div className="still-pill__progress">
+                <span className="still-pill__time">{fmt(position)}</span>
+                <div
+                  className="still-pill__track"
+                  onClick={handleProgressClick}
+                  role="slider"
+                  aria-label={t('status.seekProgress')}
+                  aria-valuenow={position}
+                  aria-valuemin={0}
+                  aria-valuemax={duration}
+                >
+                  <div className="still-pill__fill" style={{ width: `${progress}%` }} />
+                </div>
+                <span className="still-pill__time still-pill__time--end">{fmt(duration)}</span>
+              </div>
+
+              <div className="still-pill__controls-row">
+                <div className="still-pill__transport">
+                  <button
+                    type="button"
+                    className={`still-pill__btn ${shuffle ? 'is-active' : ''}`}
+                    title={shuffle ? t('controls.shuffleOn') : t('controls.shuffleOff')}
+                    onClick={toggleShuffle}
+                  >
+                    <Shuffle size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    className="still-pill__btn"
+                    onClick={previous}
+                    title={t('controls.previousTrack')}
+                  >
+                    <SkipBack size={17} />
+                  </button>
+                  <button
+                    type="button"
+                    className="still-pill__btn still-pill__btn--play"
+                    onClick={toggle}
+                    title={t('controls.playPauseShortcut')}
+                  >
+                    {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
+                  </button>
+                  <button
+                    type="button"
+                    className="still-pill__btn"
+                    onClick={next}
+                    title={t('controls.nextTrack')}
+                  >
+                    <SkipForward size={17} />
+                  </button>
+                  <button
+                    type="button"
+                    className={`still-pill__btn ${repeatMode !== 'off' ? 'is-active' : ''}`}
+                    title={repeatLabel}
+                    onClick={toggleRepeat}
+                  >
+                    {repeatMode === 'one' ? <Repeat1 size={15} /> : <Repeat size={15} />}
+                  </button>
+                </div>
+
+                <div className="still-pill__volume">
+                  <button
+                    type="button"
+                    className="player-fav-btn"
+                    onClick={handleToggleMute}
+                    title={volume === 0 ? t('controls.unmute') : t('controls.mute')}
+                    style={{ padding: 4 }}
+                  >
+                    {volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                  </button>
+                  <div
+                    className="still-pill__vol-track"
+                    onClick={handleVolumeClick}
+                    role="slider"
+                    aria-label={t('status.volume')}
+                    aria-valuenow={volume}
+                    aria-valuemin={0}
+                    aria-valuemax={1}
+                  >
+                    <div className="still-pill__vol-fill" style={{ width: `${volume * 100}%` }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {viewMode !== 'artwork' && (
+            <section className="still-secondary-pane">
+              {secondaryPaneContent}
+            </section>
+          )}
+        </main>
+      ) : (
+        <main className={`fullscreen-body mode-${viewMode}`}>
         {/* Left Column: Artwork & Playback Controls */}
         <section className="fullscreen-main-pane">
           <div className="fullscreen-artwork-wrapper">
@@ -398,269 +819,11 @@ export function FullscreenNowPlaying() {
         {/* Right Column: Lyrics or Queue Panel */}
         {viewMode !== 'artwork' && (
           <section className="fullscreen-secondary-pane">
-            {secondaryTab === 'lyrics' ? (
-              <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, width: '100%', minWidth: 0, overflow: 'hidden' }}>
-                {(lyricsSource || currentTrack) && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '16px clamp(20px, 3vw, 28px) 0',
-                      flexShrink: 0,
-                      gap: 12,
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        letterSpacing: '0.04em',
-                        color: 'var(--color-text-3)',
-                      }}
-                    >
-                      {lyricsSource ?? t('status.lyrics')}
-                    </span>
-                    {currentTrack && lyrics.lines.length > 0 && (
-                      <button
-                        type="button"
-                        className="fullscreen-reload-btn"
-                        onClick={reloadLyrics}
-                        title={t('status.searchLyricsFileAgain')}
-                        style={{ padding: '4px 10px' }}
-                      >
-                        <RotateCcw size={11} />
-                        {t('common:actions.checkAgain')}
-                      </button>
-                    )}
-                  </div>
-                )}
-                <div
-                  ref={lyricsListRef}
-                  className={`fullscreen-lyrics-container ${lyrics.synchronized ? 'is-synced' : ''}`}
-                  onWheel={() => {
-                    userScrolledLyricsUntil.current = Date.now() + 3500
-                  }}
-                  onTouchMove={() => {
-                    userScrolledLyricsUntil.current = Date.now() + 3500
-                  }}
-                  onPointerDown={() => {
-                    isLyricsPointerDown.current = true
-                  }}
-                  onPointerUp={() => {
-                    isLyricsPointerDown.current = false
-                    userScrolledLyricsUntil.current = Date.now() + 3500
-                  }}
-                  onPointerCancel={() => {
-                    isLyricsPointerDown.current = false
-                  }}
-                >
-                  {lyricsLoading ? (
-                    <div className="fullscreen-lyrics-empty">
-                      <div className="fullscreen-lyrics-empty__title">{t('status.loadingLyrics')}</div>
-                    </div>
-                  ) : lyrics.lines.length > 0 ? (
-                    <div className="fullscreen-lyrics-list">
-                      {lyrics.lines.map((line, index) => {
-                        const isActive = index === activeLyricIndex
-                        const isGap = Boolean(line.isGap || (!line.text && line.timestamp != null))
-
-                        if (isGap) {
-                          return (
-                            <LyricGapIndicator
-                              key={`${line.timestamp ?? 'gap'}-${index}`}
-                              index={index}
-                              isActive={isActive}
-                              timestamp={line.timestamp}
-                              onSeek={seek}
-                              formattedTimestamp={line.timestamp != null ? fmt(line.timestamp) : undefined}
-                              variant="fullscreen"
-                            />
-                          )
-                        }
-
-                        const isClickable = line.timestamp != null && Boolean(line.text)
-                        const words = line.words && line.words.length > 0 ? line.words : null
-                        const nextLineTimestamp = lyrics.lines[index + 1]?.timestamp
-                        const wordStates =
-                          words && isActive
-                            ? getLineWordSyncStates(line, syncPosition, nextLineTimestamp)
-                            : null
-                        const hasEmbeddedSpaces = words
-                          ? words.some((w) => /^\s|\s$/.test(w.text))
-                          : false
-                        const hasLineSpaces = words ? /\s/.test(line.text) : false
-
-                        return (
-                          <button
-                            key={`${line.timestamp ?? 'text'}-${index}`}
-                            type="button"
-                            data-lyric-index={index}
-                            className={`fullscreen-lyric-line ${isActive ? 'is-active' : ''} ${words ? 'is-word-synced' : ''}`}
-                            disabled={!isClickable}
-                            onClick={() => {
-                              if (line.timestamp != null) {
-                                seek(line.timestamp)
-                              }
-                            }}
-                            title={line.timestamp != null ? t('status.seekTo', { time: fmt(line.timestamp) }) : undefined}
-                          >
-                            {words
-                              ? words.map((word, wIdx) => {
-                                  const wordState = wordStates?.[wIdx]
-                                  const status = wordState
-                                    ? wordState.status
-                                    : activeLyricIndex >= 0 && index < activeLyricIndex
-                                      ? 'past'
-                                      : 'upcoming'
-                                  const visibleText = word.text.trim() || word.text
-                                  const needsTrailingSpace =
-                                    /\s$/.test(word.text) ||
-                                    (!hasEmbeddedSpaces &&
-                                      hasLineSpaces &&
-                                      wIdx < words.length - 1)
-                                  const needsLeadingSpace =
-                                    /^\s/.test(word.text) &&
-                                    wIdx > 0 &&
-                                    !/\s$/.test(words[wIdx - 1].text)
-
-                                  return (
-                                    <span
-                                      key={`${word.timestamp}-${wIdx}`}
-                                      className="fullscreen-lyric-word-group"
-                                    >
-                                      {needsLeadingSpace ? ' ' : null}
-                                      <span
-                                        className={`fullscreen-lyric-word is-${status}`}
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          seek(word.timestamp)
-                                        }}
-                                        title={t('status.seekToWord', { word: visibleText, time: fmt(word.timestamp) })}
-                                      >
-                                        {visibleText}
-                                      </span>
-                                      {needsTrailingSpace ? ' ' : null}
-                                    </span>
-                                  )
-                                })
-                              : line.text}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  ) : (
-                    <div className="fullscreen-lyrics-empty">
-                      <Mic2 size={36} className="fullscreen-lyrics-empty__icon" />
-                      <div className="fullscreen-lyrics-empty__title">{t('status.noLyricsAvailable')}</div>
-                      <div className="fullscreen-lyrics-empty__desc">
-                        {currentTrack
-                          ? t('status.noLyricsDetail', { title: currentTrack.title })
-                          : t('status.selectTrackLyricsDetail')}
-                      </div>
-                      {currentTrack && (
-                        <button
-                          type="button"
-                          className="fullscreen-reload-btn"
-                          onClick={reloadLyrics}
-                          title={t('status.searchLyricsFileAgain')}
-                        >
-                          <RotateCcw size={13} />
-                          {t('common:actions.checkAgain')}
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : (
-              /* Queue Panel */
-              <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, width: '100%', minWidth: 0, overflow: 'hidden' }}>
-                <div className="fullscreen-queue-header">
-                  <div>
-                    <div className="fullscreen-queue-title">{t('status.upNextTitle')}</div>
-                    <div className="fullscreen-queue-subtitle">
-                      {t('library:counts.track', { count: queue.length })}
-                    </div>
-                  </div>
-                  {queue.length > 0 && (
-                    <button
-                      type="button"
-                      className="fullscreen-reload-btn"
-                      onClick={clearQueue}
-                      title={t('status.clearQueueShort')}
-                      style={{ padding: '4px 10px' }}
-                    >
-                      <Trash2 size={12} />
-                      {t('common:actions.clear')}
-                    </button>
-                  )}
-                </div>
-
-                <div className="fullscreen-queue-list">
-                  {queue.length === 0 ? (
-                    <div className="fullscreen-lyrics-empty">
-                      <div className="fullscreen-lyrics-empty__desc">{t('status.noTracksInQueue')}</div>
-                    </div>
-                  ) : (
-                    queue.map((track, idx) => {
-                      const isCurrent = idx === queueIndex
-
-                      return (
-                        <div
-                          key={`${track.id}-${idx}`}
-                          className={`fullscreen-queue-item ${isCurrent ? 'is-current' : ''}`}
-                          onClick={() => play(track, queue)}
-                        >
-                          <span className="fullscreen-queue-index">{idx + 1}</span>
-                          <div style={{ minWidth: 0 }}>
-                            <div className="fullscreen-queue-item-title">{track.title}</div>
-                            <div className="fullscreen-queue-item-artist">
-                              {track.artist ?? track.album_artist ?? t('common:fallbacks.unknownArtist')}
-                            </div>
-                          </div>
-                          <span className="fullscreen-queue-item-duration">{fmt(track.duration)}</span>
-                          <div
-                            className="fullscreen-queue-actions"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <button
-                              type="button"
-                              className="queue-icon-btn"
-                              disabled={idx === 0}
-                              onClick={() => moveQueueItem(idx, idx - 1)}
-                              title={t('common:actions.moveUp')}
-                            >
-                              <ChevronUp size={13} />
-                            </button>
-                            <button
-                              type="button"
-                              className="queue-icon-btn"
-                              disabled={idx === queue.length - 1}
-                              onClick={() => moveQueueItem(idx, idx + 1)}
-                              title={t('common:actions.moveDown')}
-                            >
-                              <ChevronDown size={13} />
-                            </button>
-                            <button
-                              type="button"
-                              className="queue-icon-btn queue-icon-btn--danger"
-                              onClick={() => removeFromQueue(idx)}
-                              title={t('common:actions.removeFromQueue')}
-                            >
-                              <X size={13} />
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
-              </div>
-            )}
+            {secondaryPaneContent}
           </section>
         )}
       </main>
+      )}
     </div>
   )
 }

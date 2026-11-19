@@ -5,7 +5,7 @@ import { applyAppLanguage } from '../i18n'
 import { formatNumber } from '../i18n/format'
 import { notifyLyricsReload } from '../hooks/useLibrary'
 import { useAppStore } from '../store'
-import type { AppInfo, AppLanguage, LyricsSourcePreference, PlaybackBackendMode, ScanResult } from '../types/electron'
+import type { AppInfo, AppLanguage, FullscreenStyle, LyricsSourcePreference, PlaybackBackendMode, ScanResult } from '../types/electron'
 import '../styles/settings.css'
 
 const DEFAULT_LIBRARY_ROOT = ''
@@ -18,7 +18,7 @@ const settingsCategories = [
 
 export function SettingsView() {
   const { t, i18n } = useTranslation(['settings', 'common'])
-  const { library, scanLibrary, cleanupMissingTracks } = useAppStore()
+  const { library, scanLibrary, cleanupMissingTracks, fullscreenStyle, setFullscreenStyle } = useAppStore()
   const [libraryRoot, setLibraryRoot] = useState(DEFAULT_LIBRARY_ROOT)
   const [scanning, setScanning] = useState(false)
   const [cleaningMissing, setCleaningMissing] = useState(false)
@@ -201,6 +201,19 @@ export function SettingsView() {
                     <option value="browser">{t('playback.backendOptions.browser')}</option>
                   </select>
                   <small>{t('playback.backendHint')}</small>
+                </div>
+
+                <div className="settings-field">
+                  <label htmlFor="fullscreen-style">{t('playback.fullscreenStyleLabel')}</label>
+                  <select
+                    id="fullscreen-style"
+                    value={fullscreenStyle}
+                    onChange={(e) => setFullscreenStyle(e.target.value as FullscreenStyle)}
+                  >
+                    <option value="classic">{t('playback.fullscreenStyleOptions.classic')}</option>
+                    <option value="still">{t('playback.fullscreenStyleOptions.still')}</option>
+                  </select>
+                  <small>{t('playback.fullscreenStyleHint')}</small>
                 </div>
 
                 <div className="settings-field">

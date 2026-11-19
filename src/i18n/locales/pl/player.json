@@ -63,7 +63,10 @@
     "lyrics": "Tekst",
     "lyricsTitle": "Skupienie na tekście",
     "showLyrics": "Pokaż tekst",
-    "showQueue": "Pokaż kolejkę"
+    "showQueue": "Pokaż kolejkę",
+    "styleClassic": "Klasyczny",
+    "styleStill": "Still",
+    "styleTitle": "Styl widoku pełnoekranowego"
   },
   "lyricsSources": {
     "embeddedPlain": "Osadzony · Zwykły",

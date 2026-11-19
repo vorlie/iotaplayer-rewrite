@@ -23,6 +23,7 @@ import i18n from '../i18n'
 import type {
   Album,
   Artist,
+  FullscreenStyle,
   Playlist,
   ScanProgress,
   ScanResult,
@@ -88,8 +89,10 @@ interface AppStore {
 
   // Immersive Fullscreen Now Playing overlay
   isFullscreenNowPlaying: boolean
+  fullscreenStyle: FullscreenStyle
   setFullscreenNowPlaying: (open: boolean) => void
   toggleFullscreenNowPlaying: () => void
+  setFullscreenStyle: (style: FullscreenStyle, persist?: boolean) => void
 
   // Library
   library: LibraryState
@@ -122,8 +125,15 @@ export const useAppStore = create<AppStore>((set, get) => ({
   },
 
   isFullscreenNowPlaying: false,
+  fullscreenStyle: 'classic',
   setFullscreenNowPlaying: (open) => set({ isFullscreenNowPlaying: open }),
   toggleFullscreenNowPlaying: () => set((s) => ({ isFullscreenNowPlaying: !s.isFullscreenNowPlaying })),
+  setFullscreenStyle: (style, persist = true) => {
+    set({ fullscreenStyle: style })
+    if (persist && typeof window !== 'undefined' && 'settings' in window) {
+      void window.settings.set({ fullscreenStyle: style })
+    }
+  },
 
   library: {
     stats: null,

@@ -59,6 +59,9 @@ export default function App() {
     ])
       .then(([settings, info]) => {
         void applyAppLanguage(settings.language ?? 'system', info?.systemLocale)
+        if (settings.fullscreenStyle === 'classic' || settings.fullscreenStyle === 'still') {
+          useAppStore.getState().setFullscreenStyle(settings.fullscreenStyle, false)
+        }
       })
       .catch(() => {
         // Fallback to browser/system locale already initialized

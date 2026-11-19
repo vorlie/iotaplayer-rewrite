@@ -27,7 +27,13 @@
       "mpv": "Tylko MPV",
       "browser": "Tylko silnik przeglądarkowy"
     },
-    "backendHint": "Pliki .wav zawsze używają MPV."
+    "backendHint": "Pliki .wav zawsze używają MPV.",
+    "fullscreenStyleLabel": "Styl pełnego ekranu (Teraz odtwarzane)",
+    "fullscreenStyleOptions": {
+      "classic": "Klasyczny",
+      "still": "Still (Ambientowe szkło)"
+    },
+    "fullscreenStyleHint": "Wybierz między klasycznym układem podzielonym a ambientowym stylem Still."
   },
   "lyrics": {
     "eyebrow": "Teksty",
