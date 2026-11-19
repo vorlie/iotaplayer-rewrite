@@ -46,7 +46,7 @@ float fbm(vec2 p) {
   float v = 0.0;
   float a = 0.5;
   mat2 m = mat2(1.6, 1.2, -1.2, 1.6);
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 3; i++) {
     v += a * noise(p);
     p = m * p;
     a *= 0.5;
@@ -97,8 +97,10 @@ void main() {
   float v = smoothstep(1.30, 0.15, length((uv - 0.5) * vec2(asp * 0.85, 1.0)));
   col *= mix(0.48, 1.0, v);
 
-  // Static dither against banding
-  col += (hash(gl_FragCoord.xy) - 0.5) / 255.0;
+  // Subtle saturation boost & static film grain directly in shader (avoids CSS filter/mix-blend passes)
+  float luma = dot(col, vec3(0.299, 0.587, 0.114));
+  col = mix(vec3(luma), col, 1.18);
+  col += (hash(gl_FragCoord.xy) - 0.5) * 0.025;
   gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
 `
@@ -274,8 +276,8 @@ export function StillAmbientCanvas({
     const uC2 = gl.getUniformLocation(program, 'u_c2')
     const uC3 = gl.getUniformLocation(program, 'u_c3')
 
-    canvas.width = 320
-    canvas.height = 180
+    canvas.width = 240
+    canvas.height = 135
     gl.viewport(0, 0, canvas.width, canvas.height)
 
     let rafId = 0
@@ -328,7 +330,6 @@ export function StillAmbientCanvas({
         <div className="still-bg__fallback" />
       )}
       <div className="still-bg__scrim" />
-      <div className="still-grain" />
     </div>
   )
 }

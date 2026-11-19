@@ -816,7 +816,7 @@
   height: 100%;
   display: block;
   object-fit: cover;
-  filter: saturate(1.18) contrast(1.04);
+  transform: translateZ(0);
 }
 
 .still-bg__fallback {
@@ -1010,10 +1010,9 @@
 .still-btn--play {
   width: 40px;
   height: 40px;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: #ffffff;
-  backdrop-filter: blur(12px);
 }
 
 .still-btn--play:hover {
@@ -1044,36 +1043,31 @@
   text-wrap: balance;
   cursor: pointer;
   font-family: inherit;
+  will-change: transform, opacity;
   transition:
-    opacity 0.65s ease,
-    transform 0.75s cubic-bezier(0.16, 1, 0.3, 1),
-    filter 0.65s ease,
-    text-shadow 0.65s ease;
+    opacity 0.55s ease,
+    transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes still-line-enter-current {
   from {
-    opacity: 0.42;
-    transform: translateY(14px) scale(0.95);
-    filter: blur(2px);
+    opacity: 0.35;
+    transform: translate3d(0, 14px, 0) scale(0.96);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 @keyframes still-line-enter-next {
   from {
     opacity: 0;
-    transform: translateY(14px);
-    filter: blur(3px);
+    transform: translate3d(0, 14px, 0);
   }
   to {
     opacity: 0.46;
-    transform: translateY(0);
-    filter: blur(0);
+    transform: translate3d(0, 0, 0);
   }
 }
 
