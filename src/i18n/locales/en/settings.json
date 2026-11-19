@@ -27,7 +27,13 @@
       "mpv": "MPV only",
       "browser": "Browser fallback only"
     },
-    "backendHint": ".wav files always use MPV."
+    "backendHint": ".wav files always use MPV.",
+    "fullscreenStyleLabel": "Fullscreen Now Playing style",
+    "fullscreenStyleOptions": {
+      "classic": "Classic",
+      "still": "Still (Ambient Glass)"
+    },
+    "fullscreenStyleHint": "Choose between the classic split layout and the ambient glass Still style."
   },
   "lyrics": {
     "eyebrow": "Lyrics",
@@ -41,7 +47,9 @@
       "embedded": "Prefer lyrics embedded in audio files, then fall back to sidecars.",
       "synchronized": "Prefer lyrics with the highest synchronization quality, regardless of source.",
       "sidecar": "Prefer external lyrics files, then fall back to embedded lyrics."
-    }
+    },
+    "ignoreEmbeddedLabel": "Ignore embedded lyrics",
+    "ignoreEmbeddedHint": "When Synchronized mode is active, skip embedded lyrics and use only external sidecar files."
   },
   "discord": {
     "title": "Discord Rich Presence",

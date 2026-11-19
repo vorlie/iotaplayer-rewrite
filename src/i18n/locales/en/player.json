@@ -61,7 +61,10 @@
     "lyrics": "Lyrics",
     "lyricsTitle": "Lyrics focus",
     "showLyrics": "Show Lyrics",
-    "showQueue": "Show Up Next Queue"
+    "showQueue": "Show Up Next Queue",
+    "styleClassic": "Classic",
+    "styleStill": "Still",
+    "styleTitle": "Fullscreen visual style"
   },
   "lyricsSources": {
     "embeddedPlain": "Embedded · Plain",

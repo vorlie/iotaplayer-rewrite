@@ -22,6 +22,7 @@ function getElectronApp(): typeof import('electron').app | undefined {
 }
 
 export type AppLanguage = 'system' | 'en' | 'pl'
+export type FullscreenStyle = 'classic' | 'still'
 
 export interface AppSettings {
   discordClientId: string
@@ -32,9 +33,11 @@ export interface AppSettings {
   equalizerPreset: string
   equalizerBands: number[]
   lyricsSourcePreference: LyricsSourcePreference
+  lyricsIgnoreEmbedded: boolean
   playbackRate: number
   preservePitch: boolean
   language: AppLanguage
+  fullscreenStyle: FullscreenStyle
 }
 
 const DEFAULT_EQUALIZER_BANDS = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -74,6 +77,13 @@ export function normalizeAppLanguage(value: unknown): AppLanguage {
   return 'system'
 }
 
+export function normalizeFullscreenStyle(value: unknown): FullscreenStyle {
+  if (value === 'classic' || value === 'still') {
+    return value
+  }
+  return 'classic'
+}
+
 const DEFAULT_SETTINGS: AppSettings = {
   discordClientId: '',
   imgurClientId: '',
@@ -83,9 +93,11 @@ const DEFAULT_SETTINGS: AppSettings = {
   equalizerPreset: 'Flat',
   equalizerBands: [...DEFAULT_EQUALIZER_BANDS],
   lyricsSourcePreference: 'embedded',
+  lyricsIgnoreEmbedded: false,
   playbackRate: DEFAULT_PLAYBACK_RATE,
   preservePitch: DEFAULT_PRESERVE_PITCH,
   language: 'system',
+  fullscreenStyle: 'classic',
 }
 
 function normalizeEqualizerBands(value: unknown): number[] {
@@ -127,9 +139,11 @@ export function getAppSettings(): AppSettings {
       equalizerPreset: parsed.equalizerPreset ?? DEFAULT_SETTINGS.equalizerPreset,
       equalizerBands: normalizeEqualizerBands(parsed.equalizerBands),
       lyricsSourcePreference: normalizeLyricsSourcePreference(parsed.lyricsSourcePreference),
+      lyricsIgnoreEmbedded: Boolean(parsed.lyricsIgnoreEmbedded ?? DEFAULT_SETTINGS.lyricsIgnoreEmbedded),
       playbackRate: normalizePlaybackRate(parsed.playbackRate, DEFAULT_SETTINGS.playbackRate),
       preservePitch: normalizePreservePitch(parsed.preservePitch, DEFAULT_SETTINGS.preservePitch),
       language: normalizeAppLanguage(parsed.language),
+      fullscreenStyle: normalizeFullscreenStyle(parsed.fullscreenStyle),
     }
   } catch {
     writeFileSync(settingsPath, JSON.stringify(DEFAULT_SETTINGS, null, 2), 'utf8')
@@ -147,6 +161,9 @@ export function setAppSettings(nextSettings: Partial<AppSettings>): AppSettings 
     lyricsSourcePreference: normalizeLyricsSourcePreference(
       nextSettings.lyricsSourcePreference ?? current.lyricsSourcePreference,
     ),
+    lyricsIgnoreEmbedded: Boolean(
+      nextSettings.lyricsIgnoreEmbedded ?? current.lyricsIgnoreEmbedded,
+    ),
     playbackRate: normalizePlaybackRate(
       nextSettings.playbackRate ?? current.playbackRate,
       current.playbackRate,
@@ -156,6 +173,9 @@ export function setAppSettings(nextSettings: Partial<AppSettings>): AppSettings 
       current.preservePitch,
     ),
     language: normalizeAppLanguage(nextSettings.language ?? current.language),
+    fullscreenStyle: normalizeFullscreenStyle(
+      nextSettings.fullscreenStyle ?? current.fullscreenStyle,
+    ),
   }
   const settingsPath = getSettingsPath()
   writeFileSync(settingsPath, JSON.stringify(merged, null, 2), 'utf8')
