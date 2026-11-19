@@ -479,6 +479,7 @@ const settingsAPI = {
     lyricsSourcePreference: LyricsSourcePreference
     playbackRate: number
     preservePitch: boolean
+    language: 'system' | 'en' | 'pl'
   }> => ipcRenderer.invoke('settings:get'),
   set: (value: {
     discordClientId?: string
@@ -491,6 +492,7 @@ const settingsAPI = {
     lyricsSourcePreference?: LyricsSourcePreference
     playbackRate?: number
     preservePitch?: boolean
+    language?: 'system' | 'en' | 'pl'
   }): Promise<void> => {
     if (value.playbackRate !== undefined || value.preservePitch !== undefined) {
       browserPlaybackPreferences = normalizePlaybackPreferences(value, browserPlaybackPreferences)
@@ -732,6 +734,7 @@ const appInfoAPI = {
     publisher: string
     websiteUrl: string
     projectUrl: string
+    systemLocale: string
   }> => ipcRenderer.invoke('app:info'),
 }
 

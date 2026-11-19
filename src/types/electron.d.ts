@@ -87,6 +87,8 @@ interface DiscordActivityInput {
   repeatMode?: 'off' | 'all' | 'one'
 }
 
+type AppLanguage = 'system' | 'en' | 'pl'
+
 interface AppSettings {
   discordClientId: string
   imgurClientId: string
@@ -98,6 +100,7 @@ interface AppSettings {
   lyricsSourcePreference: LyricsSourcePreference
   playbackRate: number
   preservePitch: boolean
+  language: AppLanguage
 }
 
 interface PlaybackPreferences {
@@ -157,6 +160,7 @@ interface AppInfo {
   publisher: string
   websiteUrl: string
   projectUrl: string
+  systemLocale?: string
 }
 
 interface AppInfoAPI {
@@ -181,6 +185,7 @@ export type {
   Album,
   AppInfo,
   AppInfoAPI,
+  AppLanguage,
   AppSettings,
   Artist,
   ArtworkResponse,

@@ -295,6 +295,7 @@ export function registerIpcHandlers(): void {
       publisher: 'vorlie',
       websiteUrl: 'https://vorlie.pl',
       projectUrl: 'https://vorlie.pl/projects/iotaplayer',
+      systemLocale: app.getLocale(),
     }
   })
 

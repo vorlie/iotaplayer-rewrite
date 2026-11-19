@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
-import { AudioLines, ExternalLink, Library, RefreshCw, ShieldCheck, Sparkles, Trash2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { AudioLines, ExternalLink, Globe, Library, RefreshCw, ShieldCheck, Sparkles, Trash2 } from 'lucide-react'
+import { applyAppLanguage } from '../i18n'
 import { notifyLyricsReload } from '../hooks/useLibrary'
 import { useAppStore } from '../store'
-import type { AppInfo, LyricsSourcePreference, PlaybackBackendMode, ScanResult } from '../types/electron'
+import type { AppInfo, AppLanguage, LyricsSourcePreference, PlaybackBackendMode, ScanResult } from '../types/electron'
 import '../styles/settings.css'
 
 const DEFAULT_LIBRARY_ROOT = ''
@@ -14,6 +16,7 @@ const settingsCategories = [
 ]
 
 export function SettingsView() {
+  const { t } = useTranslation(['settings', 'common'])
   const { library, scanLibrary, cleanupMissingTracks } = useAppStore()
   const [libraryRoot, setLibraryRoot] = useState(DEFAULT_LIBRARY_ROOT)
   const [scanning, setScanning] = useState(false)
@@ -21,6 +24,7 @@ export function SettingsView() {
   const [lastResult, setLastResult] = useState<ScanResult | null>(library.lastScanResult)
   const [backendMode, setBackendMode] = useState<PlaybackBackendMode>('auto')
   const [lyricsSourcePreference, setLyricsSourcePreference] = useState<LyricsSourcePreference>('embedded')
+  const [language, setLanguage] = useState<AppLanguage>('system')
   const [discordEnabled, setDiscordEnabled] = useState(true)
   const [discordClientId, setDiscordClientId] = useState('')
   const [imgurClientId, setImgurClientId] = useState('')
@@ -38,6 +42,7 @@ export function SettingsView() {
       setImgurClientId(settings.imgurClientId)
       setLibraryRoot(settings.libraryRoot || DEFAULT_LIBRARY_ROOT)
       setLyricsSourcePreference(settings.lyricsSourcePreference ?? 'embedded')
+      setLanguage(settings.language ?? 'system')
     })
     void window.appInfo?.getInfo().then((info) => {
       setAppInfo(info)
@@ -54,6 +59,12 @@ export function SettingsView() {
     notifyLyricsReload()
   }
 
+  async function handleLanguageChange(nextLanguage: AppLanguage) {
+    setLanguage(nextLanguage)
+    await applyAppLanguage(nextLanguage, appInfo?.systemLocale)
+    await window.settings.set({ language: nextLanguage })
+  }
+
   async function handleSaveSettings() {
     setSavingSettings(true)
     try {
@@ -63,6 +74,7 @@ export function SettingsView() {
         imgurClientId,
         libraryRoot,
         lyricsSourcePreference,
+        language,
       })
       await window.discord.setEnabled(discordEnabled)
       notifyLyricsReload()
@@ -159,6 +171,23 @@ export function SettingsView() {
               </header>
 
               <div className="settings-card">
+                <div className="settings-field">
+                  <label htmlFor="app-language" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <Globe size={13} />
+                    {t('language.title')}
+                  </label>
+                  <select
+                    id="app-language"
+                    value={language}
+                    onChange={(e) => void handleLanguageChange(e.target.value as AppLanguage)}
+                  >
+                    <option value="system">{t('language.options.system')}</option>
+                    <option value="en">{t('language.options.en')}</option>
+                    <option value="pl">{t('language.options.pl')}</option>
+                  </select>
+                  <small>{t('language.description')}</small>
+                </div>
+
                 <div className="settings-field">
                   <label htmlFor="audio-backend">Audio backend</label>
                   <select
