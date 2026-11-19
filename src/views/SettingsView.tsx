@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AudioLines, ExternalLink, Globe, Library, RefreshCw, ShieldCheck, Sparkles, Trash2 } from 'lucide-react'
 import { applyAppLanguage } from '../i18n'
+import { formatNumber } from '../i18n/format'
 import { notifyLyricsReload } from '../hooks/useLibrary'
 import { useAppStore } from '../store'
 import type { AppInfo, AppLanguage, LyricsSourcePreference, PlaybackBackendMode, ScanResult } from '../types/electron'
@@ -16,7 +17,7 @@ const settingsCategories = [
 ] as const
 
 export function SettingsView() {
-  const { t } = useTranslation(['settings', 'common'])
+  const { t, i18n } = useTranslation(['settings', 'common'])
   const { library, scanLibrary, cleanupMissingTracks } = useAppStore()
   const [libraryRoot, setLibraryRoot] = useState(DEFAULT_LIBRARY_ROOT)
   const [scanning, setScanning] = useState(false)
@@ -322,7 +323,15 @@ export function SettingsView() {
                   <div className="settings-summary">
                     <div className="settings-summary__header">
                       <span>{t('library.summary.lastScan')}</span>
-                      <strong>{t('library.summary.duration', { seconds: (lastResult.duration_ms / 1000).toFixed(1) })}</strong>
+                      <strong>
+                        {t('library.summary.duration', {
+                          seconds: formatNumber(
+                            lastResult.duration_ms / 1000,
+                            { minimumFractionDigits: 1, maximumFractionDigits: 1 },
+                            i18n.resolvedLanguage,
+                          ),
+                        })}
+                      </strong>
                     </div>
                     <div className="settings-summary__grid">
                       {[
@@ -335,7 +344,7 @@ export function SettingsView() {
                       ].map(([label, value]) => (
                         <div key={label as string} className="settings-summary__item">
                           <span>{label}</span>
-                          <strong>{value}</strong>
+                          <strong>{formatNumber(value as number, undefined, i18n.resolvedLanguage)}</strong>
                         </div>
                       ))}
                     </div>
@@ -361,7 +370,7 @@ export function SettingsView() {
                       [t('library.stats.artists'), stats.artist_count],
                     ].map(([label, value]) => (
                       <div key={label as string} className="settings-stat">
-                        <div className="settings-stat__value">{value}</div>
+                        <div className="settings-stat__value">{formatNumber(value as number, undefined, i18n.resolvedLanguage)}</div>
                         <div className="settings-stat__label">{label}</div>
                       </div>
                     ))}
