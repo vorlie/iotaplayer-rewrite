@@ -1127,7 +1127,7 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-3);
-  align-items: end;
+  align-items: start;
 }
 
 .ambient-editor__control {
@@ -1160,7 +1160,10 @@
   appearance: none;
   width: 100%;
   height: 6px;
+  min-height: 0;
   margin: 14px 0;
+  padding: 0;
+  border: none;
   border-radius: 999px;
   background: var(--color-surface-3);
   outline: none;
