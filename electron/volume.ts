@@ -49,6 +49,7 @@ export interface VolumeControllerOptions<TAudio extends AudioElementVolumeTarget
   persistVolume?: (volume: number) => Promise<void> | void
   applyMpvVolume?: (volume: number) => Promise<void> | void
   createAudioElement?: () => TAudio
+  applyElementVolume?: (element: TAudio, volume: number) => void
   onVolumeApplied?: (volume: number) => void
 }
 
@@ -69,12 +70,20 @@ export class VolumeController<TAudio extends AudioElementVolumeTarget = AudioEle
     }
   }
 
+  private writeElementVolume(element: TAudio, volume: number): void {
+    if (this.options.applyElementVolume) {
+      this.options.applyElementVolume(element, volume)
+    } else {
+      element.volume = volume
+    }
+  }
+
   private createAndConfigureAudioElement(): TAudio {
     if (!this.options.createAudioElement) {
       throw new Error('No createAudioElement factory configured')
     }
     const element = this.options.createAudioElement()
-    element.volume = this.volume
+    this.writeElementVolume(element, this.volume)
     return element
   }
 
@@ -92,13 +101,13 @@ export class VolumeController<TAudio extends AudioElementVolumeTarget = AudioEle
 
   public getAudioElement(): TAudio | null {
     if (this.audioElement) {
-      this.audioElement.volume = this.volume
+      this.writeElementVolume(this.audioElement, this.volume)
     }
     return this.audioElement
   }
 
   public setAudioElement(element: TAudio): TAudio {
-    element.volume = this.volume
+    this.writeElementVolume(element, this.volume)
     this.audioElement = element
     return element
   }
@@ -112,7 +121,7 @@ export class VolumeController<TAudio extends AudioElementVolumeTarget = AudioEle
   public applyToAudioElement(element?: TAudio | null): number {
     const target = element ?? this.audioElement
     if (target) {
-      target.volume = this.volume
+      this.writeElementVolume(target, this.volume)
     }
     return this.volume
   }

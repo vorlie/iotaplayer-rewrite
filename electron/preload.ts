@@ -236,6 +236,15 @@ const volumeController = new VolumeController<BrowserAudioElement>({
     return saved?.volume
   },
   applyMpvVolume: (vol) => ipcRenderer.invoke('playback:volume', vol),
+  applyElementVolume: (element, vol) => {
+    browserVolume = vol
+    if (element === browserAudio && browserGainNode && audioContext) {
+      browserGainNode.gain.value = vol
+      element.volume = 1
+    } else {
+      element.volume = vol
+    }
+  },
   onVolumeApplied: (vol) => {
     browserVolume = vol
     applyBrowserOutputVolume(vol)
