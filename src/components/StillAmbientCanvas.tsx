@@ -133,7 +133,7 @@ void main() {
   vec2 w2 = vec2(sn(q * 2.0 + w * 1.6 + 11.0), sn(q * 2.0 + w * 1.6 + 23.0));
   p += 0.22 * (w + 0.4 * w2);
 
-  float e = u_energy + u_kick * 0.35;
+  float e = u_energy + max(0.0, u_kick) * 0.35;
   vec3 acc = u_bg;
   float W = 1.0;
   float rs = clamp(sqrt(asp / 1.4), 0.5, 1.0);
@@ -156,14 +156,18 @@ void main() {
   vec3 lab = acc / W;
   float cov = 1.0 - 1.0 / W;
 
-  // Sheen: long, soft silk folds of light where the colour is, swelling on bass/kick hits
+  // Sheen: long, soft silk folds of light where the colour is, plus Sound Keys style exposure pulse
   float fold = sn((R * p) * vec2(0.8, 3.2) + w * 0.9 + vec2(t * 0.03, 0.0)) * 0.5 + 0.5;
   float fold3 = fold * fold * fold;
   float fold4 = fold3 * fold;
-  lab.x += ((0.14 + u_kick * 0.22) * fold3 + 0.12 * u_kick * fold4 + e * 0.02) * cov;
+  float pulse = clamp((u_kick + 1.0) / 1.9, 0.0, 1.0);
+  lab.x += ((0.12 + pulse * 0.16) * fold3 + 0.08 * pulse * fold4 + e * 0.02) * cov;
   lab.x = min(lab.x, 0.64);
 
   vec3 col = oklabToSrgb(mix(u_bg, lab, 0.92));
+
+  // Exposure-style ambient lift mapped from [-1.0, 0.9]
+  col *= pow(2.0, u_kick * 0.45);
 
   // Soft vignette & static 1/255 dither against banding
   float vig = smoothstep(1.3, 0.2, length((uv - 0.5) * vec2(asp * 0.85, 1.0)));
@@ -402,8 +406,8 @@ export function StillAmbientCanvas({
     let lastTs = performance.now()
     let elapsed = 0
     let energy = isPlayingRef.current ? 0.45 : 0.1
-    let bassAvg = 0
-    let kick = 0
+    let bassEnvelope = 0
+    let exposure = 0
 
     const render = (now: number) => {
       const dt = Math.min(0.1, (now - lastTs) / 1000)
@@ -416,24 +420,22 @@ export function StillAmbientCanvas({
           ? window.playback.getSpectrum()
           : null
 
-      if (spectrum && spectrum.length >= 14) {
+      if (spectrum && spectrum.length >= 16) {
+        // Sub Bass + Bass average (matching Sound Keys Average of Range, Mid/Treble = 0)
         let lowSum = 0
-        for (let i = 0; i < 14; i++) {
+        for (let i = 0; i < 16; i++) {
           lowSum += spectrum[i]
         }
-        const low = lowSum / 14
-        bassAvg += (low - bassAvg) * Math.min(1, dt * 3.5)
-        const transient = Math.max(0, low - bassAvg * 1.08)
-        const sustained = Math.max(0, low - 0.18)
-        const targetKick = Math.min(1, sustained * 1.05 + transient * 3.2)
-        if (targetKick > kick) {
-          kick += (targetKick - kick) * Math.min(1, dt * 24.0)
-        } else {
-          kick *= Math.exp(-dt * 6.0)
-        }
+        const audioLev = lowSum / 16
+        // Peak-hold with instant attack and exponential release (release = 5)
+        const release = 5.0
+        bassEnvelope = Math.max(bassEnvelope * Math.exp(-release * dt), audioLev)
+        // Map 0..1 -> [-1.0, 1.5] clamped to [-1.0, 0.9]
+        exposure = Math.min(0.9, Math.max(-1.0, -1.0 + bassEnvelope * 2.5))
       } else {
-        bassAvg *= Math.exp(-dt * 4.0)
-        kick *= Math.exp(-dt * 6.0)
+        bassEnvelope *= Math.exp(-5.0 * dt)
+        // Neutral exposure (0.0) when paused or on MPV without FFT spectrum
+        exposure += (0.0 - exposure) * Math.min(1, dt * 6.0)
       }
 
       const curr = currentPaletteRef.current
@@ -447,7 +449,7 @@ export function StillAmbientCanvas({
       gl.uniform2f(uRes, canvas.width, canvas.height)
       gl.uniform1f(uTime, elapsed)
       gl.uniform1f(uEnergy, energy)
-      gl.uniform1f(uKick, kick)
+      gl.uniform1f(uKick, exposure)
       gl.uniform3fv(uBg, bgLab)
       gl.uniform3fv(uC0, curr[0])
       gl.uniform3fv(uC1, curr[1])
