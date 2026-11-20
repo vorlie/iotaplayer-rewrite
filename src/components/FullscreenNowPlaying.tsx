@@ -43,6 +43,7 @@ export function FullscreenNowPlaying() {
   const setFullscreen = useAppStore((s) => s.setFullscreenNowPlaying)
   const fullscreenStyle = useAppStore((s) => s.fullscreenStyle)
   const setFullscreenStyle = useAppStore((s) => s.setFullscreenStyle)
+  const lowPerformanceMode = useAppStore((s) => s.lowPerformanceMode)
 
   const {
     currentTrack,
@@ -248,7 +249,7 @@ export function FullscreenNowPlaying() {
               }
 
               const isClickable = line.timestamp != null && Boolean(line.text)
-              const words = line.words && line.words.length > 0 ? line.words : null
+              const words = !lowPerformanceMode && line.words && line.words.length > 0 ? line.words : null
               const nextLineTimestamp = lyrics.lines[index + 1]?.timestamp
               const wordStates =
                 words && isActive
@@ -677,7 +678,7 @@ export function FullscreenNowPlaying() {
                       )
                     }
 
-                    const words = line.words && line.words.length > 0 ? line.words : null
+                    const words = !lowPerformanceMode && line.words && line.words.length > 0 ? line.words : null
                     const nextLineTimestamp = lyrics.lines[lineIdx + 1]?.timestamp
                     const wordStates =
                       words && isCurrent

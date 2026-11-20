@@ -37,3 +37,19 @@ test('lyricsSourcePreference defaults to embedded and persists valid options', (
     setAppSettings({ lyricsSourcePreference: before.lyricsSourcePreference ?? 'embedded' })
   }
 })
+
+test('lowPerformanceMode defaults to false and persists boolean values', () => {
+  const before = getAppSettings()
+
+  try {
+    const enabled = setAppSettings({ lowPerformanceMode: true })
+    assert.equal(enabled.lowPerformanceMode, true)
+    assert.equal(getAppSettings().lowPerformanceMode, true)
+
+    const disabled = setAppSettings({ lowPerformanceMode: false })
+    assert.equal(disabled.lowPerformanceMode, false)
+    assert.equal(getAppSettings().lowPerformanceMode, false)
+  } finally {
+    setAppSettings({ lowPerformanceMode: before.lowPerformanceMode ?? false })
+  }
+})

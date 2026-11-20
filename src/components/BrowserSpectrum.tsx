@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useAppStore } from '../store'
 
 interface BrowserSpectrumProps {
   className?: string
@@ -9,9 +10,11 @@ export function BrowserSpectrum({
   className,
   barColor,
 }: BrowserSpectrumProps) {
+  const lowPerformanceMode = useAppStore((s) => s.lowPerformanceMode)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
+    if (lowPerformanceMode) return
     const canvas = canvasRef.current
     const ctx = canvas?.getContext('2d')
 
@@ -72,7 +75,9 @@ export function BrowserSpectrum({
     return () => {
       cancelAnimationFrame(animationFrame)
     }
-  }, [barColor])
+  }, [barColor, lowPerformanceMode])
+
+  if (lowPerformanceMode) return null
 
   return (
     <canvas

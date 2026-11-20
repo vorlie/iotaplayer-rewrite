@@ -121,6 +121,7 @@ interface AppSettings {
   preservePitch: boolean
   language: AppLanguage
   fullscreenStyle: FullscreenStyle
+  lowPerformanceMode: boolean
 }
 
 interface PlaybackPreferences {

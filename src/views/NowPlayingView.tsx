@@ -36,6 +36,7 @@ import '../styles/now-playing.css'
 export function NowPlayingView() {
   const { t } = useTranslation(['player', 'common', 'playlists'])
   const setFullscreen = useAppStore((s) => s.setFullscreenNowPlaying)
+  const lowPerformanceMode = useAppStore((s) => s.lowPerformanceMode)
   const fmt = useFormatDuration()
   const {
     currentTrack,
@@ -431,7 +432,7 @@ export function NowPlayingView() {
                     )
                   }
 
-                  const words = line.words && line.words.length > 0 ? line.words : null
+                  const words = !lowPerformanceMode && line.words && line.words.length > 0 ? line.words : null
                   const nextLineTimestamp = lyrics.lines[index + 1]?.timestamp
                   const wordStates =
                     words && isActive

@@ -10,6 +10,7 @@ import {
   normalizePlaybackRate,
 } from '../../electron/playbackSpeed'
 import type { Album, Artist, LyricLine, LyricsResult, Track } from '../types/electron'
+import { useAppStore } from '../store'
 
 // Convenience hook for loading data from the IPC bridge
 export function useArtists() {
@@ -283,6 +284,7 @@ export function useInterpolatedPosition(
   playbackRate = DEFAULT_PLAYBACK_RATE,
 ): number {
   const safeRate = normalizePlaybackRate(playbackRate, DEFAULT_PLAYBACK_RATE)
+  const lowPerformanceMode = useAppStore((s) => s.lowPerformanceMode)
   const isSynced = enabled && lyrics.synchronized && lyrics.lines.length > 0
   const [syncPosition, setSyncPosition] = useState(position)
   const anchorRef = useRef<{
@@ -336,7 +338,14 @@ export function useInterpolatedPosition(
     if (!isSynced || !isPlaying) return
 
     let frameId = 0
+    let lastCheckMs = 0
+    const minIntervalMs = lowPerformanceMode ? 100 : 0
     const tick = (now: number) => {
+      if (minIntervalMs > 0 && now - lastCheckMs < minIntervalMs) {
+        frameId = window.requestAnimationFrame(tick)
+        return
+      }
+      lastCheckMs = now
       const anchor = anchorRef.current
       const rawNext = interpolateMediaPosition({
         anchorPosition: anchor.position,
@@ -354,7 +363,8 @@ export function useInterpolatedPosition(
       const lineIdx = getActiveLyricIndex(lyrics, clampedNext)
       const line = lineIdx >= 0 ? lyrics.lines[lineIdx] : null
       const nextLineTs = lineIdx >= 0 ? lyrics.lines[lineIdx + 1]?.timestamp : undefined
-      const wordIdx = line ? getActiveWordIndex(line, clampedNext, nextLineTs) : -1
+      const wordIdx =
+        !lowPerformanceMode && line ? getActiveWordIndex(line, clampedNext, nextLineTs) : -1
 
       if (lineIdx !== anchor.lastLineIdx || wordIdx !== anchor.lastWordIdx) {
         anchor.lastLineIdx = lineIdx
@@ -369,7 +379,7 @@ export function useInterpolatedPosition(
     return () => {
       window.cancelAnimationFrame(frameId)
     }
-  }, [isSynced, isPlaying, lyrics, duration, safeRate])
+  }, [isSynced, isPlaying, lyrics, duration, safeRate, lowPerformanceMode])
 
   if (!isSynced || !isPlaying) {
     return position

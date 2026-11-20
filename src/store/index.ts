@@ -90,9 +90,11 @@ interface AppStore {
   // Immersive Fullscreen Now Playing overlay
   isFullscreenNowPlaying: boolean
   fullscreenStyle: FullscreenStyle
+  lowPerformanceMode: boolean
   setFullscreenNowPlaying: (open: boolean) => void
   toggleFullscreenNowPlaying: () => void
   setFullscreenStyle: (style: FullscreenStyle, persist?: boolean) => void
+  setLowPerformanceMode: (enabled: boolean, persist?: boolean) => void
 
   // Library
   library: LibraryState
@@ -126,12 +128,26 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   isFullscreenNowPlaying: false,
   fullscreenStyle: 'classic',
+  lowPerformanceMode: false,
   setFullscreenNowPlaying: (open) => set({ isFullscreenNowPlaying: open }),
   toggleFullscreenNowPlaying: () => set((s) => ({ isFullscreenNowPlaying: !s.isFullscreenNowPlaying })),
   setFullscreenStyle: (style, persist = true) => {
     set({ fullscreenStyle: style })
     if (persist && typeof window !== 'undefined' && 'settings' in window) {
       void window.settings.set({ fullscreenStyle: style })
+    }
+  },
+  setLowPerformanceMode: (enabled, persist = true) => {
+    set({ lowPerformanceMode: enabled })
+    if (typeof document !== 'undefined') {
+      if (enabled) {
+        document.documentElement.dataset.lowPerformance = 'true'
+      } else {
+        delete document.documentElement.dataset.lowPerformance
+      }
+    }
+    if (persist && typeof window !== 'undefined' && 'settings' in window) {
+      void window.settings.set({ lowPerformanceMode: enabled })
     }
   },
 

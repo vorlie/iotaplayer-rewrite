@@ -38,6 +38,7 @@ export interface AppSettings {
   preservePitch: boolean
   language: AppLanguage
   fullscreenStyle: FullscreenStyle
+  lowPerformanceMode: boolean
 }
 
 const DEFAULT_EQUALIZER_BANDS = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -98,6 +99,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   preservePitch: DEFAULT_PRESERVE_PITCH,
   language: 'system',
   fullscreenStyle: 'classic',
+  lowPerformanceMode: false,
 }
 
 function normalizeEqualizerBands(value: unknown): number[] {
@@ -144,6 +146,7 @@ export function getAppSettings(): AppSettings {
       preservePitch: normalizePreservePitch(parsed.preservePitch, DEFAULT_SETTINGS.preservePitch),
       language: normalizeAppLanguage(parsed.language),
       fullscreenStyle: normalizeFullscreenStyle(parsed.fullscreenStyle),
+      lowPerformanceMode: Boolean(parsed.lowPerformanceMode ?? DEFAULT_SETTINGS.lowPerformanceMode),
     }
   } catch {
     writeFileSync(settingsPath, JSON.stringify(DEFAULT_SETTINGS, null, 2), 'utf8')
@@ -175,6 +178,9 @@ export function setAppSettings(nextSettings: Partial<AppSettings>): AppSettings 
     language: normalizeAppLanguage(nextSettings.language ?? current.language),
     fullscreenStyle: normalizeFullscreenStyle(
       nextSettings.fullscreenStyle ?? current.fullscreenStyle,
+    ),
+    lowPerformanceMode: Boolean(
+      nextSettings.lowPerformanceMode ?? current.lowPerformanceMode,
     ),
   }
   const settingsPath = getSettingsPath()
