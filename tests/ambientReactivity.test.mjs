@@ -62,6 +62,17 @@ test('evaluateSpectrumRange computes average and peak within frequency and ampli
     mode: 'peak',
   })
   assert.ok(Math.abs(headroom - 1 / 1.5) < 1e-6)
+
+  const scaled = evaluateSpectrumRange([0.5, 0.5], {
+    ...DEFAULT_AMBIENT_REACTIVITY,
+    freqStart: 0,
+    freqEnd: 1,
+    ampFloor: 0,
+    ampCeiling: 1,
+    spectrumScale: 1.5,
+    mode: 'peak',
+  })
+  assert.equal(scaled, 0.75)
 })
 
 test('stepAmbientExposure uses instant attack, exponential release, and exposure clamp', () => {
@@ -84,6 +95,7 @@ test('ambientReactivity persists in app settings', () => {
       ampFloor: 0.15,
       ampCeiling: 1.85,
       spectrumCeiling: 2.2,
+      spectrumScale: 1.25,
       mode: 'peak',
       release: 7,
       intensity: 0.75,

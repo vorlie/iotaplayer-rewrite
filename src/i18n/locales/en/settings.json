@@ -69,7 +69,8 @@
     },
     "releaseLabel": "Release",
     "intensityLabel": "Max exposure",
-    "ceilingLabel": "Spectrum ceiling"
+    "ceilingLabel": "Canvas ceiling",
+    "barScaleLabel": "Bar top-out"
   },
   "lyrics": {
     "eyebrow": "Lyrics",

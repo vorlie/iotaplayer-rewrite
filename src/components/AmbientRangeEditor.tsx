@@ -94,6 +94,7 @@ export function AmbientRangeEditor() {
 
       const cfg = configRef.current
       const maxAmp = cfg.spectrumCeiling ?? 1.5
+      const barScale = cfg.spectrumScale ?? 1
       const meterWidth = 34
       const gap = 12
       const specWidth = Math.max(80, width - meterWidth - gap)
@@ -105,14 +106,11 @@ export function AmbientRangeEditor() {
       ctx.fillRect(0, 0, specWidth, height)
       ctx.fillRect(specWidth + gap, 0, meterWidth, height)
 
-      // Horizontal reference grid lines (0.25..maxAmp, with 1.0 as spectrum ceiling)
+      // Horizontal reference grid lines + configurable bar top-out line
       ctx.lineWidth = 1
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.07)'
       for (let level = 0.25; level < maxAmp; level += 0.25) {
         const gy = Math.round((1 - level / maxAmp) * height) + 0.5
-        ctx.strokeStyle =
-          Math.abs(level - 1.0) < 0.001
-            ? 'rgba(255, 255, 255, 0.16)'
-            : 'rgba(255, 255, 255, 0.07)'
         ctx.beginPath()
         ctx.moveTo(0, gy)
         ctx.lineTo(specWidth, gy)
@@ -121,19 +119,28 @@ export function AmbientRangeEditor() {
         ctx.stroke()
       }
 
+      if (barScale > 0 && barScale < maxAmp) {
+        const capY = Math.round((1 - barScale / maxAmp) * height) + 0.5
+        ctx.strokeStyle = 'rgba(255, 167, 167, 0.28)'
+        ctx.beginPath()
+        ctx.moveTo(0, capY)
+        ctx.lineTo(specWidth, capY)
+        ctx.stroke()
+      }
+
       const spectrum =
         typeof window !== 'undefined' && 'playback' in window
           ? window.playback.getSpectrum()
           : null
 
-      // Draw 64 spectrum bars (0..1 mapped within 0..maxAmp so headroom remains above)
+      // Draw 64 spectrum bars scaled by barScale within 0..maxAmp
       if (spectrum && spectrum.length > 0) {
         const barW = specWidth / spectrum.length
         ctx.fillStyle = cfg.enabled
           ? 'rgba(255, 167, 167, 0.48)'
           : 'rgba(255, 255, 255, 0.18)'
         for (let i = 0; i < spectrum.length; i++) {
-          const val = spectrum[i]
+          const val = spectrum[i] * barScale
           const bh = Math.max(1, (val / maxAmp) * height)
           ctx.fillRect(
             i * barW,
@@ -375,6 +382,20 @@ export function AmbientRangeEditor() {
             <option value="average">{t('ambient.modes.average')}</option>
             <option value="peak">{t('ambient.modes.peak')}</option>
           </select>
+        </label>
+
+        <label className="ambient-editor__control">
+          <span>
+            {t('ambient.barScaleLabel')} ({Math.round((config.spectrumScale ?? 1) * 100)}%)
+          </span>
+          <input
+            type="range"
+            min={0.25}
+            max={2.5}
+            step={0.05}
+            value={config.spectrumScale ?? 1}
+            onChange={(e) => setConfig({ spectrumScale: Number(e.target.value) })}
+          />
         </label>
 
         <label className="ambient-editor__control">

@@ -7,6 +7,7 @@ export interface AmbientReactivityConfig {
   ampFloor: number
   ampCeiling: number
   spectrumCeiling: number
+  spectrumScale: number
   mode: AmbientRangeMode
   release: number
   intensity: number
@@ -19,6 +20,7 @@ export const DEFAULT_AMBIENT_REACTIVITY: AmbientReactivityConfig = {
   ampFloor: 0,
   ampCeiling: 1,
   spectrumCeiling: 1.5,
+  spectrumScale: 1,
   mode: 'average',
   release: 5,
   intensity: 0.9,
@@ -36,6 +38,7 @@ export const AMBIENT_REACTIVITY_PRESETS: Record<
     ampFloor: 0.2,
     ampCeiling: 0.95,
     spectrumCeiling: 1.5,
+    spectrumScale: 1,
     mode: 'peak',
     release: 6,
     intensity: 0.9,
@@ -47,6 +50,7 @@ export const AMBIENT_REACTIVITY_PRESETS: Record<
     ampFloor: 0.1,
     ampCeiling: 0.9,
     spectrumCeiling: 1.5,
+    spectrumScale: 1,
     mode: 'average',
     release: 5,
     intensity: 0.9,
@@ -91,6 +95,13 @@ export function normalizeAmbientReactivity(
     1.0,
     3.0,
   )
+  const spectrumScale = clamp(
+    typeof raw.spectrumScale === 'number' && Number.isFinite(raw.spectrumScale)
+      ? raw.spectrumScale
+      : fallback.spectrumScale,
+    0.25,
+    2.5,
+  )
   const ampFloor = clamp(
     typeof raw.ampFloor === 'number' && Number.isFinite(raw.ampFloor)
       ? raw.ampFloor
@@ -129,6 +140,7 @@ export function normalizeAmbientReactivity(
     ampFloor,
     ampCeiling,
     spectrumCeiling,
+    spectrumScale,
     mode,
     release,
     intensity,
@@ -152,8 +164,11 @@ export function evaluateSpectrumRange(
   let peak = 0
   let count = 0
 
+  const scale = typeof config.spectrumScale === 'number' ? config.spectrumScale : 1
+
   for (let i = startIdx; i <= endIdx; i++) {
-    const normalized = clamp((spectrum[i] - config.ampFloor) / span, 0, 1)
+    const scaled = spectrum[i] * scale
+    const normalized = clamp((scaled - config.ampFloor) / span, 0, 1)
     sum += normalized
     if (normalized > peak) {
       peak = normalized

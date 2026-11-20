@@ -69,7 +69,8 @@
     },
     "releaseLabel": "Wygaszanie",
     "intensityLabel": "Maks. ekspozycja",
-    "ceilingLabel": "Sufit widma"
+    "ceilingLabel": "Sufit wykresu",
+    "barScaleLabel": "Maks. słupków"
   },
   "lyrics": {
     "eyebrow": "Teksty",
