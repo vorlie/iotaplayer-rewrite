@@ -6,6 +6,7 @@ import {
   normalizePlaybackPreferences,
   type PlaybackPreferences,
 } from './playbackSpeed'
+import type { AmbientReactivityConfig } from './ambientReactivity'
 import { DEFAULT_VOLUME, VolumeController, normalizeVolume } from './volume'
 import type {
   Album,
@@ -217,6 +218,12 @@ function applyBrowserPlaybackSpeed(targetAudio: BrowserAudioElement): void {
   }
 }
 
+let audioContext: AudioContextLike | null = null
+let analyser: AnalyserNodeLike | null = null
+let analyserData: Uint8Array | null = null
+let browserAudioSource: AudioNodeLike | null = null
+let browserGainNode: GainNodeLike | null = null
+
 function createRawBrowserAudio(): BrowserAudioElement {
   const AudioCtor = (globalThis as unknown as { Audio: new () => BrowserAudioElement }).Audio
   const audio = new AudioCtor()
@@ -235,9 +242,18 @@ const volumeController = new VolumeController<BrowserAudioElement>({
     return saved?.volume
   },
   applyMpvVolume: (vol) => ipcRenderer.invoke('playback:volume', vol),
+  applyElementVolume: (element, vol) => {
+    browserVolume = vol
+    if (browserGainNode && audioContext) {
+      browserGainNode.gain.value = vol
+      element.volume = 1
+    } else {
+      element.volume = vol
+    }
+  },
   onVolumeApplied: (vol) => {
     browserVolume = vol
-    browserAudio.volume = vol
+    applyBrowserOutputVolume(vol)
   },
 })
 
@@ -251,6 +267,7 @@ interface AudioContextLike {
   destination: AudioNodeLike
   createAnalyser(): AnalyserNodeLike
   createBiquadFilter(): BiquadFilterNodeLike
+  createGain(): GainNodeLike
   createMediaElementSource(element: unknown): AudioNodeLike
   resume(): Promise<void>
 }
@@ -261,6 +278,8 @@ interface AudioNodeLike {
 
 interface AnalyserNodeLike extends AudioNodeLike {
   fftSize: number
+  minDecibels: number
+  maxDecibels: number
   smoothingTimeConstant: number
   frequencyBinCount: number
   getByteFrequencyData(array: Uint8Array): void
@@ -273,10 +292,18 @@ interface BiquadFilterNodeLike extends AudioNodeLike {
   gain: { value: number; setTargetAtTime: (value: number, startTime: number, timeConstant: number) => void }
 }
 
-let audioContext: AudioContextLike | null = null
-let analyser: AnalyserNodeLike | null = null
-let analyserData: Uint8Array | null = null
-let browserAudioSource: AudioNodeLike | null = null
+interface GainNodeLike extends AudioNodeLike {
+  gain: { value: number }
+}
+
+function applyBrowserOutputVolume(vol: number): void {
+  if (browserGainNode && audioContext) {
+    browserGainNode.gain.value = vol
+    browserAudio.volume = 1
+  } else {
+    browserAudio.volume = vol
+  }
+}
 let browserEqualizerNodes: BiquadFilterNodeLike[] = []
 let browserEqualizerBands = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 const browserEqualizerFrequencies = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000]
@@ -310,6 +337,8 @@ function initializeAnalyser(): void {
   const nextAnalyser = context.createAnalyser()
 
   nextAnalyser.fftSize = 2048
+  nextAnalyser.minDecibels = -95
+  nextAnalyser.maxDecibels = -10
   nextAnalyser.smoothingTimeConstant = 0.4
 
   if (!browserAudioSource) {
@@ -328,12 +357,18 @@ function initializeAnalyser(): void {
     return filter
   })
 
+  const nextGain = context.createGain()
+  nextGain.gain.value = browserVolume
+
   previousNode.connect(nextAnalyser)
-  nextAnalyser.connect(context.destination)
+  nextAnalyser.connect(nextGain)
+  nextGain.connect(context.destination)
 
   audioContext = context
   analyser = nextAnalyser
   analyserData = new Uint8Array(nextAnalyser.frequencyBinCount)
+  browserGainNode = nextGain
+  browserAudio.volume = 1
   applyBrowserEqualizer()
 }
 
@@ -432,7 +467,11 @@ function emitBrowserEnded(): void {
 }
 
 function attachBrowserAudioEvents(targetAudio: BrowserAudioElement = browserAudio): void {
-  targetAudio.volume = volumeController.getVolume()
+  if (targetAudio === browserAudio) {
+    applyBrowserOutputVolume(volumeController.getVolume())
+  } else {
+    targetAudio.volume = volumeController.getVolume()
+  }
   applyBrowserPlaybackSpeed(targetAudio)
 
   targetAudio.onplay = () => {
@@ -510,6 +549,8 @@ const settingsAPI = {
     language: 'system' | 'en' | 'pl'
     fullscreenStyle: 'classic' | 'still'
     lowPerformanceMode: boolean
+    visualizerEnabled: boolean
+    ambientReactivity: AmbientReactivityConfig
   }> => ipcRenderer.invoke('settings:get'),
   set: (value: {
     discordClientId?: string
@@ -526,6 +567,8 @@ const settingsAPI = {
     language?: 'system' | 'en' | 'pl'
     fullscreenStyle?: 'classic' | 'still'
     lowPerformanceMode?: boolean
+    visualizerEnabled?: boolean
+    ambientReactivity?: Partial<AmbientReactivityConfig>
   }): Promise<void> => {
     if (value.playbackRate !== undefined || value.preservePitch !== undefined) {
       browserPlaybackPreferences = normalizePlaybackPreferences(value, browserPlaybackPreferences)
@@ -570,10 +613,10 @@ const playbackAPI = {
       }
       browserAudioActive = true
       const appliedVolume = await volumeController.prepareForPlayback('browser')
-      browserAudio.volume = appliedVolume
+      applyBrowserOutputVolume(appliedVolume)
       browserAudio.src = toBrowserAudioUrl(filePath)
       browserAudio.load()
-      browserAudio.volume = appliedVolume
+      applyBrowserOutputVolume(appliedVolume)
       applyBrowserPlaybackSpeed(browserAudio)
 
       try {
@@ -587,7 +630,7 @@ const playbackAPI = {
       }
 
       try {
-        browserAudio.volume = volumeController.getVolume()
+        applyBrowserOutputVolume(volumeController.getVolume())
         await browserAudio.play()
       } catch {
         browserAudioActive = false
@@ -615,7 +658,7 @@ const playbackAPI = {
 
   resume: (): Promise<void> => {
     if (browserAudioActive) {
-      browserAudio.volume = volumeController.getVolume()
+      applyBrowserOutputVolume(volumeController.getVolume())
       void browserAudio.play()
       return Promise.resolve()
     }
@@ -624,7 +667,7 @@ const playbackAPI = {
 
   toggle: (): Promise<void> => {
     if (browserAudioActive) {
-      browserAudio.volume = volumeController.getVolume()
+      applyBrowserOutputVolume(volumeController.getVolume())
       if (browserAudio.paused) {
         void browserAudio.play()
       } else {

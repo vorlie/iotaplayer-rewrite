@@ -11,10 +11,12 @@ export function BrowserSpectrum({
   barColor,
 }: BrowserSpectrumProps) {
   const lowPerformanceMode = useAppStore((s) => s.lowPerformanceMode)
+  const visualizerEnabled = useAppStore((s) => s.visualizerEnabled)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const disabled = lowPerformanceMode || !visualizerEnabled
 
   useEffect(() => {
-    if (lowPerformanceMode) return
+    if (disabled) return
     const canvas = canvasRef.current
     const ctx = canvas?.getContext('2d')
 
@@ -75,9 +77,9 @@ export function BrowserSpectrum({
     return () => {
       cancelAnimationFrame(animationFrame)
     }
-  }, [barColor, lowPerformanceMode])
+  }, [barColor, disabled])
 
-  if (lowPerformanceMode) return null
+  if (disabled) return null
 
   return (
     <canvas

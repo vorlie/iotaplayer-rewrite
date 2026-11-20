@@ -65,6 +65,12 @@ export default function App() {
         if (typeof settings.lowPerformanceMode === 'boolean') {
           useAppStore.getState().setLowPerformanceMode(settings.lowPerformanceMode, false)
         }
+        if (typeof settings.visualizerEnabled === 'boolean') {
+          useAppStore.getState().setVisualizerEnabled(settings.visualizerEnabled, false)
+        }
+        if (settings.ambientReactivity) {
+          useAppStore.getState().setAmbientReactivity(settings.ambientReactivity, false)
+        }
       })
       .catch(() => {
         // Fallback to browser/system locale already initialized

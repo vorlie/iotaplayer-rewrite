@@ -5,10 +5,20 @@
   "saveSettings": "Save Settings",
   "saving": "Saving…",
   "categories": {
-    "playback": "Playback",
+    "general": "General",
+    "playback": "Audio & Lyrics",
+    "appearance": "Appearance & Effects",
     "library": "Library",
     "integrations": "Integrations",
     "credits": "Credits"
+  },
+  "general": {
+    "eyebrow": "General",
+    "heading": "Language & application"
+  },
+  "appearance": {
+    "eyebrow": "Appearance",
+    "heading": "Visuals & performance"
   },
   "language": {
     "title": "Application Language",
@@ -36,7 +46,31 @@
     },
     "fullscreenStyleHint": "Choose between the classic split layout and the ambient glass Still style.",
     "lowPerformanceLabel": "Low performance mode",
-    "lowPerformanceHint": "Disable glass blurs, ambient shaders, and visualizer loops to reduce GPU usage while gaming or on low-power hardware."
+    "lowPerformanceHint": "Disable glass blurs, ambient shaders, and visualizer loops to reduce GPU usage while gaming or on low-power hardware.",
+    "visualizerLabel": "Spectrum visualizer",
+    "visualizerHint": "Show the live frequency spectrum visualizer in the player bar when using the Browser audio backend."
+  },
+  "ambient": {
+    "title": "Still ambient audio reactivity",
+    "description": "Drag or resize the box to choose which frequencies and amplitudes drive Still fullscreen highlights.",
+    "enabled": "Active",
+    "disabled": "Off",
+    "presets": {
+      "lowTones": "Low Tones",
+      "subBass": "Sub-Bass",
+      "fullBeat": "Full Beat"
+    },
+    "rangeSummary": "Freq {{freqStart}}%–{{freqEnd}}% · Amp {{ampFloor}}%–{{ampCeiling}}%",
+    "browserOnlyHint": "Live spectrum preview & reactivity require the Browser audio backend.",
+    "modeLabel": "Range type",
+    "modes": {
+      "average": "Average of range",
+      "peak": "Peak"
+    },
+    "releaseLabel": "Release",
+    "intensityLabel": "Max exposure",
+    "ceilingLabel": "Canvas ceiling",
+    "barScaleLabel": "Bar top-out"
   },
   "lyrics": {
     "eyebrow": "Lyrics",

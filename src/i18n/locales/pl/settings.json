@@ -5,10 +5,20 @@
   "saveSettings": "Zapisz ustawienia",
   "saving": "Zapisywanie…",
   "categories": {
-    "playback": "Odtwarzanie",
+    "general": "Ogólne",
+    "playback": "Dźwięk i teksty",
+    "appearance": "Wygląd i efekty",
     "library": "Biblioteka",
     "integrations": "Integracje",
     "credits": "Autorzy i licencje"
+  },
+  "general": {
+    "eyebrow": "Ogólne",
+    "heading": "Język i aplikacja"
+  },
+  "appearance": {
+    "eyebrow": "Wygląd",
+    "heading": "Efekty wizualne i wydajność"
   },
   "language": {
     "title": "Język aplikacji",
@@ -36,7 +46,31 @@
     },
     "fullscreenStyleHint": "Wybierz między klasycznym układem podzielonym a ambientowym stylem Still.",
     "lowPerformanceLabel": "Tryb niskiego zużycia zasobów",
-    "lowPerformanceHint": "Wyłącza rozmycia szkła, shadery tła i wizualizator, aby ograniczyć użycie GPU podczas grania lub na słabszym sprzęcie."
+    "lowPerformanceHint": "Wyłącza rozmycia szkła, shadery tła i wizualizator, aby ograniczyć użycie GPU podczas grania lub na słabszym sprzęcie.",
+    "visualizerLabel": "Wizualizator widma",
+    "visualizerHint": "Pokazuj na żywo wizualizator częstotliwości na pasku odtwarzacza przy silniku przeglądarkowym."
+  },
+  "ambient": {
+    "title": "Reakcja tła Still na dźwięk",
+    "description": "Przeciągnij lub zmień rozmiar ramki, aby wybrać pasmo częstotliwości i poziom aktywujący podświetlenia w trybie Still.",
+    "enabled": "Włączone",
+    "disabled": "Wyłączone",
+    "presets": {
+      "lowTones": "Niskie tony",
+      "subBass": "Sub-bas",
+      "fullBeat": "Pełny bit"
+    },
+    "rangeSummary": "Pasmo {{freqStart}}%–{{freqEnd}}% · Amplituda {{ampFloor}}%–{{ampCeiling}}%",
+    "browserOnlyHint": "Podgląd na żywo i reakcja na widmo wymagają przeglądarkowego silnika audio.",
+    "modeLabel": "Tryb zakresu",
+    "modes": {
+      "average": "Średnia z zakresu",
+      "peak": "Szczyt (Peak)"
+    },
+    "releaseLabel": "Wygaszanie",
+    "intensityLabel": "Maks. ekspozycja",
+    "ceilingLabel": "Sufit wykresu",
+    "barScaleLabel": "Maks. słupków"
   },
   "lyrics": {
     "eyebrow": "Teksty",

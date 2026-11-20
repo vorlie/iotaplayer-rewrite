@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import {
+  evaluateSpectrumRange,
+  stepAmbientExposure,
+} from '../../electron/ambientReactivity'
 import { useAppStore } from '../store'
 
 type RgbTuple = [number, number, number]
@@ -53,6 +57,7 @@ precision highp float;
 uniform vec2 u_res;
 uniform float u_time;
 uniform float u_energy;
+uniform float u_kick;
 uniform vec3 u_bg;
 uniform vec3 u_c0;
 uniform vec3 u_c1;
@@ -132,7 +137,7 @@ void main() {
   vec2 w2 = vec2(sn(q * 2.0 + w * 1.6 + 11.0), sn(q * 2.0 + w * 1.6 + 23.0));
   p += 0.22 * (w + 0.4 * w2);
 
-  float e = u_energy;
+  float e = u_energy + max(0.0, u_kick) * 0.35;
   vec3 acc = u_bg;
   float W = 1.0;
   float rs = clamp(sqrt(asp / 1.4), 0.5, 1.0);
@@ -155,11 +160,18 @@ void main() {
   vec3 lab = acc / W;
   float cov = 1.0 - 1.0 / W;
 
-  // Sheen: long, soft silk folds of light where the colour is
+  // Sheen: long, soft silk folds of light where the colour is, plus Sound Keys style exposure pulse
   float fold = sn((R * p) * vec2(0.8, 3.2) + w * 0.9 + vec2(t * 0.03, 0.0)) * 0.5 + 0.5;
-  lab.x += (0.14 * fold * fold * fold + e * 0.02) * cov;
+  float fold3 = fold * fold * fold;
+  float fold4 = fold3 * fold;
+  float pulse = clamp((u_kick + 1.0) / 1.9, 0.0, 1.0);
+  lab.x += ((0.12 + pulse * 0.16) * fold3 + 0.08 * pulse * fold4 + e * 0.02) * cov;
+  lab.x = min(lab.x, 0.64);
 
   vec3 col = oklabToSrgb(mix(u_bg, lab, 0.92));
+
+  // Exposure-style ambient lift mapped from [-1.0, 0.9]
+  col *= pow(2.0, u_kick * 0.45);
 
   // Soft vignette & static 1/255 dither against banding
   float vig = smoothstep(1.3, 0.2, length((uv - 0.5) * vec2(asp * 0.85, 1.0)));
@@ -279,6 +291,8 @@ export function StillAmbientCanvas({
   isPlaying,
 }: StillAmbientCanvasProps) {
   const lowPerformanceMode = useAppStore((s) => s.lowPerformanceMode)
+  const ambientReactivity = useAppStore((s) => s.ambientReactivity)
+  const reactivityRef = useRef(ambientReactivity)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [grainTile] = useState(() => getGrainTile())
   const targetPaletteRef = useRef<[LabTuple, LabTuple, LabTuple, LabTuple, LabTuple]>(DEFAULT_LAB_PALETTE)
@@ -295,6 +309,10 @@ export function StillAmbientCanvas({
   useEffect(() => {
     isPlayingRef.current = isPlaying
   }, [isPlaying])
+
+  useEffect(() => {
+    reactivityRef.current = ambientReactivity
+  }, [ambientReactivity])
 
   useEffect(() => {
     let cancelled = false
@@ -380,6 +398,7 @@ export function StillAmbientCanvas({
     const uRes = gl.getUniformLocation(program, 'u_res')
     const uTime = gl.getUniformLocation(program, 'u_time')
     const uEnergy = gl.getUniformLocation(program, 'u_energy')
+    const uKick = gl.getUniformLocation(program, 'u_kick')
     const uBg = gl.getUniformLocation(program, 'u_bg')
     const uC0 = gl.getUniformLocation(program, 'u_c0')
     const uC1 = gl.getUniformLocation(program, 'u_c1')
@@ -397,12 +416,37 @@ export function StillAmbientCanvas({
     let lastTs = performance.now()
     let elapsed = 0
     let energy = isPlayingRef.current ? 0.45 : 0.1
+    let bassEnvelope = 0
+    let exposure = 0
 
     const render = (now: number) => {
       const dt = Math.min(0.1, (now - lastTs) / 1000)
       lastTs = now
       elapsed += dt * (isPlayingRef.current ? 1 : 0.3)
       energy += ((isPlayingRef.current ? 0.45 : 0.1) - energy) * 0.05
+
+      const spectrum =
+        isPlayingRef.current &&
+        reactivityRef.current.enabled &&
+        typeof window !== 'undefined' &&
+        'playback' in window
+          ? window.playback.getSpectrum()
+          : null
+
+      if (spectrum && spectrum.length > 0 && reactivityRef.current.enabled) {
+        const audioLev = evaluateSpectrumRange(spectrum, reactivityRef.current)
+        const next = stepAmbientExposure(
+          bassEnvelope,
+          audioLev,
+          dt,
+          reactivityRef.current,
+        )
+        bassEnvelope = next.envelope
+        exposure = next.exposure
+      } else {
+        bassEnvelope *= Math.exp(-reactivityRef.current.release * dt)
+        exposure += (0.0 - exposure) * Math.min(1, dt * 6.0)
+      }
 
       const curr = currentPaletteRef.current
       const target = targetPaletteRef.current
@@ -415,6 +459,7 @@ export function StillAmbientCanvas({
       gl.uniform2f(uRes, canvas.width, canvas.height)
       gl.uniform1f(uTime, elapsed)
       gl.uniform1f(uEnergy, energy)
+      gl.uniform1f(uKick, exposure)
       gl.uniform3fv(uBg, bgLab)
       gl.uniform3fv(uC0, curr[0])
       gl.uniform3fv(uC1, curr[1])
