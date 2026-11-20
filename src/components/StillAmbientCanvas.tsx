@@ -416,16 +416,20 @@ export function StillAmbientCanvas({
           ? window.playback.getSpectrum()
           : null
 
-      if (spectrum && spectrum.length >= 6) {
-        const bass =
-          (spectrum[0] + spectrum[1] + spectrum[2] + spectrum[3] + spectrum[4] + spectrum[5]) / 6
-        bassAvg += (bass - bassAvg) * Math.min(1, dt * 4.0)
-        const transient = Math.max(0, bass - bassAvg * 1.12)
-        const targetKick = Math.min(1, transient * 4.5 + Math.max(0, bass - 0.55) * 0.7)
+      if (spectrum && spectrum.length >= 14) {
+        let lowSum = 0
+        for (let i = 0; i < 14; i++) {
+          lowSum += spectrum[i]
+        }
+        const low = lowSum / 14
+        bassAvg += (low - bassAvg) * Math.min(1, dt * 3.5)
+        const transient = Math.max(0, low - bassAvg * 1.08)
+        const sustained = Math.max(0, low - 0.18)
+        const targetKick = Math.min(1, sustained * 1.05 + transient * 3.2)
         if (targetKick > kick) {
-          kick += (targetKick - kick) * Math.min(1, dt * 28.0)
+          kick += (targetKick - kick) * Math.min(1, dt * 24.0)
         } else {
-          kick *= Math.exp(-dt * 7.5)
+          kick *= Math.exp(-dt * 6.0)
         }
       } else {
         bassAvg *= Math.exp(-dt * 4.0)
