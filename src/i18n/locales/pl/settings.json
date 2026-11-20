@@ -40,6 +40,26 @@
     "visualizerLabel": "Wizualizator widma",
     "visualizerHint": "Pokazuj na żywo wizualizator częstotliwości na pasku odtwarzacza przy silniku przeglądarkowym."
   },
+  "ambient": {
+    "title": "Reakcja tła Still na dźwięk",
+    "description": "Przeciągnij lub zmień rozmiar ramki, aby wybrać pasmo częstotliwości i poziom aktywujący podświetlenia w trybie Still.",
+    "enabled": "Włączone",
+    "disabled": "Wyłączone",
+    "presets": {
+      "lowTones": "Niskie tony",
+      "subBass": "Sub-bas",
+      "fullBeat": "Pełny bit"
+    },
+    "rangeSummary": "Pasmo {{freqStart}}%–{{freqEnd}}% · Amplituda {{ampFloor}}%–{{ampCeiling}}%",
+    "browserOnlyHint": "Podgląd na żywo i reakcja na widmo wymagają przeglądarkowego silnika audio.",
+    "modeLabel": "Tryb zakresu",
+    "modes": {
+      "average": "Średnia z zakresu",
+      "peak": "Szczyt (Peak)"
+    },
+    "releaseLabel": "Wygaszanie",
+    "intensityLabel": "Maks. ekspozycja"
+  },
   "lyrics": {
     "eyebrow": "Teksty",
     "label": "Preferowane źródło tekstu",

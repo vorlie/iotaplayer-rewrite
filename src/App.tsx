@@ -68,6 +68,9 @@ export default function App() {
         if (typeof settings.visualizerEnabled === 'boolean') {
           useAppStore.getState().setVisualizerEnabled(settings.visualizerEnabled, false)
         }
+        if (settings.ambientReactivity) {
+          useAppStore.getState().setAmbientReactivity(settings.ambientReactivity, false)
+        }
       })
       .catch(() => {
         // Fallback to browser/system locale already initialized

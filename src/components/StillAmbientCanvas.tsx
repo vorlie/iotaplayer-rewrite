@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import {
+  evaluateSpectrumRange,
+  stepAmbientExposure,
+} from '../../electron/ambientReactivity'
 import { useAppStore } from '../store'
 
 type RgbTuple = [number, number, number]
@@ -287,6 +291,8 @@ export function StillAmbientCanvas({
   isPlaying,
 }: StillAmbientCanvasProps) {
   const lowPerformanceMode = useAppStore((s) => s.lowPerformanceMode)
+  const ambientReactivity = useAppStore((s) => s.ambientReactivity)
+  const reactivityRef = useRef(ambientReactivity)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [grainTile] = useState(() => getGrainTile())
   const targetPaletteRef = useRef<[LabTuple, LabTuple, LabTuple, LabTuple, LabTuple]>(DEFAULT_LAB_PALETTE)
@@ -303,6 +309,10 @@ export function StillAmbientCanvas({
   useEffect(() => {
     isPlayingRef.current = isPlaying
   }, [isPlaying])
+
+  useEffect(() => {
+    reactivityRef.current = ambientReactivity
+  }, [ambientReactivity])
 
   useEffect(() => {
     let cancelled = false
@@ -416,25 +426,25 @@ export function StillAmbientCanvas({
       energy += ((isPlayingRef.current ? 0.45 : 0.1) - energy) * 0.05
 
       const spectrum =
-        isPlayingRef.current && typeof window !== 'undefined' && 'playback' in window
+        isPlayingRef.current &&
+        reactivityRef.current.enabled &&
+        typeof window !== 'undefined' &&
+        'playback' in window
           ? window.playback.getSpectrum()
           : null
 
-      if (spectrum && spectrum.length >= 16) {
-        // Sub Bass + Bass average (matching Sound Keys Average of Range, Mid/Treble = 0)
-        let lowSum = 0
-        for (let i = 0; i < 16; i++) {
-          lowSum += spectrum[i]
-        }
-        const audioLev = lowSum / 16
-        // Peak-hold with instant attack and exponential release (release = 5)
-        const release = 5.0
-        bassEnvelope = Math.max(bassEnvelope * Math.exp(-release * dt), audioLev)
-        // Map 0..1 -> [-1.0, 1.5] clamped to [-1.0, 0.9]
-        exposure = Math.min(0.9, Math.max(-1.0, -1.0 + bassEnvelope * 2.5))
+      if (spectrum && spectrum.length > 0 && reactivityRef.current.enabled) {
+        const audioLev = evaluateSpectrumRange(spectrum, reactivityRef.current)
+        const next = stepAmbientExposure(
+          bassEnvelope,
+          audioLev,
+          dt,
+          reactivityRef.current,
+        )
+        bassEnvelope = next.envelope
+        exposure = next.exposure
       } else {
-        bassEnvelope *= Math.exp(-5.0 * dt)
-        // Neutral exposure (0.0) when paused or on MPV without FFT spectrum
+        bassEnvelope *= Math.exp(-reactivityRef.current.release * dt)
         exposure += (0.0 - exposure) * Math.min(1, dt * 6.0)
       }
 

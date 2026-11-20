@@ -4,6 +4,7 @@ import { AudioLines, ExternalLink, Globe, Info, Library, RefreshCw, ShieldCheck,
 import { applyAppLanguage } from '../i18n'
 import { formatNumber } from '../i18n/format'
 import { notifyLyricsReload } from '../hooks/useLibrary'
+import { AmbientRangeEditor } from '../components/AmbientRangeEditor'
 import { useAppStore } from '../store'
 import type { AppInfo, AppLanguage, FullscreenStyle, LyricsSourcePreference, PlaybackBackendMode, ScanResult } from '../types/electron'
 import '../styles/settings.css'
@@ -259,6 +260,10 @@ export function SettingsView() {
                     onChange={(e) => setVisualizerEnabled(e.target.checked)}
                   />
                 </div>
+
+                {fullscreenStyle === 'still' && !lowPerformanceMode && (
+                  <AmbientRangeEditor />
+                )}
 
                 <div className="settings-field">
                   <p className="settings-section__eyebrow" style={{ marginBottom: 2 }}>{t('lyrics.eyebrow')}</p>

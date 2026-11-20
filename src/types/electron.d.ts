@@ -106,6 +106,18 @@ interface DiscordActivityInput {
 
 type AppLanguage = 'system' | 'en' | 'pl'
 type FullscreenStyle = 'classic' | 'still'
+type AmbientRangeMode = 'average' | 'peak'
+
+interface AmbientReactivityConfig {
+  enabled: boolean
+  freqStart: number
+  freqEnd: number
+  ampFloor: number
+  ampCeiling: number
+  mode: AmbientRangeMode
+  release: number
+  intensity: number
+}
 
 interface AppSettings {
   discordClientId: string
@@ -123,6 +135,7 @@ interface AppSettings {
   fullscreenStyle: FullscreenStyle
   lowPerformanceMode: boolean
   visualizerEnabled: boolean
+  ambientReactivity: AmbientReactivityConfig
 }
 
 interface PlaybackPreferences {
@@ -205,6 +218,8 @@ declare global {
 
 export type {
   Album,
+  AmbientRangeMode,
+  AmbientReactivityConfig,
   AppInfo,
   AppInfoAPI,
   AppLanguage,

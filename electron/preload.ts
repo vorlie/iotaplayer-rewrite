@@ -6,6 +6,7 @@ import {
   normalizePlaybackPreferences,
   type PlaybackPreferences,
 } from './playbackSpeed'
+import type { AmbientReactivityConfig } from './ambientReactivity'
 import { DEFAULT_VOLUME, VolumeController, normalizeVolume } from './volume'
 import type {
   Album,
@@ -511,6 +512,7 @@ const settingsAPI = {
     fullscreenStyle: 'classic' | 'still'
     lowPerformanceMode: boolean
     visualizerEnabled: boolean
+    ambientReactivity: AmbientReactivityConfig
   }> => ipcRenderer.invoke('settings:get'),
   set: (value: {
     discordClientId?: string
@@ -528,6 +530,7 @@ const settingsAPI = {
     fullscreenStyle?: 'classic' | 'still'
     lowPerformanceMode?: boolean
     visualizerEnabled?: boolean
+    ambientReactivity?: Partial<AmbientReactivityConfig>
   }): Promise<void> => {
     if (value.playbackRate !== undefined || value.preservePitch !== undefined) {
       browserPlaybackPreferences = normalizePlaybackPreferences(value, browserPlaybackPreferences)

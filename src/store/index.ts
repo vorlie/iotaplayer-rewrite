@@ -20,8 +20,13 @@ import {
 } from '../../electron/shuffle'
 import { DEFAULT_VOLUME, normalizeVolume } from '../../electron/volume'
 import i18n from '../i18n'
+import {
+  DEFAULT_AMBIENT_REACTIVITY,
+  normalizeAmbientReactivity,
+} from '../../electron/ambientReactivity'
 import type {
   Album,
+  AmbientReactivityConfig,
   Artist,
   FullscreenStyle,
   Playlist,
@@ -92,11 +97,13 @@ interface AppStore {
   fullscreenStyle: FullscreenStyle
   lowPerformanceMode: boolean
   visualizerEnabled: boolean
+  ambientReactivity: AmbientReactivityConfig
   setFullscreenNowPlaying: (open: boolean) => void
   toggleFullscreenNowPlaying: () => void
   setFullscreenStyle: (style: FullscreenStyle, persist?: boolean) => void
   setLowPerformanceMode: (enabled: boolean, persist?: boolean) => void
   setVisualizerEnabled: (enabled: boolean, persist?: boolean) => void
+  setAmbientReactivity: (next: Partial<AmbientReactivityConfig>, persist?: boolean) => void
 
   // Library
   library: LibraryState
@@ -132,6 +139,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   fullscreenStyle: 'classic',
   lowPerformanceMode: false,
   visualizerEnabled: true,
+  ambientReactivity: { ...DEFAULT_AMBIENT_REACTIVITY },
   setFullscreenNowPlaying: (open) => set({ isFullscreenNowPlaying: open }),
   toggleFullscreenNowPlaying: () => set((s) => ({ isFullscreenNowPlaying: !s.isFullscreenNowPlaying })),
   setFullscreenStyle: (style, persist = true) => {
@@ -157,6 +165,16 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set({ visualizerEnabled: enabled })
     if (persist && typeof window !== 'undefined' && 'settings' in window) {
       void window.settings.set({ visualizerEnabled: enabled })
+    }
+  },
+  setAmbientReactivity: (next, persist = true) => {
+    const merged = normalizeAmbientReactivity(
+      { ...get().ambientReactivity, ...next },
+      get().ambientReactivity,
+    )
+    set({ ambientReactivity: merged })
+    if (persist && typeof window !== 'undefined' && 'settings' in window) {
+      void window.settings.set({ ambientReactivity: merged })
     }
   },
 

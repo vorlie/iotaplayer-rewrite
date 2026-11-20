@@ -1045,3 +1045,87 @@
     min-width: 0;
   }
 }
+
+/* Sound Keys–style Ambient Audio Reactivity Editor */
+.ambient-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+}
+
+.ambient-editor__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.ambient-editor__header h3 {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.ambient-editor__header p {
+  margin: 4px 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-3);
+}
+
+.ambient-editor__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ambient-editor__canvas {
+  width: 100%;
+  height: 150px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  display: block;
+  touch-action: none;
+}
+
+.ambient-editor__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  font-size: var(--text-xs);
+  color: var(--color-text-3);
+}
+
+.ambient-editor__notice {
+  color: var(--color-accent);
+}
+
+.ambient-editor__controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.ambient-editor__control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--text-xs);
+  color: var(--color-text-2);
+}
+
+.ambient-editor__control input[type="range"] {
+  accent-color: var(--color-accent);
+}
+
+@media (max-width: 700px) {
+  .ambient-editor__controls {
+    grid-template-columns: 1fr;
+  }
+}
