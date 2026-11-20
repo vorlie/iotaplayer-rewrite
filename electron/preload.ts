@@ -278,6 +278,8 @@ interface AudioNodeLike {
 
 interface AnalyserNodeLike extends AudioNodeLike {
   fftSize: number
+  minDecibels: number
+  maxDecibels: number
   smoothingTimeConstant: number
   frequencyBinCount: number
   getByteFrequencyData(array: Uint8Array): void
@@ -335,6 +337,8 @@ function initializeAnalyser(): void {
   const nextAnalyser = context.createAnalyser()
 
   nextAnalyser.fftSize = 2048
+  nextAnalyser.minDecibels = -95
+  nextAnalyser.maxDecibels = -10
   nextAnalyser.smoothingTimeConstant = 0.4
 
   if (!browserAudioSource) {
