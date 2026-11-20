@@ -5,10 +5,20 @@
   "saveSettings": "Save Settings",
   "saving": "Saving…",
   "categories": {
-    "playback": "Playback",
+    "general": "General",
+    "playback": "Audio & Lyrics",
+    "appearance": "Appearance & Effects",
     "library": "Library",
     "integrations": "Integrations",
     "credits": "Credits"
+  },
+  "general": {
+    "eyebrow": "General",
+    "heading": "Language & application"
+  },
+  "appearance": {
+    "eyebrow": "Appearance",
+    "heading": "Visuals & performance"
   },
   "language": {
     "title": "Application Language",

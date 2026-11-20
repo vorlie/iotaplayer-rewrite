@@ -5,10 +5,20 @@
   "saveSettings": "Zapisz ustawienia",
   "saving": "Zapisywanie…",
   "categories": {
-    "playback": "Odtwarzanie",
+    "general": "Ogólne",
+    "playback": "Dźwięk i teksty",
+    "appearance": "Wygląd i efekty",
     "library": "Biblioteka",
     "integrations": "Integracje",
     "credits": "Autorzy i licencje"
+  },
+  "general": {
+    "eyebrow": "Ogólne",
+    "heading": "Język i aplikacja"
+  },
+  "appearance": {
+    "eyebrow": "Wygląd",
+    "heading": "Efekty wizualne i wydajność"
   },
   "language": {
     "title": "Język aplikacji",

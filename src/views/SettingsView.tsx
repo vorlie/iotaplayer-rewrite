@@ -12,14 +12,19 @@ import '../styles/settings.css'
 const DEFAULT_LIBRARY_ROOT = ''
 
 const settingsCategories = [
+  { id: 'general', Icon: Globe },
   { id: 'playback', Icon: AudioLines },
+  { id: 'appearance', Icon: Sparkles },
   { id: 'library', Icon: Library },
   { id: 'integrations', Icon: ShieldCheck },
   { id: 'credits', Icon: Info },
 ] as const
 
+type SettingsCategoryId = (typeof settingsCategories)[number]['id']
+
 export function SettingsView() {
   const { t, i18n } = useTranslation(['settings', 'common'])
+  const [activeCategory, setActiveCategory] = useState<SettingsCategoryId>('general')
   const {
     library,
     scanLibrary,
@@ -169,10 +174,15 @@ export function SettingsView() {
           <aside className="settings-sidebar">
             <div className="settings-sidebar__label">{t('navigation')}</div>
             {settingsCategories.map(({ id, Icon }) => (
-              <a key={id} href={`#${id}`} className="settings-sidebar__link">
+              <button
+                key={id}
+                type="button"
+                className={`settings-sidebar__link ${activeCategory === id ? 'settings-sidebar__link--active' : ''}`}
+                onClick={() => setActiveCategory(id)}
+              >
                 <Icon size={14} />
                 <span>{t(`categories.${id}`)}</span>
-              </a>
+              </button>
             ))}
             <div className="settings-sidebar__divider" />
             <div className="settings-actions">
@@ -183,158 +193,175 @@ export function SettingsView() {
           </aside>
 
           <main className="settings-content">
-            <section id="playback" className="settings-section">
-              <header className="settings-section__header">
-                <div>
-                  <p className="settings-section__eyebrow">{t('playback.eyebrow')}</p>
-                  <h2>{t('playback.heading')}</h2>
-                </div>
-                <Sparkles size={16} className="settings-section__icon" />
-              </header>
-
-              <div className="settings-card">
-                <div className="settings-field">
-                  <label htmlFor="app-language" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    <Globe size={13} />
-                    {t('language.title')}
-                  </label>
-                  <select
-                    id="app-language"
-                    value={language}
-                    onChange={(e) => void handleLanguageChange(e.target.value as AppLanguage)}
-                  >
-                    <option value="system">{t('language.options.system')}</option>
-                    <option value="en">{t('language.options.en')}</option>
-                    <option value="pl">{t('language.options.pl')}</option>
-                  </select>
-                  <small>{t('language.description')}</small>
-                </div>
-
-                <div className="settings-field">
-                  <label htmlFor="audio-backend">{t('playback.backendLabel')}</label>
-                  <select
-                    id="audio-backend"
-                    value={backendMode}
-                    onChange={(e) => setBackendMode(e.target.value as PlaybackBackendMode)}
-                  >
-                    <option value="auto">{t('playback.backendOptions.auto')}</option>
-                    <option value="mpv">{t('playback.backendOptions.mpv')}</option>
-                    <option value="browser">{t('playback.backendOptions.browser')}</option>
-                  </select>
-                  <small>{t('playback.backendHint')}</small>
-                </div>
-
-                <div className="settings-field">
-                  <label htmlFor="fullscreen-style">{t('playback.fullscreenStyleLabel')}</label>
-                  <select
-                    id="fullscreen-style"
-                    value={fullscreenStyle}
-                    onChange={(e) => setFullscreenStyle(e.target.value as FullscreenStyle)}
-                  >
-                    <option value="classic">{t('playback.fullscreenStyleOptions.classic')}</option>
-                    <option value="still">{t('playback.fullscreenStyleOptions.still')}</option>
-                  </select>
-                  <small>{t('playback.fullscreenStyleHint')}</small>
-                </div>
-
-                <div className="settings-toggle-row">
+            {activeCategory === 'general' && (
+              <section id="general" className="settings-section">
+                <header className="settings-section__header">
                   <div>
-                    <h3>{t('playback.lowPerformanceLabel')}</h3>
-                    <p>{t('playback.lowPerformanceHint')}</p>
+                    <p className="settings-section__eyebrow">{t('general.eyebrow')}</p>
+                    <h2>{t('general.heading')}</h2>
                   </div>
-                  <input
-                    type="checkbox"
-                    checked={lowPerformanceMode}
-                    onChange={(e) => setLowPerformanceMode(e.target.checked)}
-                  />
+                  <Globe size={16} className="settings-section__icon" />
+                </header>
+
+                <div className="settings-card">
+                  <div className="settings-field">
+                    <label htmlFor="app-language">{t('language.title')}</label>
+                    <select
+                      id="app-language"
+                      value={language}
+                      onChange={(e) => void handleLanguageChange(e.target.value as AppLanguage)}
+                    >
+                      <option value="system">{t('language.options.system')}</option>
+                      <option value="en">{t('language.options.en')}</option>
+                      <option value="pl">{t('language.options.pl')}</option>
+                    </select>
+                    <small>{t('language.description')}</small>
+                  </div>
                 </div>
 
-                <div className="settings-toggle-row">
+                <div className="settings-card settings-card--compact">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontWeight: 600, color: 'var(--color-text-1)' }}>
+                        {appInfo?.name ?? t('common:app.name')} {appInfo?.version ? `v${appInfo.version}` : ''}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginTop: 2 }}>
+                        {t('integrations.publishedBy', { publisher: appInfo?.publisher ?? 'vorlie', appId: 'pl.vorlie.iotaplayer' })}
+                      </div>
+                    </div>
+                    <a
+                      href={appInfo?.projectUrl ?? 'https://vorlie.pl/projects/iotaplayer'}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="settings-button settings-button--secondary"
+                      style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <span>vorlie.pl</span>
+                      <ExternalLink size={13} />
+                    </a>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {activeCategory === 'playback' && (
+              <section id="playback" className="settings-section">
+                <header className="settings-section__header">
                   <div>
-                    <h3>{t('playback.visualizerLabel')}</h3>
-                    <p>{t('playback.visualizerHint')}</p>
+                    <p className="settings-section__eyebrow">{t('playback.eyebrow')}</p>
+                    <h2>{t('playback.heading')}</h2>
                   </div>
-                  <input
-                    type="checkbox"
-                    checked={visualizerEnabled}
-                    onChange={(e) => setVisualizerEnabled(e.target.checked)}
-                  />
+                  <AudioLines size={16} className="settings-section__icon" />
+                </header>
+
+                <div className="settings-card">
+                  <div className="settings-field">
+                    <label htmlFor="audio-backend">{t('playback.backendLabel')}</label>
+                    <select
+                      id="audio-backend"
+                      value={backendMode}
+                      onChange={(e) => setBackendMode(e.target.value as PlaybackBackendMode)}
+                    >
+                      <option value="auto">{t('playback.backendOptions.auto')}</option>
+                      <option value="mpv">{t('playback.backendOptions.mpv')}</option>
+                      <option value="browser">{t('playback.backendOptions.browser')}</option>
+                    </select>
+                    <small>{t('playback.backendHint')}</small>
+                  </div>
+
+                  <div className="settings-field">
+                    <p className="settings-section__eyebrow" style={{ marginBottom: 2 }}>{t('lyrics.eyebrow')}</p>
+                    <label htmlFor="lyrics-source-preference">{t('lyrics.label')}</label>
+                    <select
+                      id="lyrics-source-preference"
+                      value={lyricsSourcePreference}
+                      onChange={(e) => void handleLyricsPreferenceChange(e.target.value as LyricsSourcePreference)}
+                    >
+                      <option value="embedded">{t('lyrics.options.embedded')}</option>
+                      <option value="synchronized">{t('lyrics.options.synchronized')}</option>
+                      <option value="sidecar">{t('lyrics.options.sidecar')}</option>
+                    </select>
+                    <small>
+                      {lyricsSourcePreference === 'embedded' && t('lyrics.hints.embedded')}
+                      {lyricsSourcePreference === 'synchronized' && t('lyrics.hints.synchronized')}
+                      {lyricsSourcePreference === 'sidecar' && t('lyrics.hints.sidecar')}
+                    </small>
+                  </div>
+
+                  {lyricsSourcePreference === 'synchronized' && (
+                    <div className="settings-toggle-row">
+                      <div>
+                        <h3>{t('lyrics.ignoreEmbeddedLabel')}</h3>
+                        <p>{t('lyrics.ignoreEmbeddedHint')}</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={lyricsIgnoreEmbedded}
+                        onChange={(e) => void handleLyricsIgnoreEmbeddedChange(e.target.checked)}
+                      />
+                    </div>
+                  )}
                 </div>
+              </section>
+            )}
 
-                {fullscreenStyle === 'still' && !lowPerformanceMode && (
-                  <AmbientRangeEditor />
-                )}
+            {activeCategory === 'appearance' && (
+              <section id="appearance" className="settings-section">
+                <header className="settings-section__header">
+                  <div>
+                    <p className="settings-section__eyebrow">{t('appearance.eyebrow')}</p>
+                    <h2>{t('appearance.heading')}</h2>
+                  </div>
+                  <Sparkles size={16} className="settings-section__icon" />
+                </header>
 
-                <div className="settings-field">
-                  <p className="settings-section__eyebrow" style={{ marginBottom: 2 }}>{t('lyrics.eyebrow')}</p>
-                  <label htmlFor="lyrics-source-preference">{t('lyrics.label')}</label>
-                  <select
-                    id="lyrics-source-preference"
-                    value={lyricsSourcePreference}
-                    onChange={(e) => void handleLyricsPreferenceChange(e.target.value as LyricsSourcePreference)}
-                  >
-                    <option value="embedded">{t('lyrics.options.embedded')}</option>
-                    <option value="synchronized">{t('lyrics.options.synchronized')}</option>
-                    <option value="sidecar">{t('lyrics.options.sidecar')}</option>
-                  </select>
-                  <small>
-                    {lyricsSourcePreference === 'embedded' && t('lyrics.hints.embedded')}
-                    {lyricsSourcePreference === 'synchronized' && t('lyrics.hints.synchronized')}
-                    {lyricsSourcePreference === 'sidecar' && t('lyrics.hints.sidecar')}
-                  </small>
-                </div>
+                <div className="settings-card">
+                  <div className="settings-field">
+                    <label htmlFor="fullscreen-style">{t('playback.fullscreenStyleLabel')}</label>
+                    <select
+                      id="fullscreen-style"
+                      value={fullscreenStyle}
+                      onChange={(e) => setFullscreenStyle(e.target.value as FullscreenStyle)}
+                    >
+                      <option value="classic">{t('playback.fullscreenStyleOptions.classic')}</option>
+                      <option value="still">{t('playback.fullscreenStyleOptions.still')}</option>
+                    </select>
+                    <small>{t('playback.fullscreenStyleHint')}</small>
+                  </div>
 
-                {lyricsSourcePreference === 'synchronized' && (
                   <div className="settings-toggle-row">
                     <div>
-                      <h3>{t('lyrics.ignoreEmbeddedLabel')}</h3>
-                      <p>{t('lyrics.ignoreEmbeddedHint')}</p>
+                      <h3>{t('playback.lowPerformanceLabel')}</h3>
+                      <p>{t('playback.lowPerformanceHint')}</p>
                     </div>
                     <input
                       type="checkbox"
-                      checked={lyricsIgnoreEmbedded}
-                      onChange={(e) => void handleLyricsIgnoreEmbeddedChange(e.target.checked)}
+                      checked={lowPerformanceMode}
+                      onChange={(e) => setLowPerformanceMode(e.target.checked)}
                     />
                   </div>
-                )}
 
-                <div className="settings-toggle-row">
-                  <div>
-                    <h3>{t('discord.title')}</h3>
-                    <p>{t('discord.description')}</p>
+                  <div className="settings-toggle-row">
+                    <div>
+                      <h3>{t('playback.visualizerLabel')}</h3>
+                      <p>{t('playback.visualizerHint')}</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={visualizerEnabled}
+                      onChange={(e) => setVisualizerEnabled(e.target.checked)}
+                    />
                   </div>
-                  <input
-                    type="checkbox"
-                    checked={discordEnabled}
-                    onChange={(e) => setDiscordEnabled(e.target.checked)}
-                  />
-                </div>
 
-                <div className="settings-field">
-                  <label htmlFor="discord-app-id">{t('discord.clientIdLabel')}</label>
-                  <input
-                    id="discord-app-id"
-                    type="text"
-                    value={discordClientId}
-                    onChange={(e) => setDiscordClientId(e.target.value)}
-                    placeholder={t('discord.clientIdPlaceholder')}
-                  />
+                  {fullscreenStyle === 'still' && !lowPerformanceMode && (
+                    <AmbientRangeEditor />
+                  )}
                 </div>
+              </section>
+            )}
 
-                <div className="settings-field">
-                  <label htmlFor="imgur-client-id">{t('discord.imgurIdLabel')}</label>
-                  <input
-                    id="imgur-client-id"
-                    type="text"
-                    value={imgurClientId}
-                    onChange={(e) => setImgurClientId(e.target.value)}
-                    placeholder={t('discord.imgurIdPlaceholder')}
-                  />
-                </div>
-              </div>
-            </section>
-
-            <section id="library" className="settings-section">
+            {activeCategory === 'library' && (
+              <section id="library" className="settings-section">
               <header className="settings-section__header">
                 <div>
                   <p className="settings-section__eyebrow">{t('library.eyebrow')}</p>
@@ -454,52 +481,69 @@ export function SettingsView() {
                 )}
               </div>
             </section>
+            )}
 
-            <section id="integrations" className="settings-section">
-              <header className="settings-section__header">
-                <div>
-                  <p className="settings-section__eyebrow">{t('integrations.eyebrow')}</p>
-                  <h2>{t('integrations.heading')}</h2>
-                </div>
-                <ShieldCheck size={16} className="settings-section__icon" />
-              </header>
-
-              <div className="settings-card settings-card--compact">
-                <div className="settings-status">
-                  <span className="settings-status__dot" />
-                  {discordEnabled ? t('discord.enabledStatus') : t('discord.disabledStatus')}
-                </div>
-                <div className="settings-status settings-status--muted">
-                  <span className="settings-status__dot settings-status__dot--muted" />
-                  {imgurClientId ? t('discord.imgurConfigured') : t('discord.imgurNotConfigured')}
-                </div>
-              </div>
-
-              <div className="settings-card settings-card--compact" style={{ marginTop: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            {activeCategory === 'integrations' && (
+              <section id="integrations" className="settings-section">
+                <header className="settings-section__header">
                   <div>
-                    <div style={{ fontWeight: 600, color: 'var(--color-text-1)' }}>
-                      {appInfo?.name ?? t('common:app.name')} {appInfo?.version ? `v${appInfo.version}` : ''}
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--color-text-3)', marginTop: 2 }}>
-                      {t('integrations.publishedBy', { publisher: appInfo?.publisher ?? 'vorlie', appId: 'pl.vorlie.iotaplayer' })}
-                    </div>
+                    <p className="settings-section__eyebrow">{t('integrations.eyebrow')}</p>
+                    <h2>{t('integrations.heading')}</h2>
                   </div>
-                  <a
-                    href={appInfo?.projectUrl ?? 'https://vorlie.pl/projects/iotaplayer'}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="settings-button settings-button--secondary"
-                    style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                  >
-                    <span>vorlie.pl</span>
-                    <ExternalLink size={13} />
-                  </a>
-                </div>
-              </div>
-            </section>
+                  <ShieldCheck size={16} className="settings-section__icon" />
+                </header>
 
-            <section id="credits" className="settings-section">
+                <div className="settings-card">
+                  <div className="settings-toggle-row">
+                    <div>
+                      <h3>{t('discord.title')}</h3>
+                      <p>{t('discord.description')}</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={discordEnabled}
+                      onChange={(e) => setDiscordEnabled(e.target.checked)}
+                    />
+                  </div>
+
+                  <div className="settings-field">
+                    <label htmlFor="discord-app-id">{t('discord.clientIdLabel')}</label>
+                    <input
+                      id="discord-app-id"
+                      type="text"
+                      value={discordClientId}
+                      onChange={(e) => setDiscordClientId(e.target.value)}
+                      placeholder={t('discord.clientIdPlaceholder')}
+                    />
+                  </div>
+
+                  <div className="settings-field">
+                    <label htmlFor="imgur-client-id">{t('discord.imgurIdLabel')}</label>
+                    <input
+                      id="imgur-client-id"
+                      type="text"
+                      value={imgurClientId}
+                      onChange={(e) => setImgurClientId(e.target.value)}
+                      placeholder={t('discord.imgurIdPlaceholder')}
+                    />
+                  </div>
+                </div>
+
+                <div className="settings-card settings-card--compact">
+                  <div className="settings-status">
+                    <span className="settings-status__dot" />
+                    {discordEnabled ? t('discord.enabledStatus') : t('discord.disabledStatus')}
+                  </div>
+                  <div className="settings-status settings-status--muted">
+                    <span className="settings-status__dot settings-status__dot--muted" />
+                    {imgurClientId ? t('discord.imgurConfigured') : t('discord.imgurNotConfigured')}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {activeCategory === 'credits' && (
+              <section id="credits" className="settings-section">
               <header className="settings-section__header">
                 <div>
                   <p className="settings-section__eyebrow">{t('credits.eyebrow')}</p>
@@ -597,6 +641,7 @@ export function SettingsView() {
                 </div>
               </div>
             </section>
+            )}
           </main>
         </div>
       </div>
