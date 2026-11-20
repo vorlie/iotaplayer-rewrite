@@ -302,28 +302,28 @@ export function AmbientRangeEditor() {
         <div className="ambient-editor__presets">
           <button
             type="button"
-            className="btn-secondary btn-sm"
+            className="settings-button settings-button--secondary settings-button--sm"
             onClick={() => setConfig(AMBIENT_REACTIVITY_PRESETS.lowTones)}
           >
             {t('ambient.presets.lowTones')}
           </button>
           <button
             type="button"
-            className="btn-secondary btn-sm"
+            className="settings-button settings-button--secondary settings-button--sm"
             onClick={() => setConfig(AMBIENT_REACTIVITY_PRESETS.subBass)}
           >
             {t('ambient.presets.subBass')}
           </button>
           <button
             type="button"
-            className="btn-secondary btn-sm"
+            className="settings-button settings-button--secondary settings-button--sm"
             onClick={() => setConfig(AMBIENT_REACTIVITY_PRESETS.fullBeat)}
           >
             {t('ambient.presets.fullBeat')}
           </button>
           <button
             type="button"
-            className="btn-secondary btn-sm"
+            className={`settings-button settings-button--sm ${config.enabled ? 'settings-button--primary' : 'settings-button--secondary'}`}
             onClick={() => setConfig({ enabled: !config.enabled })}
           >
             {config.enabled ? t('ambient.enabled') : t('ambient.disabled')}
