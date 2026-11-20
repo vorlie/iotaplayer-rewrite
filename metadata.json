@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 1,
+  "id": "iotaplayer",
+  "name": "IotaPlayer",
+  "tagline": "A local-first desktop music player with MPV playback, word-level lyrics, and an intentional dark interface.",
+  "summary": "IotaPlayer indexes your local audio library into SQLite and pairs native MPV playback (with an automatic Web Audio fallback) with word- and line-synchronized lyrics, a 10-band parametric equalizer, speed and pitch presets, smart playlists, library statistics, and Discord Rich Presence.",
+  "status": "active",
+  "category": "desktop-app",
+  "accentColor": "#ffa7a7",
+  "platforms": ["windows", "macos", "linux"],
+  "languages": ["en", "pl"],
+  "repo": {
+    "owner": "vorlie",
+    "name": "iotaplayer-rewrite",
+    "branch": "main"
+  },
+  "links": {
+    "github": "https://github.com/vorlie/iotaplayer-rewrite",
+    "releases": "https://github.com/vorlie/iotaplayer-rewrite/releases",
+    "docs": "docs/README.md",
+    "platformSupport": "docs/PLATFORM-SUPPORT.md",
+    "notices": "THIRD_PARTY_NOTICES.md"
+  },
+  "techStack": [
+    "Electron",
+    "React 19",
+    "TypeScript",
+    "SQLite",
+    "MPV",
+    "Web Audio API",
+    "Zustand",
+    "Vite"
+  ],
+  "requirements": {
+    "optionalDependencies": [
+      {
+        "name": "mpv",
+        "purpose": "Primary native audio backend for broad codec support (FLAC, ALAC, Opus, WAV, etc.). Automatically falls back to the built-in Browser/Web Audio engine if unavailable."
+      }
+    ]
+  },
+  "highlights": [
+    {
+      "id": "playback-engine",
+      "title": "Dual Playback Engine & Speed Presets",
+      "description": "Plays through MPV over IPC with an automatic Web Audio fallback, 10-band parametric EQ, live spectrum visualizer, and Nightcore/Daycore/Slowed speed & pitch presets."
+    },
+    {
+      "id": "lyrics-engine",
+      "title": "Word- & Line-Synchronized Lyrics",
+      "description": "Supports Lyricsfile 1.0, Enhanced LRC, standard LRC, embedded tags, and plain sidecars with word-level highlighting, click-to-seek, and instrumental gap indicators."
+    },
+    {
+      "id": "fullscreen-modes",
+      "title": "Classic & Still Fullscreen Modes",
+      "description": "Switch between the 3-pane Now Playing workspace and Fullscreen Now Playing in Classic (blurred cover backdrop) or Still (ambient dark-glass mesh with film grain) styles."
+    },
+    {
+      "id": "library-insights",
+      "title": "SQLite Library, Smart Playlists & Stats",
+      "description": "Fast local indexing with Hi-Res/Lossless quality badges, Track File Inspector, rule-based Smart Playlists (ALL/ANY), and SQL-aggregated Library Format Statistics."
+    },
+    {
+      "id": "low-performance-mode",
+      "title": "Low Performance Mode",
+      "description": "Optional reduced-effects mode that disables glass blurs, ambient shaders, and visualizer loops and falls back to line-level lyrics to save GPU headroom while gaming."
+    },
+    {
+      "id": "desktop-integration",
+      "title": "Localization & OS Integration",
+      "description": "Full English and Polish UI with system locale detection, hardware media key support via OS Media Session, and Discord Rich Presence."
+    }
+  ],
+  "heroImage": "docs/images/nowplaying-page.png",
+  "screenshots": [
+    {
+      "path": "docs/images/nowplaying-page.png",
+      "title": "Now Playing Workspace",
+      "caption": "3-pane Now Playing view with synchronized lyrics, artwork, and resizable Up Next queue.",
+      "category": "player"
+    },
+    {
+      "path": "docs/images/fullscreen-still.png",
+      "title": "Fullscreen — Still Ambient Style",
+      "caption": "Editorial dark-glass Still ambient backdrop with subtle film grain.",
+      "category": "fullscreen"
+    },
+    {
+      "path": "docs/images/fullscreen-classic.png",
+      "title": "Fullscreen — Classic Style",
+      "caption": "Classic blurred album-art backdrop with Split, Artwork, and Lyrics modes.",
+      "category": "fullscreen"
+    },
+    {
+      "path": "docs/images/tracks-page.png",
+      "title": "Tracks",
+      "caption": "Track library with media quality badges and quick actions.",
+      "category": "library"
+    },
+    {
+      "path": "docs/images/albums-page.png",
+      "title": "Albums",
+      "caption": "Album grid view.",
+      "category": "library"
+    },
+    {
+      "path": "docs/images/artists-page.png",
+      "title": "Artists",
+      "caption": "Artists directory.",
+      "category": "library"
+    },
+    {
+      "path": "docs/images/search-page.png",
+      "title": "Search",
+      "caption": "Multi-field library search across tracks, albums, and artists.",
+      "category": "library"
+    },
+    {
+      "path": "docs/images/statistics-page.png",
+      "title": "Library Statistics",
+      "caption": "SQL-aggregated breakdown by quality tiers, codecs, sample rates, and genres.",
+      "category": "library"
+    },
+    {
+      "path": "docs/images/playlists-page.png",
+      "title": "Playlists & Smart Playlists",
+      "caption": "Standard and rule-based Smart Playlists.",
+      "category": "playlists"
+    },
+    {
+      "path": "docs/images/playlist-details-page.png",
+      "title": "Playlist Details",
+      "caption": "Custom cover art, drag-and-drop track reordering, and inline management.",
+      "category": "playlists"
+    },
+    {
+      "path": "docs/images/favorites-page.png",
+      "title": "Favorites",
+      "caption": "Favorited tracks collection.",
+      "category": "playlists"
+    },
+    {
+      "path": "docs/images/recentlyplayed-page.png",
+      "title": "Recently Played",
+      "caption": "Playback history with one-click clearing.",
+      "category": "playlists"
+    },
+    {
+      "path": "docs/images/eq-speed-page.png",
+      "title": "Equalizer & Playback Speed",
+      "caption": "10-band parametric EQ, live visualizer, and speed/pitch presets.",
+      "category": "settings"
+    },
+    {
+      "path": "docs/images/settings-page.png",
+      "title": "Settings",
+      "caption": "Playback, Lyrics, Library, Appearance, Language, and Credits & Notices.",
+      "category": "settings"
+    }
+  ]
+}
