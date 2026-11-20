@@ -6,6 +6,7 @@ export interface AmbientReactivityConfig {
   freqEnd: number
   ampFloor: number
   ampCeiling: number
+  spectrumCeiling: number
   mode: AmbientRangeMode
   release: number
   intensity: number
@@ -17,6 +18,7 @@ export const DEFAULT_AMBIENT_REACTIVITY: AmbientReactivityConfig = {
   freqEnd: 0.25,
   ampFloor: 0,
   ampCeiling: 1,
+  spectrumCeiling: 1.5,
   mode: 'average',
   release: 5,
   intensity: 0.9,
@@ -33,6 +35,7 @@ export const AMBIENT_REACTIVITY_PRESETS: Record<
     freqEnd: 0.14,
     ampFloor: 0.2,
     ampCeiling: 0.95,
+    spectrumCeiling: 1.5,
     mode: 'peak',
     release: 6,
     intensity: 0.9,
@@ -43,6 +46,7 @@ export const AMBIENT_REACTIVITY_PRESETS: Record<
     freqEnd: 0.65,
     ampFloor: 0.1,
     ampCeiling: 0.9,
+    spectrumCeiling: 1.5,
     mode: 'average',
     release: 5,
     intensity: 0.9,
@@ -80,19 +84,26 @@ export function normalizeAmbientReactivity(
     Math.min(1, freqStart + 0.05),
     1,
   )
+  const spectrumCeiling = clamp(
+    typeof raw.spectrumCeiling === 'number' && Number.isFinite(raw.spectrumCeiling)
+      ? raw.spectrumCeiling
+      : fallback.spectrumCeiling,
+    1.0,
+    3.0,
+  )
   const ampFloor = clamp(
     typeof raw.ampFloor === 'number' && Number.isFinite(raw.ampFloor)
       ? raw.ampFloor
       : fallback.ampFloor,
     0,
-    1.2,
+    Math.max(0, spectrumCeiling - 0.1),
   )
   const ampCeiling = clamp(
     typeof raw.ampCeiling === 'number' && Number.isFinite(raw.ampCeiling)
       ? raw.ampCeiling
       : fallback.ampCeiling,
-    Math.min(1.5, ampFloor + 0.1),
-    1.5,
+    Math.min(spectrumCeiling, ampFloor + 0.1),
+    spectrumCeiling,
   )
   const mode: AmbientRangeMode =
     raw.mode === 'peak' || raw.mode === 'average' ? raw.mode : fallback.mode
@@ -117,6 +128,7 @@ export function normalizeAmbientReactivity(
     freqEnd,
     ampFloor,
     ampCeiling,
+    spectrumCeiling,
     mode,
     release,
     intensity,

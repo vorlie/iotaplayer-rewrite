@@ -19,8 +19,6 @@ type DragMode =
   | 'bottom-right'
   | null
 
-const MAX_AMP = 1.5
-
 function clamp(v: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, v))
 }
@@ -95,6 +93,7 @@ export function AmbientRangeEditor() {
       }
 
       const cfg = configRef.current
+      const maxAmp = cfg.spectrumCeiling ?? 1.5
       const meterWidth = 34
       const gap = 12
       const specWidth = Math.max(80, width - meterWidth - gap)
@@ -106,12 +105,14 @@ export function AmbientRangeEditor() {
       ctx.fillRect(0, 0, specWidth, height)
       ctx.fillRect(specWidth + gap, 0, meterWidth, height)
 
-      // Horizontal reference grid lines (0.25..1.25, with 1.0 as spectrum ceiling)
+      // Horizontal reference grid lines (0.25..maxAmp, with 1.0 as spectrum ceiling)
       ctx.lineWidth = 1
-      for (const level of [0.25, 0.5, 0.75, 1.0, 1.25]) {
-        const gy = Math.round((1 - level / MAX_AMP) * height) + 0.5
+      for (let level = 0.25; level < maxAmp; level += 0.25) {
+        const gy = Math.round((1 - level / maxAmp) * height) + 0.5
         ctx.strokeStyle =
-          level === 1.0 ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.07)'
+          Math.abs(level - 1.0) < 0.001
+            ? 'rgba(255, 255, 255, 0.16)'
+            : 'rgba(255, 255, 255, 0.07)'
         ctx.beginPath()
         ctx.moveTo(0, gy)
         ctx.lineTo(specWidth, gy)
@@ -125,7 +126,7 @@ export function AmbientRangeEditor() {
           ? window.playback.getSpectrum()
           : null
 
-      // Draw 64 spectrum bars (0..1 mapped within 0..MAX_AMP so headroom remains above)
+      // Draw 64 spectrum bars (0..1 mapped within 0..maxAmp so headroom remains above)
       if (spectrum && spectrum.length > 0) {
         const barW = specWidth / spectrum.length
         ctx.fillStyle = cfg.enabled
@@ -133,7 +134,7 @@ export function AmbientRangeEditor() {
           : 'rgba(255, 255, 255, 0.18)'
         for (let i = 0; i < spectrum.length; i++) {
           const val = spectrum[i]
-          const bh = Math.max(1, (val / MAX_AMP) * height)
+          const bh = Math.max(1, (val / maxAmp) * height)
           ctx.fillRect(
             i * barW,
             height - bh,
@@ -166,8 +167,8 @@ export function AmbientRangeEditor() {
       // Draw interactive Sound Keys Range Box
       const boxX1 = cfg.freqStart * specWidth
       const boxX2 = cfg.freqEnd * specWidth
-      const boxY1 = (1 - cfg.ampCeiling / MAX_AMP) * height
-      const boxY2 = (1 - cfg.ampFloor / MAX_AMP) * height
+      const boxY1 = (1 - cfg.ampCeiling / maxAmp) * height
+      const boxY2 = (1 - cfg.ampFloor / maxAmp) * height
       const boxW = Math.max(6, boxX2 - boxX1)
       const boxH = Math.max(6, boxY2 - boxY1)
 
@@ -207,10 +208,11 @@ export function AmbientRangeEditor() {
     if (x < 0 || x > specWidth || y < 0 || y > rect.height) return null
 
     const cfg = configRef.current
+    const maxAmp = cfg.spectrumCeiling ?? 1.5
     const x1 = cfg.freqStart * specWidth
     const x2 = cfg.freqEnd * specWidth
-    const y1 = (1 - cfg.ampCeiling / MAX_AMP) * rect.height
-    const y2 = (1 - cfg.ampFloor / MAX_AMP) * rect.height
+    const y1 = (1 - cfg.ampCeiling / maxAmp) * rect.height
+    const y2 = (1 - cfg.ampFloor / maxAmp) * rect.height
     const edge = 8
 
     const nearL = Math.abs(x - x1) <= edge
@@ -256,8 +258,9 @@ export function AmbientRangeEditor() {
     }
 
     const { mode, startX, startY, initial } = dragRef.current
+    const maxAmp = initial.spectrumCeiling ?? 1.5
     const dx = (e.clientX - startX) / specWidth
-    const dy = ((e.clientY - startY) / rect.height) * MAX_AMP // positive = down = lower amplitude
+    const dy = ((e.clientY - startY) / rect.height) * maxAmp // positive = down = lower amplitude
 
     let { freqStart, freqEnd, ampFloor, ampCeiling } = initial
     const minW = 0.05
@@ -268,7 +271,7 @@ export function AmbientRangeEditor() {
       const h = ampCeiling - ampFloor
       freqStart = clamp(freqStart + dx, 0, 1 - w)
       freqEnd = freqStart + w
-      ampFloor = clamp(ampFloor - dy, 0, MAX_AMP - h)
+      ampFloor = clamp(ampFloor - dy, 0, maxAmp - h)
       ampCeiling = ampFloor + h
     } else {
       if (mode?.includes('left')) {
@@ -278,7 +281,7 @@ export function AmbientRangeEditor() {
         freqEnd = clamp(initial.freqEnd + dx, freqStart + minW, 1)
       }
       if (mode?.includes('top')) {
-        ampCeiling = clamp(initial.ampCeiling - dy, ampFloor + minH, MAX_AMP)
+        ampCeiling = clamp(initial.ampCeiling - dy, ampFloor + minH, maxAmp)
       }
       if (mode?.includes('bottom')) {
         ampFloor = clamp(initial.ampFloor - dy, 0, ampCeiling - minH)
@@ -372,6 +375,20 @@ export function AmbientRangeEditor() {
             <option value="average">{t('ambient.modes.average')}</option>
             <option value="peak">{t('ambient.modes.peak')}</option>
           </select>
+        </label>
+
+        <label className="ambient-editor__control">
+          <span>
+            {t('ambient.ceilingLabel')} ({Math.round((config.spectrumCeiling ?? 1.5) * 100)}%)
+          </span>
+          <input
+            type="range"
+            min={1}
+            max={3}
+            step={0.1}
+            value={config.spectrumCeiling ?? 1.5}
+            onChange={(e) => setConfig({ spectrumCeiling: Number(e.target.value) })}
+          />
         </label>
 
         <label className="ambient-editor__control">

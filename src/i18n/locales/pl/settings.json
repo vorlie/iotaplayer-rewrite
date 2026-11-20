@@ -68,7 +68,8 @@
       "peak": "Szczyt (Peak)"
     },
     "releaseLabel": "Wygaszanie",
-    "intensityLabel": "Maks. ekspozycja"
+    "intensityLabel": "Maks. ekspozycja",
+    "ceilingLabel": "Sufit widma"
   },
   "lyrics": {
     "eyebrow": "Teksty",

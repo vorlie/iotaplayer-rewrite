@@ -68,7 +68,8 @@
       "peak": "Peak"
     },
     "releaseLabel": "Release",
-    "intensityLabel": "Max exposure"
+    "intensityLabel": "Max exposure",
+    "ceilingLabel": "Spectrum ceiling"
   },
   "lyrics": {
     "eyebrow": "Lyrics",

@@ -114,6 +114,7 @@ interface AmbientReactivityConfig {
   freqEnd: number
   ampFloor: number
   ampCeiling: number
+  spectrumCeiling: number
   mode: AmbientRangeMode
   release: number
   intensity: number
