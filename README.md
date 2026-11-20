@@ -188,6 +188,21 @@ Styling is organized in explicit layers imported via `src/index.css` without ext
 
 ---
 
+## Performance & Hardware Notes
+
+IotaPlayer relies on Electron's GPU-accelerated compositor for several of its visual effects. On systems with a dedicated GPU (tested on an AMD Ryzen 5 3600 + Radeon RX 7600, 16 GB RAM), animations and transitions run smoothly at 60+ fps.
+
+On older integrated graphics (iGPUs), low-power laptops, or VMs without hardware acceleration, you may notice higher GPU usage or frame drops in:
+- **Fullscreen Now Playing** — Large blurred album-art backdrops, the **Still** ambient mesh/film-grain layers, and `requestAnimationFrame` word-by-word lyric animations are GPU-composited across the full viewport.
+- **Browser Audio Visualizer** — The real-time canvas spectrum visualizer runs continuously while playing on the Browser backend.
+
+**Tips for lower-end GPUs:**
+- Prefer the standard **Now Playing** view over **Fullscreen** during long sessions, or switch between **Classic** and **Still** styles depending on which performs better on your driver.
+- Use the **MPV** playback backend (which skips the Web Audio spectrum visualizer loop).
+- Ensure hardware acceleration is enabled in your OS/GPU drivers so Chromium does not fall back to CPU software rendering.
+
+---
+
 ## Roadmap
 
 - **Remote Media Sources** - Subsonic / OpenSubsonic server integration alongside the local SQLite library.
