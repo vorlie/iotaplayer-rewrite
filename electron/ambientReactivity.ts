@@ -85,14 +85,14 @@ export function normalizeAmbientReactivity(
       ? raw.ampFloor
       : fallback.ampFloor,
     0,
-    0.9,
+    1.2,
   )
   const ampCeiling = clamp(
     typeof raw.ampCeiling === 'number' && Number.isFinite(raw.ampCeiling)
       ? raw.ampCeiling
       : fallback.ampCeiling,
-    Math.min(1, ampFloor + 0.1),
-    1,
+    Math.min(1.5, ampFloor + 0.1),
+    1.5,
   )
   const mode: AmbientRangeMode =
     raw.mode === 'peak' || raw.mode === 'average' ? raw.mode : fallback.mode

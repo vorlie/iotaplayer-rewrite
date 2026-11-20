@@ -52,6 +52,16 @@ test('evaluateSpectrumRange computes average and peak within frequency and ampli
 
   const disabled = evaluateSpectrumRange(spectrum, { ...avgConfig, enabled: false })
   assert.equal(disabled, 0)
+
+  const headroom = evaluateSpectrumRange([1, 1], {
+    ...DEFAULT_AMBIENT_REACTIVITY,
+    freqStart: 0,
+    freqEnd: 1,
+    ampFloor: 0,
+    ampCeiling: 1.5,
+    mode: 'peak',
+  })
+  assert.ok(Math.abs(headroom - 1 / 1.5) < 1e-6)
 })
 
 test('stepAmbientExposure uses instant attack, exponential release, and exposure clamp', () => {
