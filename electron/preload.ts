@@ -218,6 +218,12 @@ function applyBrowserPlaybackSpeed(targetAudio: BrowserAudioElement): void {
   }
 }
 
+let audioContext: AudioContextLike | null = null
+let analyser: AnalyserNodeLike | null = null
+let analyserData: Uint8Array | null = null
+let browserAudioSource: AudioNodeLike | null = null
+let browserGainNode: GainNodeLike | null = null
+
 function createRawBrowserAudio(): BrowserAudioElement {
   const AudioCtor = (globalThis as unknown as { Audio: new () => BrowserAudioElement }).Audio
   const audio = new AudioCtor()
@@ -238,7 +244,7 @@ const volumeController = new VolumeController<BrowserAudioElement>({
   applyMpvVolume: (vol) => ipcRenderer.invoke('playback:volume', vol),
   applyElementVolume: (element, vol) => {
     browserVolume = vol
-    if (element === browserAudio && browserGainNode && audioContext) {
+    if (browserGainNode && audioContext) {
       browserGainNode.gain.value = vol
       element.volume = 1
     } else {
@@ -287,12 +293,6 @@ interface BiquadFilterNodeLike extends AudioNodeLike {
 interface GainNodeLike extends AudioNodeLike {
   gain: { value: number }
 }
-
-let audioContext: AudioContextLike | null = null
-let analyser: AnalyserNodeLike | null = null
-let analyserData: Uint8Array | null = null
-let browserAudioSource: AudioNodeLike | null = null
-let browserGainNode: GainNodeLike | null = null
 
 function applyBrowserOutputVolume(vol: number): void {
   if (browserGainNode && audioContext) {
