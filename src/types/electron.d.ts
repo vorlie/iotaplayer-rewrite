@@ -122,6 +122,7 @@ interface AppSettings {
   language: AppLanguage
   fullscreenStyle: FullscreenStyle
   lowPerformanceMode: boolean
+  visualizerEnabled: boolean
 }
 
 interface PlaybackPreferences {

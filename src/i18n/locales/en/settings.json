@@ -36,7 +36,9 @@
     },
     "fullscreenStyleHint": "Choose between the classic split layout and the ambient glass Still style.",
     "lowPerformanceLabel": "Low performance mode",
-    "lowPerformanceHint": "Disable glass blurs, ambient shaders, and visualizer loops to reduce GPU usage while gaming or on low-power hardware."
+    "lowPerformanceHint": "Disable glass blurs, ambient shaders, and visualizer loops to reduce GPU usage while gaming or on low-power hardware.",
+    "visualizerLabel": "Spectrum visualizer",
+    "visualizerHint": "Show the live frequency spectrum visualizer in the player bar when using the Browser audio backend."
   },
   "lyrics": {
     "eyebrow": "Lyrics",

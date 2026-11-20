@@ -91,10 +91,12 @@ interface AppStore {
   isFullscreenNowPlaying: boolean
   fullscreenStyle: FullscreenStyle
   lowPerformanceMode: boolean
+  visualizerEnabled: boolean
   setFullscreenNowPlaying: (open: boolean) => void
   toggleFullscreenNowPlaying: () => void
   setFullscreenStyle: (style: FullscreenStyle, persist?: boolean) => void
   setLowPerformanceMode: (enabled: boolean, persist?: boolean) => void
+  setVisualizerEnabled: (enabled: boolean, persist?: boolean) => void
 
   // Library
   library: LibraryState
@@ -129,6 +131,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   isFullscreenNowPlaying: false,
   fullscreenStyle: 'classic',
   lowPerformanceMode: false,
+  visualizerEnabled: true,
   setFullscreenNowPlaying: (open) => set({ isFullscreenNowPlaying: open }),
   toggleFullscreenNowPlaying: () => set((s) => ({ isFullscreenNowPlaying: !s.isFullscreenNowPlaying })),
   setFullscreenStyle: (style, persist = true) => {
@@ -148,6 +151,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }
     if (persist && typeof window !== 'undefined' && 'settings' in window) {
       void window.settings.set({ lowPerformanceMode: enabled })
+    }
+  },
+  setVisualizerEnabled: (enabled, persist = true) => {
+    set({ visualizerEnabled: enabled })
+    if (persist && typeof window !== 'undefined' && 'settings' in window) {
+      void window.settings.set({ visualizerEnabled: enabled })
     }
   },
 

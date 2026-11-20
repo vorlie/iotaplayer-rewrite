@@ -27,6 +27,8 @@ export function SettingsView() {
     setFullscreenStyle,
     lowPerformanceMode,
     setLowPerformanceMode,
+    visualizerEnabled,
+    setVisualizerEnabled,
   } = useAppStore()
   const [libraryRoot, setLibraryRoot] = useState(DEFAULT_LIBRARY_ROOT)
   const [scanning, setScanning] = useState(false)
@@ -243,6 +245,18 @@ export function SettingsView() {
                     type="checkbox"
                     checked={lowPerformanceMode}
                     onChange={(e) => setLowPerformanceMode(e.target.checked)}
+                  />
+                </div>
+
+                <div className="settings-toggle-row">
+                  <div>
+                    <h3>{t('playback.visualizerLabel')}</h3>
+                    <p>{t('playback.visualizerHint')}</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={visualizerEnabled}
+                    onChange={(e) => setVisualizerEnabled(e.target.checked)}
                   />
                 </div>
 

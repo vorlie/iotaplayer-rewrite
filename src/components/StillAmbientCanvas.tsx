@@ -53,6 +53,7 @@ precision highp float;
 uniform vec2 u_res;
 uniform float u_time;
 uniform float u_energy;
+uniform float u_kick;
 uniform vec3 u_bg;
 uniform vec3 u_c0;
 uniform vec3 u_c1;
@@ -132,7 +133,7 @@ void main() {
   vec2 w2 = vec2(sn(q * 2.0 + w * 1.6 + 11.0), sn(q * 2.0 + w * 1.6 + 23.0));
   p += 0.22 * (w + 0.4 * w2);
 
-  float e = u_energy;
+  float e = u_energy + u_kick * 0.35;
   vec3 acc = u_bg;
   float W = 1.0;
   float rs = clamp(sqrt(asp / 1.4), 0.5, 1.0);
@@ -155,9 +156,12 @@ void main() {
   vec3 lab = acc / W;
   float cov = 1.0 - 1.0 / W;
 
-  // Sheen: long, soft silk folds of light where the colour is
+  // Sheen: long, soft silk folds of light where the colour is, swelling on bass/kick hits
   float fold = sn((R * p) * vec2(0.8, 3.2) + w * 0.9 + vec2(t * 0.03, 0.0)) * 0.5 + 0.5;
-  lab.x += (0.14 * fold * fold * fold + e * 0.02) * cov;
+  float fold3 = fold * fold * fold;
+  float fold4 = fold3 * fold;
+  lab.x += ((0.14 + u_kick * 0.22) * fold3 + 0.12 * u_kick * fold4 + e * 0.02) * cov;
+  lab.x = min(lab.x, 0.64);
 
   vec3 col = oklabToSrgb(mix(u_bg, lab, 0.92));
 
@@ -380,6 +384,7 @@ export function StillAmbientCanvas({
     const uRes = gl.getUniformLocation(program, 'u_res')
     const uTime = gl.getUniformLocation(program, 'u_time')
     const uEnergy = gl.getUniformLocation(program, 'u_energy')
+    const uKick = gl.getUniformLocation(program, 'u_kick')
     const uBg = gl.getUniformLocation(program, 'u_bg')
     const uC0 = gl.getUniformLocation(program, 'u_c0')
     const uC1 = gl.getUniformLocation(program, 'u_c1')
@@ -397,12 +402,35 @@ export function StillAmbientCanvas({
     let lastTs = performance.now()
     let elapsed = 0
     let energy = isPlayingRef.current ? 0.45 : 0.1
+    let bassAvg = 0
+    let kick = 0
 
     const render = (now: number) => {
       const dt = Math.min(0.1, (now - lastTs) / 1000)
       lastTs = now
       elapsed += dt * (isPlayingRef.current ? 1 : 0.3)
       energy += ((isPlayingRef.current ? 0.45 : 0.1) - energy) * 0.05
+
+      const spectrum =
+        isPlayingRef.current && typeof window !== 'undefined' && 'playback' in window
+          ? window.playback.getSpectrum()
+          : null
+
+      if (spectrum && spectrum.length >= 6) {
+        const bass =
+          (spectrum[0] + spectrum[1] + spectrum[2] + spectrum[3] + spectrum[4] + spectrum[5]) / 6
+        bassAvg += (bass - bassAvg) * Math.min(1, dt * 4.0)
+        const transient = Math.max(0, bass - bassAvg * 1.12)
+        const targetKick = Math.min(1, transient * 4.5 + Math.max(0, bass - 0.55) * 0.7)
+        if (targetKick > kick) {
+          kick += (targetKick - kick) * Math.min(1, dt * 28.0)
+        } else {
+          kick *= Math.exp(-dt * 7.5)
+        }
+      } else {
+        bassAvg *= Math.exp(-dt * 4.0)
+        kick *= Math.exp(-dt * 6.0)
+      }
 
       const curr = currentPaletteRef.current
       const target = targetPaletteRef.current
@@ -415,6 +443,7 @@ export function StillAmbientCanvas({
       gl.uniform2f(uRes, canvas.width, canvas.height)
       gl.uniform1f(uTime, elapsed)
       gl.uniform1f(uEnergy, energy)
+      gl.uniform1f(uKick, kick)
       gl.uniform3fv(uBg, bgLab)
       gl.uniform3fv(uC0, curr[0])
       gl.uniform3fv(uC1, curr[1])

@@ -53,3 +53,19 @@ test('lowPerformanceMode defaults to false and persists boolean values', () => {
     setAppSettings({ lowPerformanceMode: before.lowPerformanceMode ?? false })
   }
 })
+
+test('visualizerEnabled defaults to true and persists boolean values', () => {
+  const before = getAppSettings()
+
+  try {
+    const disabled = setAppSettings({ visualizerEnabled: false })
+    assert.equal(disabled.visualizerEnabled, false)
+    assert.equal(getAppSettings().visualizerEnabled, false)
+
+    const enabled = setAppSettings({ visualizerEnabled: true })
+    assert.equal(enabled.visualizerEnabled, true)
+    assert.equal(getAppSettings().visualizerEnabled, true)
+  } finally {
+    setAppSettings({ visualizerEnabled: before.visualizerEnabled ?? true })
+  }
+})
