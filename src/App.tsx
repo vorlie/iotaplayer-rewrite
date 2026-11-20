@@ -62,6 +62,9 @@ export default function App() {
         if (settings.fullscreenStyle === 'classic' || settings.fullscreenStyle === 'still') {
           useAppStore.getState().setFullscreenStyle(settings.fullscreenStyle, false)
         }
+        if (typeof settings.lowPerformanceMode === 'boolean') {
+          useAppStore.getState().setLowPerformanceMode(settings.lowPerformanceMode, false)
+        }
       })
       .catch(() => {
         // Fallback to browser/system locale already initialized

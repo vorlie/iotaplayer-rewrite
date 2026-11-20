@@ -34,7 +34,9 @@
       "classic": "Classic",
       "still": "Still (Ambient Glass)"
     },
-    "fullscreenStyleHint": "Choose between the classic split layout and the ambient glass Still style."
+    "fullscreenStyleHint": "Choose between the classic split layout and the ambient glass Still style.",
+    "lowPerformanceLabel": "Low performance mode",
+    "lowPerformanceHint": "Disable glass blurs, ambient shaders, and visualizer loops to reduce GPU usage while gaming or on low-power hardware."
   },
   "lyrics": {
     "eyebrow": "Lyrics",

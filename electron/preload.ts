@@ -509,6 +509,7 @@ const settingsAPI = {
     preservePitch: boolean
     language: 'system' | 'en' | 'pl'
     fullscreenStyle: 'classic' | 'still'
+    lowPerformanceMode: boolean
   }> => ipcRenderer.invoke('settings:get'),
   set: (value: {
     discordClientId?: string
@@ -524,6 +525,7 @@ const settingsAPI = {
     preservePitch?: boolean
     language?: 'system' | 'en' | 'pl'
     fullscreenStyle?: 'classic' | 'still'
+    lowPerformanceMode?: boolean
   }): Promise<void> => {
     if (value.playbackRate !== undefined || value.preservePitch !== undefined) {
       browserPlaybackPreferences = normalizePlaybackPreferences(value, browserPlaybackPreferences)

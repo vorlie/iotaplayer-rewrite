@@ -1,0 +1,52 @@
+/* -------------------------------------------------------------------------
+   Low Performance Mode Overrides
+   Disables GPU-heavy backdrop blurs, real-time backdrop filters, layer
+   promotions (will-change), and continuous ambient animations when
+   html[data-low-performance="true"] is active.
+   ------------------------------------------------------------------------- */
+
+:root[data-low-performance="true"] .fullscreen-np,
+:root[data-low-performance="true"] .fullscreen-np__topbar,
+:root[data-low-performance="true"] .fullscreen-np__mode-switcher,
+:root[data-low-performance="true"] .fullscreen-np__mode-btn,
+:root[data-low-performance="true"] .fullscreen-np__icon-btn,
+:root[data-low-performance="true"] .fullscreen-np__player-card,
+:root[data-low-performance="true"] .fullscreen-np__scrim,
+:root[data-low-performance="true"] .np-header-badge,
+:root[data-low-performance="true"] .np-lyrics-toolbar,
+:root[data-low-performance="true"] .context-menu,
+:root[data-low-performance="true"] .modal-backdrop,
+:root[data-low-performance="true"] .playlist-card__badge {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+:root[data-low-performance="true"] .fullscreen-np__backdrop-img {
+  filter: none !important;
+  opacity: 0.2 !important;
+  transform: none !important;
+  will-change: auto !important;
+}
+
+:root[data-low-performance="true"] .fullscreen-np__player-card,
+:root[data-low-performance="true"] .fullscreen-np__mode-switcher {
+  background: rgba(17, 13, 13, 0.88) !important;
+}
+
+:root[data-low-performance="true"] .np-lyric-line,
+:root[data-low-performance="true"] .np-lyric-line--past,
+:root[data-low-performance="true"] .fullscreen-np__lyric,
+:root[data-low-performance="true"] .fullscreen-np__lyric--past {
+  filter: none !important;
+  will-change: auto !important;
+}
+
+:root[data-low-performance="true"] .lyric-gap__dot {
+  animation: none !important;
+  will-change: auto !important;
+  opacity: 0.6;
+}
+
+:root[data-low-performance="true"] .still-bg__fallback {
+  animation: none !important;
+}

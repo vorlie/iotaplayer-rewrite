@@ -19,7 +19,15 @@ const settingsCategories = [
 
 export function SettingsView() {
   const { t, i18n } = useTranslation(['settings', 'common'])
-  const { library, scanLibrary, cleanupMissingTracks, fullscreenStyle, setFullscreenStyle } = useAppStore()
+  const {
+    library,
+    scanLibrary,
+    cleanupMissingTracks,
+    fullscreenStyle,
+    setFullscreenStyle,
+    lowPerformanceMode,
+    setLowPerformanceMode,
+  } = useAppStore()
   const [libraryRoot, setLibraryRoot] = useState(DEFAULT_LIBRARY_ROOT)
   const [scanning, setScanning] = useState(false)
   const [cleaningMissing, setCleaningMissing] = useState(false)
@@ -224,6 +232,18 @@ export function SettingsView() {
                     <option value="still">{t('playback.fullscreenStyleOptions.still')}</option>
                   </select>
                   <small>{t('playback.fullscreenStyleHint')}</small>
+                </div>
+
+                <div className="settings-toggle-row">
+                  <div>
+                    <h3>{t('playback.lowPerformanceLabel')}</h3>
+                    <p>{t('playback.lowPerformanceHint')}</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={lowPerformanceMode}
+                    onChange={(e) => setLowPerformanceMode(e.target.checked)}
+                  />
                 </div>
 
                 <div className="settings-field">

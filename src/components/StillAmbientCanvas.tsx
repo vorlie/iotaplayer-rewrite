@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useAppStore } from '../store'
 
 type RgbTuple = [number, number, number]
 type LabTuple = [number, number, number]
@@ -277,6 +278,7 @@ export function StillAmbientCanvas({
   active,
   isPlaying,
 }: StillAmbientCanvasProps) {
+  const lowPerformanceMode = useAppStore((s) => s.lowPerformanceMode)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [grainTile] = useState(() => getGrainTile())
   const targetPaletteRef = useRef<[LabTuple, LabTuple, LabTuple, LabTuple, LabTuple]>(DEFAULT_LAB_PALETTE)
@@ -313,7 +315,7 @@ export function StillAmbientCanvas({
   }, [artworkSrc])
 
   useEffect(() => {
-    if (!active) return
+    if (!active || lowPerformanceMode) return
     const canvas = canvasRef.current
     if (!canvas) return
 
@@ -433,17 +435,17 @@ export function StillAmbientCanvas({
       gl.deleteShader(vert)
       gl.deleteShader(frag)
     }
-  }, [active])
+  }, [active, lowPerformanceMode])
 
   return (
     <div className="still-bg" aria-hidden="true">
-      {!webglUnsupported ? (
+      {!webglUnsupported && !lowPerformanceMode ? (
         <canvas ref={canvasRef} className="still-bg__canvas" />
       ) : (
         <div className="still-bg__fallback" />
       )}
       <div className="still-bg__scrim" />
-      {grainTile && (
+      {!lowPerformanceMode && grainTile && (
         <div
           className="still-grain"
           style={{

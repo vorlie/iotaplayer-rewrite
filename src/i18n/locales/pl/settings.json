@@ -34,7 +34,9 @@
       "classic": "Klasyczny",
       "still": "Still (Ambientowe szkło)"
     },
-    "fullscreenStyleHint": "Wybierz między klasycznym układem podzielonym a ambientowym stylem Still."
+    "fullscreenStyleHint": "Wybierz między klasycznym układem podzielonym a ambientowym stylem Still.",
+    "lowPerformanceLabel": "Tryb niskiego zużycia zasobów",
+    "lowPerformanceHint": "Wyłącza rozmycia szkła, shadery tła i wizualizator, aby ograniczyć użycie GPU podczas grania lub na słabszym sprzęcie."
   },
   "lyrics": {
     "eyebrow": "Teksty",
