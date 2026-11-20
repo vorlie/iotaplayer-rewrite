@@ -6,6 +6,25 @@ IotaPlayer indexes your local audio library into a fast SQLite database and pair
 
 ---
 
+## Table of Contents
+
+- [Highlights](#highlights)
+- [Screenshots](#screenshots)
+- [Quick Start](#quick-start)
+- [Feature Guide](#feature-guide)
+  - [1. Playback, Speed & Audio Engine](#1-playback-speed--audio-engine)
+  - [2. Lyrics System & Fullscreen Now Playing](#2-lyrics-system--fullscreen-now-playing)
+  - [3. Library, Playlists, Smart Playlists & Statistics](#3-library-playlists-smart-playlists--statistics)
+  - [4. Keyboard Shortcuts & OS Media Controls](#4-keyboard-shortcuts--os-media-controls)
+- [Architecture & Project Structure](#architecture--project-structure)
+- [Tech Stack](#tech-stack)
+- [Performance & Hardware Notes](#performance--hardware-notes)
+- [Roadmap](#roadmap)
+- [Documentation](#documentation)
+- [Credits & Third-Party Notices](#credits--third-party-notices)
+
+---
+
 ## Highlights
 
 - **Dual Playback Engine & Speed/Pitch Control** - Uses **MPV** over IPC as the primary high-format-compatibility backend, with a seamless **Browser / Web Audio** fallback supporting a live frequency spectrum visualizer, a 10-band parametric equalizer, and configurable playback speed & pitch presets (**Normal**, **Nightcore**, **Fast Nightcore**, **Daycore**, **Slowed**, **Custom**).
